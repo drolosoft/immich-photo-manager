@@ -158,7 +158,7 @@ Immich is excellent at storing and viewing your photos. But managing a large lib
 
 ---
 
-## 🏅 Glama
+## 🦙 Glama Score
 
 <p align="center">
   <a href="https://glama.ai/mcp/servers/drolosoft/immich-photo-manager"><img src="https://glama.ai/mcp/servers/drolosoft/immich-photo-manager/badges/card.svg" alt="immich-photo-manager on Glama"></a>
