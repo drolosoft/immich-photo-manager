@@ -13,10 +13,6 @@
 
 > **MCP server for intelligent photo management with [Immich](https://immich.app) — your self-hosted library, understood.**
 
-<p align="center">
-  <a href="https://glama.ai/mcp/servers/drolosoft/immich-photo-manager"><img src="https://glama.ai/mcp/servers/drolosoft/immich-photo-manager/badges/card.svg" alt="immich-photo-manager on Glama"></a>
-</p>
-
 If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance — search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally — your photos never leave your server.
 
 <p align="center"><img src="./assets/demo.gif" alt="immich-photo-manager demo" width="800"></p>
@@ -159,6 +155,14 @@ Immich is excellent at storing and viewing your photos. But managing a large lib
 | **[MCP Tools Reference](doc/MCP-TOOLS.md)** | All 50 MCP tools — parameters, return types, examples |
 | **[Architecture](doc/ARCHITECTURE.md)** | How base64-embedded thumbnails solve the Cowork sandbox restriction |
 | **[CORS Setup Guide](doc/CORS-SETUP.md)** | Optional — enable direct URL thumbnail loading for browser-viewed galleries |
+
+---
+
+## 🏅 Glama
+
+<p align="center">
+  <a href="https://glama.ai/mcp/servers/drolosoft/immich-photo-manager"><img src="https://glama.ai/mcp/servers/drolosoft/immich-photo-manager/badges/card.svg" alt="immich-photo-manager on Glama"></a>
+</p>
 
 ---
 
