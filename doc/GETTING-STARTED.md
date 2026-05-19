@@ -12,6 +12,7 @@ Step-by-step guide to installing, configuring, and running the Immich Photo Mana
 - **Immich API key** — Generated from Immich web UI → User Settings → API Keys. [How to create one](https://immich.app/docs/features/command-line-interface#obtain-the-api-key)
 - **Python 3.10+** — To run the MCP server. [Download Python](https://www.python.org/downloads/)
 - **Claude** — Desktop app with Cowork mode, or Claude Code CLI
+- **uv** — Required only for the `uvx` install path. [Installation guide](https://docs.astral.sh/uv/getting-started/installation/)
 
 ### Optional (for advanced skills)
 
@@ -60,6 +61,42 @@ claude plugin install immich-photo-manager
 claude -p "use the immich ping tool"
 ```
 
+### Install with uvx
+
+For MCP clients that can run package entry points, use `uvx`:
+
+```json
+{
+  "mcpServers": {
+    "immich": {
+      "command": "uvx",
+      "args": ["immich-photo-manager"],
+      "env": {
+        "IMMICH_BASE_URL": "https://your-immich-server.com",
+        "IMMICH_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+The `immich-photo-manager` command defaults to MCP stdio transport. For a local checkout before publishing, use:
+
+```json
+{
+  "mcpServers": {
+    "immich": {
+      "command": "uvx",
+      "args": ["--from", "/path/to/immich-photo-manager", "immich-photo-manager"],
+      "env": {
+        "IMMICH_BASE_URL": "https://your-immich-server.com",
+        "IMMICH_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
 ---
 
 ## First Run
@@ -102,8 +139,8 @@ These are set automatically by `setup-mcp.sh` inside `.mcp.json`:
 |----------|----------|---------|-------------|
 | `IMMICH_BASE_URL` | Yes | — | Your Immich server URL (e.g., `https://photos.example.com`) |
 | `IMMICH_API_KEY` | Yes | — | API key from Immich user settings |
-| `PYTHONPATH` | Yes | — | Path to `src/` directory in the cloned repo |
-| `MCP_TRANSPORT` | Yes | `stdio` | Must be `stdio` for Claude Code / Cowork |
+| `PYTHONPATH` | Local checkout only | — | Path to `src/` directory in the cloned repo |
+| `MCP_TRANSPORT` | No | `stdio` | Use `stdio` for MCP clients; set `http` for Streamable HTTP |
 
 ### Database Access (for advanced skills)
 
@@ -133,6 +170,12 @@ To test the server manually:
 PYTHONPATH=./src MCP_TRANSPORT=stdio IMMICH_BASE_URL=https://your-server IMMICH_API_KEY=your-key python3 -m immich_mcp_server
 ```
 
+To test the packaged console script from a checkout:
+
+```bash
+IMMICH_BASE_URL=https://your-server IMMICH_API_KEY=your-key uvx --from . immich-photo-manager
+```
+
 ### macOS (launchd)
 
 For persistent background service on macOS:
@@ -156,6 +199,7 @@ After=network.target
 ExecStart=/usr/bin/python3 -m immich_mcp_server
 Environment=IMMICH_BASE_URL=http://localhost:2283
 Environment=IMMICH_API_KEY=your-key-here
+Environment=MCP_TRANSPORT=http
 Restart=on-failure
 
 [Install]

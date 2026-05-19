@@ -5,7 +5,7 @@ import sys
 
 
 def main():
-    transport = os.environ.get("MCP_TRANSPORT", "http").lower()
+    transport = os.environ.get("MCP_TRANSPORT", "stdio").lower()
 
     if transport == "stdio":
         from .server import mcp

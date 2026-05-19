@@ -65,6 +65,25 @@ The same plugin runs in **[Claude Code](https://docs.anthropic.com/en/docs/claud
 
 immich-photo-manager is an **MCP server** — it works with any AI assistant that speaks the Model Context Protocol, not just Claude.
 
+Use the package entry point directly with `uvx`:
+
+```json
+{
+  "mcpServers": {
+    "immich": {
+      "command": "uvx",
+      "args": ["immich-photo-manager"],
+      "env": {
+        "IMMICH_BASE_URL": "https://your-immich-server.com",
+        "IMMICH_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+`immich-photo-manager` defaults to MCP stdio transport. Set `MCP_TRANSPORT=http` when you want to run the server as a Streamable HTTP service.
+
 ```
 ============================================================
 IMMICH-PHOTO-MANAGER × GEMMA 4 (LM STUDIO)
