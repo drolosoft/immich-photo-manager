@@ -83,27 +83,25 @@ for asset_id in sample_asset_ids:
 top_pairs = sorted(co_occurrence.items(), key=lambda x: x[1], reverse=True)[:15]
 ```
 
-### Step 3: Timeline Per Person
+### Step 3: Per-Person Profiles
 
-Iterate named people from `list_people` and use `get_person` for details:
+There is no MCP tool that searches assets by person — the report's per-person data comes entirely from `list_people` and `get_person`:
 
 ```
-# For each named person, get_person returns birthDate and other metadata
-# Use search_metadata with personIds to find their date range
-timelines = []
+# get_person returns name, birthDate, faceCount, and hidden status
+profiles = []
 for person in named:
     details = get_person(person_id=person.id)
-    # Use search_metadata(person_ids=[person.id], order="asc", size=1) for first appearance
-    # Use search_metadata(person_ids=[person.id], order="desc", size=1) for last appearance
-    first = search_metadata(person_ids=[person.id], order="asc", size=1)
-    last  = search_metadata(person_ids=[person.id], order="desc", size=1)
-    timelines.append({
+    profiles.append({
         "name": person.name,
-        "first": first.assets[0].localDateTime if first.assets else None,
-        "last":  last.assets[0].localDateTime  if last.assets  else None,
         "face_count": person.faceCount,
+        "birth_date": details.birthDate,
+        # Deep link for browsing that person's full photo timeline in Immich:
+        "immich_url": f"{IMMICH_URL}/people/{person.id}",
     })
 ```
+
+First/last appearance dates are not available through the MCP tools. For per-person browsing (timeline, all photos of one person), link the user to the person's page in the Immich web UI (`/people/{id}`).
 
 ### Step 4: Recognition Quality
 
@@ -138,18 +136,19 @@ OVERVIEW
   Unnamed clusters:       245 (85%)
   Total faces detected:  18,432
 
-TOP PEOPLE (by photo count)
-  1. María          2,341 photos (2014-2026)
-  2. Juan           1,892 photos (2014-2026)
-  3. Carlos           634 photos (2018-2025)
-  4. Ana              412 photos (2016-2024)
-  5. Pedro            287 photos (2019-2023)
+TOP PEOPLE (by face count)
+  1. María          2,341 faces
+  2. Juan           1,892 faces
+  3. Carlos           634 faces
+  4. Ana              412 faces
+  5. Pedro            287 faces
   ...
+  (browse any person's full timeline via their Immich page: /people/{id})
 
 UNNAMED CLUSTERS WORTH NAMING
-  Cluster #45:  189 faces (appears 2019-2024) — likely a real person
-  Cluster #112:  87 faces (appears 2020-2023)
-  Cluster #78:   64 faces (appears 2021-2025)
+  Cluster #45:  189 faces — likely a real person
+  Cluster #112:  87 faces
+  Cluster #78:   64 faces
   ...12 more clusters with >20 faces
 
   → Naming these 15 clusters would increase named coverage from 58% to 82%
@@ -173,11 +172,11 @@ RECOMMENDATIONS
 
 ## Actions Available
 
-- **Export people list** — CSV with name, photo count, date range
+- **Export people list** — CSV with name, face count, birth date (if set), Immich URL
 - **Flag unnamed clusters** — use `get_person_thumbnail` to show faces and ask user to name them
 - **Co-occurrence graph** — HTML visualization showing people connections (optional)
 - **Name a cluster** — use `update_person(person_id, name="...")` to name an unnamed cluster directly via MCP
-- **Merge duplicates** — use `merge_people(source_person_id, target_person_id)` to combine similar unnamed clusters
+- **Merge duplicates** — use `merge_people(person_id="<person-to-keep>", merge_ids=["<dup-1>", "<dup-2>"])` to fold duplicate clusters into the one to keep
 - **Fix misidentified faces** — use `reassign_face(face_id, person_id)` to correct wrong assignments
 
 ## Important Notes

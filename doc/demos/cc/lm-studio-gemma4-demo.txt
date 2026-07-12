@@ -1,3 +1,5 @@
+Historical transcript — recorded on v1.1.0 (22 tools at the time; the server now exposes 50).
+
 
 ============================================================
 IMMICH-PHOTO-MANAGER × GEMMA 4 (LM STUDIO)

@@ -41,36 +41,44 @@ Intelligent album creation and curation for Immich photo libraries. Organizes ph
 
 Use the Immich MCP tools for all API interactions:
 
-- `immich_search_assets` — Search by GPS coordinates, date range, city, country, camera, person, or smart/CLIP text query
-- `immich_create_album` — Create a new album with name and description
-- `immich_add_assets_to_album` — Add photos/videos to an album by asset IDs
-- `immich_remove_assets_from_album` — Remove assets from an album
-- `immich_list_albums` — List all albums with asset counts
-- `immich_get_album` — Get album details including all assets
-- `immich_delete_album` — Delete an album (does NOT delete the photos)
-- `immich_create_shared_link` — Create a public shared link for an album (makes it visible in Gallery)
-- `immich_get_asset_info` — Get full metadata for a specific asset (GPS, EXIF, dates)
-- `immich_get_statistics` — Get library statistics (total photos, videos, storage)
-- `immich_get_asset_thumbnail` — Get base64 thumbnail for an asset (used for gallery HTML generation)
+- `search_metadata` — Search by city, state, country, camera make/model, date range (`taken_after`/`taken_before`), favorites, or asset type
+- `search_smart` — CLIP semantic search from a natural language description (e.g. "Colosseum Rome Italy")
+- `get_map_markers` — Get GPS markers (up to 500) for all geotagged assets; filter by coordinates client-side
+- `create_album` — Create a new album with name and description
+- `add_assets_to_album` — Add photos/videos to an album by asset IDs
+- `remove_assets_from_album` — Remove assets from an album
+- `list_albums` — List all albums with asset counts
+- `get_album` — Get album details including all assets
+- `delete_album` — Delete an album (does NOT delete the photos)
+- `create_shared_link` — Create a public shared link for an album (makes it visible in Gallery)
+- `get_asset_info` — Get full metadata for a specific asset (GPS, EXIF, dates)
+- `get_statistics` — Get library statistics (total photos, videos, storage)
+- `get_asset_thumbnail` — Get base64 thumbnail for an asset (used for gallery HTML generation)
 
 ## Album Creation Workflow
 
 ### 1. Discover photos for a location
 
-Search by GPS bounding box OR by CLIP semantic search OR by date range:
+There is no radius/coordinate search parameter — combine these four approaches:
 
 ```
-# GPS-based (most accurate)
-immich_search_assets(latitude=41.87, longitude=12.49, radius_km=50)  # Rome area
+# Location text search (most reliable — uses EXIF reverse-geocoded names)
+search_metadata(city="Roma")
+search_metadata(country="Italy")
 
-# CLIP semantic search (when GPS is missing)
-immich_search_assets(query="Colosseum Rome Italy")
+# CLIP semantic search (when geocoded names are missing or inconsistent)
+search_smart(query="Colosseum Rome Italy")
 
-# Date-based (supplement)
-immich_search_assets(date_from="2023-06-01", date_to="2023-06-15")
+# GPS clustering via map markers (returns up to 500 markers with lat/lon)
+get_map_markers()
+# Then filter the returned coordinates yourself, e.g. keep markers
+# within ~0.5° of Rome (41.90, 12.49) and collect their asset IDs
 
-# Combined
-immich_search_assets(latitude=41.87, longitude=12.49, radius_km=50, date_from="2023-06-01")
+# Date-based (supplement — trip windows)
+search_metadata(taken_after="2023-06-01", taken_before="2023-06-15")
+
+# Combined: location text + date window
+search_metadata(city="Roma", taken_after="2023-06-01", taken_before="2023-06-15")
 ```
 
 ### 2. Filter and curate
@@ -113,7 +121,7 @@ For the description, include:
 After creating the album, create a shared link to make it visible in the Gallery frontend:
 
 ```
-immich_create_shared_link(album_id="{id}", show_metadata=true, allow_download=false)
+create_shared_link(album_id="{id}", show_metadata=true, allow_download=false)
 ```
 
 ### 5. Verify
@@ -127,8 +135,8 @@ Confirm the album appears correctly:
 
 When creating multiple albums at once (e.g., "create albums for all my trips"):
 
-1. First, get library statistics and map view data to understand what locations exist
-2. Cluster photos by GPS coordinates to identify distinct locations
+1. First, get library statistics and `get_map_markers` data to understand what locations exist
+2. Cluster the returned marker coordinates client-side to identify distinct locations
 3. Present a proposed album list to the user for approval BEFORE creating
 4. Create albums one by one, reporting progress
 5. Summarize all created albums at the end
@@ -139,9 +147,9 @@ Always err on the side of creating MORE albums — the user can merge or delete 
 
 Many photos (especially older ones or screenshots) lack GPS coordinates. Strategy:
 
-1. First search by GPS for photos that have it
-2. Then search by date range to find photos taken during the same trip
-3. Use CLIP semantic search as a fallback ("beach Lanzarote", "pyramid Egypt")
+1. First search by geocoded location text (`search_metadata` with city/country) for photos that have it
+2. Then search by date range (`taken_after`/`taken_before`) to find photos taken during the same trip
+3. Use CLIP semantic search as a fallback (`search_smart`: "beach Lanzarote", "pyramid Egypt")
 4. Flag photos without GPS that were found by date/CLIP — they may or may not belong
 
 ## Album Maintenance
@@ -272,6 +280,6 @@ User: "Show me photos from Lanzarote Verde"
 
 ## Reference Files
 
-- `references/geographic-search-patterns.md` — GPS bounding boxes of common destinations and search strategies
+- `references/geographic-search-patterns.md` — Location names and GPS reference coordinates of common destinations, plus search strategies
 - `assets/index-template.html` — Dashboard template listing all saved gallery HTML files
 - `assets/viewer-template.html` — Self-contained HTML gallery template with dark/light themes, multiple view modes, slideshow, Cowork Actions Panel, and keyboard navigation

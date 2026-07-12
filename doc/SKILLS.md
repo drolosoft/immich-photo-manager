@@ -63,8 +63,9 @@ Say "create albums for all my trips" and the skill will:
 
 ```
 User: "Create an album from my Rome trip in June 2023"
-→ Searches GPS near Rome (41.90°N, 12.50°E, 50km radius)
-→ Filters to June 2023 date range
+→ Searches city metadata ("Roma") + CLIP ("Colosseum, Roman ruins")
+→ Cross-checks get_map_markers GPS points near Rome (41.90°N, 12.50°E)
+→ Filters to June 2023 date range (taken_after/taken_before)
 → Finds 234 photos, curates to 45 best ones
 → Creates "🇮🇹 Roma, Italia" album
 → Creates shared link for Gallery
@@ -85,22 +86,22 @@ Natural language photo search that translates your intent into optimal Immich AP
 | Dimension | Example Query | API Parameter |
 |-----------|--------------|---------------|
 | Visual/semantic | "sunset at the beach" | CLIP `query` |
-| GPS location | "photos near Rome" | `latitude`, `longitude`, `radius_km` |
+| GPS location | "photos near Rome" | `get_map_markers` + client-side coordinate filtering |
 | City/Country | "photos from Barcelona" | `city`, `country` |
-| Date range | "photos from last Christmas" | `date_from`, `date_to` |
+| Date range | "photos from last Christmas" | `taken_after`, `taken_before` |
 | Camera | "photos taken with iPhone" | `make`, `model` |
-| Person | "photos of Alice" | `person_name` |
-| Type | "all my videos" | `type=VIDEO` |
+| Person | "who is Alice?" | `search_people(name)` — finds the person record; browse their photos in the Immich UI |
+| Type | "all my videos" | `asset_type="VIDEO"` |
 | Favorites | "my best photos" | `is_favorite=true` |
 
 ### Query Translation Examples
 
 | You say | Skill does |
 |---------|-----------|
-| "photos from my Italy trip" | GPS bounding box for Italy + CLIP "Italy" |
-| "screenshots on my phone" | Screen resolution dims + no GPS + no lens info |
+| "photos from my Italy trip" | `country="Italy"` metadata + CLIP "Italy" |
+| "screenshots on my phone" | CLIP "screenshot" + filename patterns (Screenshot*, Captura*) |
 | "sunset photos" | CLIP search: "sunset" |
-| "videos from Barcelona" | GPS Barcelona + `type=VIDEO` |
+| "videos from Barcelona" | `city="Barcelona"` + `asset_type="VIDEO"` |
 | "my best photos" | `is_favorite=true` |
 
 ### Result Format
@@ -127,11 +128,11 @@ Detects screenshots, duplicates, and low-quality images using multi-signal analy
 
 #### Screenshots (highest impact)
 
-Detected by combining multiple signals:
+Candidates are surfaced with CLIP (`search_smart("screenshot")`) and filename patterns, then scored by combining multiple signals (dimensions and EXIF checked per asset via `get_asset_info` — they are not searchable):
 
 | Signal | Weight | Method |
 |--------|--------|--------|
-| Screen resolution | High | Exact pixel match to known screen sizes |
+| Screen resolution | High | `get_asset_info` dimensions exactly match known screen sizes |
 | No GPS | Medium | EXIF GPS fields empty |
 | No lens info | Medium | No focal length, aperture, or lens model |
 | Filename pattern | Low | Contains "Screenshot", "Screen Shot", "Captura" |

@@ -82,13 +82,17 @@ For each album, search for unassigned photos that match its profile:
 candidates = []
 
 # GPS-based matching (for location albums)
+# There is no radius search parameter — pull the map markers and
+# filter by distance client-side (up to 500 geotagged assets)
 if album.gps_center:
-    nearby = search_metadata(
-        lat=album.gps_center.lat,
-        lng=album.gps_center.lng,
-        radius_km=album.gps_radius * 1.5  # slightly wider
-    )
+    markers = get_map_markers()
+    nearby = [m for m in markers
+              if haversine(m.lat, m.lon,
+                           album.gps_center.lat, album.gps_center.lng)
+              <= album.gps_radius * 1.5]  # slightly wider
     candidates.extend(nearby)
+    # If the album maps to a known place name, also search geocoded EXIF:
+    # search_metadata(city="Barcelona")
 
 # CLIP-based matching (for theme albums)
 if album.name:
@@ -98,8 +102,8 @@ if album.name:
 # Date-based matching (for event albums)
 if album.is_event:
     in_range = search_metadata(
-        date_after=album.date_range[0],
-        date_before=album.date_range[1]
+        taken_after=album.date_range[0],
+        taken_before=album.date_range[1]
     )
     candidates.extend(in_range)
 

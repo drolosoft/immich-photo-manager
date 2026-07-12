@@ -35,7 +35,7 @@ Follow the photo-cleanup skill workflow:
 3. Present findings as a summary report — NEVER delete anything automatically
 4. Ask the user what action to take: archive, delete, or skip
 
-Always use dryRun mode for any destructive operations. Report results in this format:
+There is no dry-run mode — the safety mechanism is the workflow itself: present findings first, act only after the user explicitly confirms, and use `delete_assets(asset_ids, force=False)` so items go to the trash and remain recoverable. Never pass `force=true` during cleanup. Report results in this format:
 
 ```
 🧹 Cleanup Scan Results

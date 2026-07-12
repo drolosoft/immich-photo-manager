@@ -24,8 +24,8 @@ allowed-tools: ["mcp__immich__*"]
 
 Connect to Immich and report the current library status.
 
-1. Call `immich_get_statistics` to get total counts
-2. Call `immich_list_albums` to get album count and names
+1. Call `get_statistics` to get total counts
+2. Call `list_albums` to get album count and names
 
 Present a concise dashboard:
 

@@ -43,11 +43,11 @@ Intelligent photo library cleanup for Immich. Identifies and helps remove screen
 
 ### 1. Screenshot Detection
 
-Screenshots are the #1 source of library bloat. Detection criteria (combine multiple signals):
+Screenshots are the #1 source of library bloat. Surface candidates with `search_smart(query="screenshot")` (CLIP) plus filename patterns (`Screenshot*`, `Screen Shot*`, `Captura*`) in `search_metadata`/`list_assets` results — dimensions are NOT searchable. Then score each candidate by combining multiple signals (dimensions and EXIF come from `get_asset_info`, per asset):
 
 | Signal | Weight | How to detect |
 |--------|--------|--------------|
-| Screen resolution | High | Dimensions match known screen sizes exactly |
+| Screen resolution | High | `get_asset_info` dimensions match known screen sizes exactly |
 | No GPS data | Medium | EXIF GPS fields empty |
 | No lens info | Medium | No focal length, aperture, or lens model |
 | Filename pattern | Low | Contains "Screenshot", "Screen Shot", "Captura" |
@@ -95,7 +95,7 @@ Detection strategy:
 ### Quick Scan (recommended first step)
 
 1. Get library statistics: total photos, videos, storage
-2. Estimate screenshots: search for assets with screen-resolution dimensions
+2. Estimate screenshots: run `search_smart(query="screenshot")` and scan filenames (`Screenshot*`, `Captura*`) in `search_metadata`/`list_assets` results
 3. Estimate duplicates: search for same-timestamp clusters
 4. Report summary:
 
@@ -112,8 +112,9 @@ Detection strategy:
 After the quick scan, clean up category by category:
 
 1. **Screenshots first** (highest confidence, biggest impact)
-   - Search by screen resolution dimensions
-   - Filter: no GPS + no lens info
+   - `search_smart(query="screenshot")` (CLIP) to surface visual screenshots
+   - Scan filenames from `search_metadata`/`list_assets` for `Screenshot*`, `Screen Shot*`, `Captura*` patterns
+   - Confirm borderline candidates with `get_asset_info`: no GPS + no lens info + dimensions matching known screen sizes
    - Present list grouped by confidence level
    - User approves → `delete_assets(asset_ids, force=False)` (moves to trash, recoverable)
 
