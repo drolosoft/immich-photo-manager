@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "immich-photo-manager"
-version = "1.3.0"
+version = "1.3.1"
 description = "MCP server for intelligent photo management with Immich"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,3 +39,8 @@ immich-photo-manager = "immich_mcp_server.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/immich_mcp_server"]
+
+[tool.hatch.build.targets.sdist]
+# Ship only what the wheel build needs — never the whole working tree
+# (generated galleries, internal plans, and heavy assets must not reach PyPI).
+only-include = ["src/immich_mcp_server", "README.md", "LICENSE", "SECURITY.md"]
