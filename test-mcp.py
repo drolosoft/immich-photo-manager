@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Test the Immich MCP server: initialize + list tools + call ping"""
-import subprocess, json, os
+import subprocess, json, os, sys
 
 env = {
+    **os.environ,
     "PYTHONPATH": os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"),
     "MCP_TRANSPORT": "stdio",
     "IMMICH_BASE_URL": os.environ.get("IMMICH_BASE_URL", "https://your-immich-server.com"),
@@ -23,7 +24,7 @@ requests = [
 stdin_data = "\n".join(json.dumps(r) for r in requests) + "\n"
 
 proc = subprocess.run(
-    ["python3", "-m", "immich_mcp_server"],
+    [sys.executable, "-m", "immich_mcp_server"],
     input=stdin_data.encode(),
     capture_output=True,
     env=env,
