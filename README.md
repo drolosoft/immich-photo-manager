@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://glama.ai/mcp/servers/drolosoft/immich-photo-manager"><img src="https://glama.ai/mcp/servers/drolosoft/immich-photo-manager/badges/score.svg" alt="immich-photo-manager MCP server"></a>
-  <a href="https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.0.0"><img src="https://img.shields.io/github/v/release/drolosoft/immich-photo-manager" alt="GitHub Release"></a>
+  <a href="https://github.com/drolosoft/immich-photo-manager/releases/latest"><img src="https://img.shields.io/github/v/release/drolosoft/immich-photo-manager" alt="GitHub Release"></a>
   <a href="https://immich.app"><img src="https://img.shields.io/badge/Immich-ecosystem-blueviolet.svg" alt="Immich"></a>
 </p>
 
@@ -144,7 +144,7 @@ RESULT: Zero cloud dependency — fully self-hosted stack.
 
 <p align="center"><img src="./assets/screenshot-03-gallery-selection.png" alt="Interactive gallery with Cowork Actions" width="700"></p>
 
-> Select photos in the gallery, click an action, and paste the command into Claude. See **[Skills Reference](doc/SKILLS.md)** for all 11 skills.
+> Select photos in the gallery, click an action, and paste the command into Claude. See **[Skills Reference](doc/SKILLS.md)** for all 12 skills.
 
 ---
 

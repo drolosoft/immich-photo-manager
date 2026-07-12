@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "immich-photo-manager",
-      "description": "MCP server for intelligent photo management with Immich — interactive HTML galleries, geographic album curation, library cleanup, duplicate detection, people & face management, trash management, metadata repair, and 36 MCP tools",
+      "description": "MCP server for intelligent photo management with Immich — interactive HTML galleries, geographic album curation, library cleanup, duplicate detection, people & face management, tags, uploads, shared links, trash management, metadata repair, and 50 MCP tools",
       "author": {
         "name": "Drolosoft",
         "email": "forge@drolosoft.com"
