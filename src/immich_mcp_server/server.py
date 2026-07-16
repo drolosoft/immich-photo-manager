@@ -6,12 +6,14 @@ License: MIT
 """
 
 import json
+import os
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import httpx
 from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.transport_security import TransportSecuritySettings
 
 from .immich_client import ImmichClient
 
@@ -32,10 +34,27 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[dict]:
     yield {"immich": client}
 
 
+# When served over HTTP behind a reverse proxy, the proxied Host header (e.g.
+# photos-mcp.example.com) must be allowed explicitly: FastMCP auto-enables DNS
+# rebinding protection that accepts only 127.0.0.1/localhost Hosts, answering
+# 421 Misdirected Request otherwise. MCP_ALLOWED_HOSTS is a comma-separated
+# list of additional allowed Host values; localhost stays allowed and
+# protection stays ON. Unset = SDK default behavior, unchanged.
+_extra_hosts = [h.strip() for h in os.environ.get("MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
+_transport_security = None
+if _extra_hosts:
+    _transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=_extra_hosts + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
+        allowed_origins=[f"https://{h}" for h in _extra_hosts]
+        + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
+    )
+
 mcp = FastMCP(
     "immich-photo-manager",
     instructions="Intelligent photo management for Immich. Search, curate albums, and publish galleries.",
     lifespan=app_lifespan,
+    transport_security=_transport_security,
 )
 
 
