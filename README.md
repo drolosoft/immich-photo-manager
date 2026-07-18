@@ -43,7 +43,7 @@ GPS coordinates, CLIP visual search, and temporal matching — combined in one r
 git clone https://github.com/drolosoft/immich-photo-manager.git
 cd immich-photo-manager
 
-claude plugin marketplace add .
+claude plugin marketplace add ./
 claude plugin install immich-photo-manager
 ```
 
