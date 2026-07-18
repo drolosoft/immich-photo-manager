@@ -45,6 +45,7 @@ cd immich-photo-manager
 
 claude plugin marketplace add ./
 claude plugin install immich-photo-manager
+./scripts/setup-mcp.sh
 ```
 
 That's it. Ask Claude: **"how healthy is my photo library?"**
