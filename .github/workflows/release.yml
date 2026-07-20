@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -e ".[dev]" build
+      - name: Test gate
+        run: ruff check src/ tests/ && pytest -q
+      - name: Build
+        run: python -m build
+      - name: Guard — sdist must contain only package sources
+        run: |
+          LEAKS=$(tar tzf dist/*.tar.gz | grep -Ev '/(src/immich_mcp_server/|README\.md$|LICENSE$|SECURITY\.md$|pyproject\.toml$|PKG-INFO$|\.gitignore$)' || true)
+          if [ -n "$LEAKS" ]; then
+            echo "Unexpected files in sdist:"; echo "$LEAKS"; exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
