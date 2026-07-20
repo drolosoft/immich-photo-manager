@@ -6,6 +6,7 @@ License: MIT
 """
 
 import json
+import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -19,11 +20,15 @@ from .immich_client import ImmichClient
 async def app_lifespan(server: FastMCP) -> AsyncIterator[dict]:
     """Initialize the Immich client on server startup."""
     client = ImmichClient()
-    # Verify connection at startup
+    # Verify connection at startup. Diagnostics go to stderr — under the
+    # stdio transport stdout carries JSON-RPC and must stay pristine.
     try:
         await client.ping()
     except Exception as e:
-        print(f"Warning: Could not connect to Immich at {client.base_url}: {e}")
+        print(
+            f"Warning: Could not connect to Immich at {client.base_url}: {e}",
+            file=sys.stderr,
+        )
     yield {"immich": client}
 
 
@@ -90,21 +95,11 @@ async def update_credentials(ctx: Context, base_url: str, api_key: str) -> str:
 
     Returns: JSON with success status, photo/video counts confirming access, and persistence path.
     """
-    # 1. Create a new client with the provided credentials to validate them
-    import os
-    old_base = os.environ.get("IMMICH_BASE_URL", "")
-    old_key = os.environ.get("IMMICH_API_KEY", "")
-
+    # 1. Create a new client carrying exactly the provided credentials
+    # (explicit args bypass the config.json override and the environment)
     try:
-        # Temporarily set env vars so ImmichClient can init
-        # (the config.json override hasn't been written yet)
-        os.environ["IMMICH_BASE_URL"] = base_url
-        os.environ["IMMICH_API_KEY"] = api_key
-        new_client = ImmichClient()
+        new_client = ImmichClient(base_url=base_url, api_key=api_key)
     except Exception as e:
-        # Restore old env vars
-        os.environ["IMMICH_BASE_URL"] = old_base
-        os.environ["IMMICH_API_KEY"] = old_key
         return json.dumps({
             "success": False,
             "error": f"Invalid credentials: {e}",
@@ -114,8 +109,6 @@ async def update_credentials(ctx: Context, base_url: str, api_key: str) -> str:
     try:
         await new_client.ping()
     except Exception as e:
-        os.environ["IMMICH_BASE_URL"] = old_base
-        os.environ["IMMICH_API_KEY"] = old_key
         return json.dumps({
             "success": False,
             "error": (
@@ -127,7 +120,7 @@ async def update_credentials(ctx: Context, base_url: str, api_key: str) -> str:
     # 3. Persist to cache dir so they survive restarts
     try:
         config_path = ImmichClient.save_config(base_url, api_key)
-    except RuntimeError as e:
+    except RuntimeError:
         # Credentials work but can't persist — still swap the live client
         config_path = None
 
@@ -264,23 +257,30 @@ async def rotate_assets(
     results: dict = {"rotated": 0, "failed": 0, "errors": []}
     for aid in ids:
         try:
-            # Read current rotation and accumulate
-            current_angle = 0
+            # Read the full current edit list — apply replaces it wholesale,
+            # so anything not carried over (crop, mirror) would be lost.
             try:
-                edits = await client.get_asset_edits(aid)
-                for edit in edits.get("edits", []):
-                    if edit.get("action") == "rotate":
-                        current_angle = edit["parameters"].get("angle", 0)
-            except Exception:
-                pass
+                existing = (await client.get_asset_edits(aid)).get("edits", []) or []
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    existing = []  # asset simply has no edits yet
+                else:
+                    raise  # unreadable edits: fail the asset, never guess the angle
+            current_angle = 0
+            for edit in existing:
+                if edit.get("action") == "rotate":
+                    current_angle = edit.get("parameters", {}).get("angle", 0)
+            other_edits = [e for e in existing if e.get("action") != "rotate"]
             new_angle = (current_angle + angle) % 360
-            if new_angle == 0:
-                # Full circle — remove edits instead
-                await client.delete_asset_edits(aid)
+            new_edits = other_edits + (
+                [{"action": "rotate", "parameters": {"angle": new_angle}}]
+                if new_angle else []
+            )
+            if new_edits:
+                await client.apply_asset_edits(aid, new_edits)
             else:
-                await client.apply_asset_edits(aid, [
-                    {"action": "rotate", "parameters": {"angle": new_angle}},
-                ])
+                # Nothing left at all — remove the (rotation-only) edit record
+                await client.delete_asset_edits(aid)
             results["rotated"] += 1
         except Exception as e:
             results["failed"] += 1
