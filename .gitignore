@@ -13,3 +13,4 @@ docs/superpowers/
 outputs/
 dist/
 *.egg-info/
+.venv/

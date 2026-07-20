@@ -1,7 +1,6 @@
 """Entry point: python -m immich_mcp_server"""
 
 import os
-import sys
 
 
 def _run(default_transport: str = "http"):
