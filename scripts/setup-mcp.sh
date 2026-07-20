@@ -37,62 +37,56 @@ else
 fi
 echo ""
 
-# Ask for Immich details
+# Ask for Immich details (the key is read without echo)
 read -p "Enter your Immich server URL (e.g. https://photos.example.com): " IMMICH_URL
-read -p "Enter your Immich API key: " IMMICH_KEY
+read -r -s -p "Enter your Immich API key: " IMMICH_KEY
+echo ""
 
 if [ -z "$IMMICH_URL" ] || [ -z "$IMMICH_KEY" ]; then
   echo "ERROR: Both URL and API key are required."
   exit 1
 fi
 
-# Build the immich MCP server JSON block
-IMMICH_BLOCK="{\"command\":\"$PYTHON_PATH\",\"args\":[\"-m\",\"immich_mcp_server\"],\"env\":{\"PYTHONPATH\":\"$SRC_DIR\",\"MCP_TRANSPORT\":\"stdio\",\"IMMICH_BASE_URL\":\"$IMMICH_URL\",\"IMMICH_API_KEY\":\"$IMMICH_KEY\"}}"
-
-# Helper function: merge immich entry into an existing JSON config
-merge_immich_config() {
+# Write/merge the immich entry into a JSON config. All user-supplied
+# values reach Python as environment variables — never interpolated
+# into code or JSON, so quotes in a key or URL are just data.
+write_immich_config() {
   local CONFIG_FILE="$1"
-  python3 -c "
-import json, sys
+  local MODE="${2:-merge}"   # merge = keep other entries; create = fresh file
+  TARGET_FILE="$CONFIG_FILE" WRITE_MODE="$MODE" \
+  IMMICH_URL="$IMMICH_URL" IMMICH_KEY="$IMMICH_KEY" \
+  PYTHON_PATH="$PYTHON_PATH" SRC_DIR="$SRC_DIR" \
+  python3 - <<'PYEOF'
+import json, os
 
-cf = '$CONFIG_FILE'
-try:
-    with open(cf, 'r') as f:
-        config = json.load(f)
-except (json.JSONDecodeError, FileNotFoundError):
-    config = {'mcpServers': {}}
-
-if 'mcpServers' not in config:
-    config['mcpServers'] = {}
-
-config['mcpServers']['immich'] = json.loads('$IMMICH_BLOCK')
-
-with open(cf, 'w') as f:
+target = os.environ["TARGET_FILE"]
+entry = {
+    "command": os.environ["PYTHON_PATH"],
+    "args": ["-m", "immich_mcp_server"],
+    "env": {
+        "PYTHONPATH": os.environ["SRC_DIR"],
+        "MCP_TRANSPORT": "stdio",
+        "IMMICH_BASE_URL": os.environ["IMMICH_URL"],
+        "IMMICH_API_KEY": os.environ["IMMICH_KEY"],
+    },
+}
+config = {"mcpServers": {}}
+if os.environ.get("WRITE_MODE") == "merge":
+    try:
+        with open(target) as f:
+            config = json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError):
+        config = {"mcpServers": {}}
+config.setdefault("mcpServers", {})["immich"] = entry
+with open(target, "w") as f:
     json.dump(config, f, indent=2)
-    f.write('\n')
-
-print(f'  Updated {cf}')
-"
+    f.write("\n")
+print(f"  Wrote {target}")
+PYEOF
 }
 
 # ---- 1. Project-level .mcp.json ----
-cat > "$SCRIPT_DIR/.mcp.json" << MCPEOF
-{
-  "mcpServers": {
-    "immich": {
-      "command": "$PYTHON_PATH",
-      "args": ["-m", "immich_mcp_server"],
-      "env": {
-        "PYTHONPATH": "$SRC_DIR",
-        "MCP_TRANSPORT": "stdio",
-        "IMMICH_BASE_URL": "$IMMICH_URL",
-        "IMMICH_API_KEY": "$IMMICH_KEY"
-      }
-    }
-  }
-}
-MCPEOF
-echo "Created $SCRIPT_DIR/.mcp.json"
+write_immich_config "$SCRIPT_DIR/.mcp.json" create
 
 # ---- 2. Global configs (auto-merge into all Claude config locations) ----
 echo ""
@@ -101,33 +95,12 @@ if [ "$GLOBAL" = "y" ] || [ "$GLOBAL" = "Y" ]; then
 
   # 2a. ~/.claude/mcp.json (Claude Code CLI + Cowork)
   mkdir -p ~/.claude
-  CLAUDE_CODE_CONFIG=~/.claude/mcp.json
-  if [ -f "$CLAUDE_CODE_CONFIG" ]; then
-    merge_immich_config "$CLAUDE_CODE_CONFIG"
-  else
-    cat > "$CLAUDE_CODE_CONFIG" << MCPEOF
-{
-  "mcpServers": {
-    "immich": {
-      "command": "$PYTHON_PATH",
-      "args": ["-m", "immich_mcp_server"],
-      "env": {
-        "PYTHONPATH": "$SRC_DIR",
-        "MCP_TRANSPORT": "stdio",
-        "IMMICH_BASE_URL": "$IMMICH_URL",
-        "IMMICH_API_KEY": "$IMMICH_KEY"
-      }
-    }
-  }
-}
-MCPEOF
-    echo "  Created $CLAUDE_CODE_CONFIG"
-  fi
+  write_immich_config ~/.claude/mcp.json merge
 
   # 2b. Claude Desktop config (macOS)
   DESKTOP_CONFIG="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
   if [ -f "$DESKTOP_CONFIG" ]; then
-    merge_immich_config "$DESKTOP_CONFIG"
+    write_immich_config "$DESKTOP_CONFIG" merge
   else
     echo "  Claude Desktop config not found (skipping): $DESKTOP_CONFIG"
   fi
@@ -135,31 +108,29 @@ MCPEOF
   # 2c. Claude Desktop config (Linux)
   LINUX_DESKTOP="$HOME/.config/Claude/claude_desktop_config.json"
   if [ -f "$LINUX_DESKTOP" ]; then
-    merge_immich_config "$LINUX_DESKTOP"
+    write_immich_config "$LINUX_DESKTOP" merge
   fi
 
   # 2d. Auto-allow immich MCP tools in ~/.claude/settings.json
   SETTINGS_FILE=~/.claude/settings.json
   if [ -f "$SETTINGS_FILE" ]; then
-    python3 -c "
-import json
+    SETTINGS_FILE="$SETTINGS_FILE" python3 - <<'PYEOF'
+import json, os
 
-sf = '$SETTINGS_FILE'
-with open(sf, 'r') as f:
+sf = os.environ["SETTINGS_FILE"]
+with open(sf) as f:
     settings = json.load(f)
 
-perms = settings.setdefault('permissions', {})
-allow = perms.setdefault('allow', [])
-
-if 'mcp__immich__*' not in allow:
-    allow.append('mcp__immich__*')
-    with open(sf, 'w') as f:
+allow = settings.setdefault("permissions", {}).setdefault("allow", [])
+if "mcp__immich__*" not in allow:
+    allow.append("mcp__immich__*")
+    with open(sf, "w") as f:
         json.dump(settings, f, indent=2)
-        f.write('\\n')
-    print('  Added mcp__immich__* to permissions.allow in ' + sf)
+        f.write("\n")
+    print("  Added mcp__immich__* to permissions.allow in " + sf)
 else:
-    print('  mcp__immich__* already in permissions.allow')
-"
+    print("  mcp__immich__* already in permissions.allow")
+PYEOF
   else
     echo "  ~/.claude/settings.json not found (skipping auto-allow)"
   fi
@@ -168,20 +139,28 @@ else:
   echo "Global installation complete."
 fi
 
-# ---- 3. Quick test ----
+# ---- 3. Quick test (never aborts the setup) ----
 echo ""
 echo "Testing connection to $IMMICH_URL..."
-PYTHONPATH="$SRC_DIR" "$PYTHON_PATH" -c "
-import httpx, sys
+IMMICH_URL="$IMMICH_URL" IMMICH_KEY="$IMMICH_KEY" PYTHONPATH="$SRC_DIR" \
+"$PYTHON_PATH" - <<'PYEOF' || true
+import os
+
 try:
-    r = httpx.get('$IMMICH_URL/api/server/ping', headers={'x-api-key': '$IMMICH_KEY'}, timeout=10)
+    import httpx
+
+    r = httpx.get(
+        os.environ["IMMICH_URL"] + "/api/server/ping",
+        headers={"x-api-key": os.environ["IMMICH_KEY"]},
+        timeout=10,
+    )
     if r.status_code == 200:
-        print('  Connection OK! Server responded.')
+        print("  Connection OK! Server responded.")
     else:
-        print(f'  WARNING: Server returned HTTP {r.status_code}')
+        print(f"  WARNING: Server returned HTTP {r.status_code}")
 except Exception as e:
-    print(f'  WARNING: Could not reach server: {e}')
-"
+    print(f"  WARNING: Could not reach server: {e}")
+PYEOF
 
 echo ""
 echo "=== Setup complete! ==="
