@@ -14,7 +14,6 @@ import json
 import os
 import sys
 import urllib.request
-from collections import defaultdict
 from math import radians, cos, sin, asin, sqrt
 
 API_KEY = os.environ.get("IMMICH_API_KEY", "")

@@ -4,7 +4,13 @@ End-to-end test: Gemma 4 (LM Studio) → MCP tool call → Immich server → res
 
 Proves immich-photo-manager works with any MCP-compatible AI, not just Claude.
 """
-import subprocess, json, os, urllib.request, threading, time, sys
+import subprocess
+import json
+import os
+import urllib.request
+import threading
+import time
+import sys
 
 # --- Config ---
 LMSTUDIO_URL = "http://localhost:1234/v1/chat/completions"
@@ -65,7 +71,7 @@ def mcp_call(messages):
     proc.terminate()
     try:
         proc.wait(timeout=3)
-    except:
+    except subprocess.TimeoutExpired:
         proc.kill()
     return results
 
@@ -122,7 +128,7 @@ for t in mcp_tools:
 print(f"   {len(openai_tools)} MCP tools available")
 
 # --- Step 2: Ask Gemma 4 ---
-print(f"\n2. Asking Gemma 4...")
+print("\n2. Asking Gemma 4...")
 result = lmstudio_chat(
     messages=[
         {"role": "system", "content": "You are a helpful assistant managing photos on an Immich server. Use the available tools to answer questions about the photo library."},
@@ -178,11 +184,11 @@ try:
     for a in lanz:
         count = a.get("assetCount", "?")
         print(f"     - {a['albumName']} ({count} photos)")
-except:
+except (json.JSONDecodeError, KeyError, TypeError):
     print(f"   Raw result: {tool_text[:300]}")
 
 # --- Step 4: Feed back to Gemma 4 ---
-print(f"\n4. Gemma 4 interpreting results...")
+print("\n4. Gemma 4 interpreting results...")
 final = lmstudio_chat(
     messages=[
         {"role": "system", "content": "You are a helpful assistant managing photos on an Immich server. Present results clearly and concisely."},

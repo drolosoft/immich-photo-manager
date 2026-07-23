@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Test the Immich MCP server: initialize + list tools + call ping"""
-import subprocess, json, os, sys
+import subprocess
+import json
+import os
+import sys
 
 env = {
     **os.environ,
@@ -63,7 +66,7 @@ else:
         content = ping_result.get("content", [{}])
         print(f"\nPing result: {content[0].get('text', 'N/A')}")
 
-    print(f"\nStderr (server log):")
+    print("\nStderr (server log):")
     for line in proc.stderr.decode().strip().split("\n"):
         print(f"  {line}")
 
