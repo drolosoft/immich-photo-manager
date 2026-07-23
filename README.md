@@ -43,8 +43,9 @@ GPS coordinates, CLIP visual search, and temporal matching — combined in one r
 git clone https://github.com/drolosoft/immich-photo-manager.git
 cd immich-photo-manager
 
-claude plugin marketplace add .
+claude plugin marketplace add ./
 claude plugin install immich-photo-manager
+./scripts/setup-mcp.sh
 ```
 
 That's it. Ask Claude: **"how healthy is my photo library?"**
