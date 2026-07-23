@@ -141,6 +141,7 @@ These are set automatically by `setup-mcp.sh` inside `.mcp.json`:
 | `IMMICH_API_KEY` | Yes | — | API key from Immich user settings |
 | `PYTHONPATH` | Local checkout only | — | Path to `src/` directory in the cloned repo |
 | `MCP_TRANSPORT` | No | `stdio` | Use `stdio` for MCP clients; set `http` for Streamable HTTP |
+| `MCP_ALLOWED_HOSTS` | No | — | HTTP mode only: comma-separated extra `Host` header values to accept (e.g. `immich-mcp.example.com`). Required behind a reverse proxy, which otherwise gets `421 Misdirected Request`. Localhost stays allowed and DNS-rebinding protection stays on |
 
 ### Database Access (for advanced skills)
 
@@ -209,6 +210,12 @@ WantedBy=multi-user.target
 ### Behind nginx
 
 See `deploy/nginx-immich-mcp.conf.example` for a reverse proxy configuration with HTTPS.
+
+When proxying, the forwarded `Host` header is your public domain rather than `localhost`, so the server answers `421 Misdirected Request` unless that host is allowed explicitly. Add it to the systemd unit (or your service manager of choice):
+
+```ini
+Environment=MCP_ALLOWED_HOSTS=immich-mcp.example.com
+```
 
 ---
 
