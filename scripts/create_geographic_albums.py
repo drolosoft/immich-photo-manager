@@ -12,7 +12,6 @@ Usage:
     python3 create_geographic_albums.py
 """
 
-import json
 import os
 import requests
 import sys
@@ -157,7 +156,7 @@ def main():
         if asset_ids:
             create_album(name, desc, list(asset_ids))
         else:
-            print(f"  No photos found, skipping")
+            print("  No photos found, skipping")
         print()
 
     print("Done!")

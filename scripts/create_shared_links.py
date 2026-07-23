@@ -10,7 +10,6 @@ Usage:
     python3 create_shared_links.py
 """
 
-import json
 import os
 import requests
 import sys
