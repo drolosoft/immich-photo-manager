@@ -60,3 +60,11 @@ asyncio_mode = "auto"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
+# Pin the rule set explicitly so a new ruff release expanding its defaults
+# can't turn a green build red without a code change (ruff 0.16 pulled in
+# I/ASYNC/PL/RUF/S/BLE by default). This mirrors ruff's historical default
+# (E4/E7/E9 + F) that this codebase was written and cleaned against — note
+# E501 line-length is intentionally excluded, as it always has been.
+select = ["E4", "E7", "E9", "F"]
