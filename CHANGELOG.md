@@ -6,6 +6,8 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.4.0] — 2026-07-27
+
 ### Fixed
 - **`update_credentials`** now validates and hot-swaps exactly the credentials it was given. Previously, once a `config.json` existed (any prior rotation), the on-disk credentials silently took precedence and the tool "successfully" re-applied the old key.
 - **`rotate_assets`** preserves non-rotation edits (crop, mirror). Previously a cumulative 360° deleted *all* edits and every rotation replaced the full edit list. A failure reading current edits now fails that asset instead of silently resetting the angle (404 still means "no edits yet").
@@ -75,6 +77,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.4.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.4.0
 [v1.3.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.3.1
 [v1.3.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.3.0
 [v1.2.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.2.0
