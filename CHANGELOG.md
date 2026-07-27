@@ -11,10 +11,15 @@ All notable changes to immich-photo-manager are documented here.
 - **`rotate_assets`** preserves non-rotation edits (crop, mirror). Previously a cumulative 360° deleted *all* edits and every rotation replaced the full edit list. A failure reading current edits now fails that asset instead of silently resetting the angle (404 still means "no edits yet").
 - **Startup diagnostics go to stderr** — the stdio transport's stdout stays pure JSON-RPC even when Immich is unreachable.
 - **`scripts/setup-mcp.sh`** passes the server URL and API key to Python via environment variables instead of interpolating them into code and JSON (a quote in the key could execute arbitrary code); the key is read without terminal echo and the final connection test can no longer abort the setup.
+- **Install instructions** — `claude plugin marketplace add ./` (the bare `.` was rejected as an invalid marketplace source) and the `setup-mcp.sh` step is now documented ([#5](https://github.com/drolosoft/immich-photo-manager/pull/5), thanks @tclancy).
 
 ### Added
+- **`MCP_ALLOWED_HOSTS`** — comma-separated extra `Host` values accepted in HTTP mode, so the server works behind a reverse proxy that forwards a public domain (previously `421 Misdirected Request`). Additive and opt-in: DNS-rebinding protection stays on, localhost stays allowed, and unset means unchanged behavior ([#4](https://github.com/drolosoft/immich-photo-manager/pull/4), thanks @bradhgq).
 - **Offline test suite** (`pytest`, 13 tests) covering credential rotation, edit-preserving rotation, transport hygiene, and setup-script safety — runs without an Immich instance.
 - **CI** — lint + tests on every push/PR (Python 3.10 & 3.13), and a tag-triggered release workflow that gates on tests, guards the sdist contents, publishes to PyPI (trusted publishing), and attaches artifacts to the GitHub release.
+
+### Changed
+- **`mcp` minimum raised to `1.9`** — the `MCP_ALLOWED_HOSTS` feature passes `transport_security` to `FastMCP`, an argument only present since mcp 1.9; the old `>=1.0.0` floor could resolve a version that crashes at startup ([#6](https://github.com/drolosoft/immich-photo-manager/pull/6)).
 
 ## [v1.3.1] — 2026-07-12
 
