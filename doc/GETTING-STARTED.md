@@ -597,17 +597,35 @@ export MCP_ALLOWED_HOSTS="192.168.1.10"
 
 ### Connecting Claude Code / LM Studio (stdio)
 
-In the MCP client configuration, use the stdio entry point:
+First, set up the project environment and install the server:
+
+```bash
+cd /path/to/immich-photo-manager
+python3 -m venv ipm
+source ipm/bin/activate
+pip install -e .
+./scripts/setup-mcp.sh
+```
+
+Then configure the MCP client. For **LM Studio**, open **Developer → MCP Servers**
+and add a server with this config. Two details matter:
+
+1. `command` must point at the **full path to the venv's Python binary**
+   (`.../ipm/bin/python`), not the system `python3`, so the SDK and its dependencies
+   are found.
+2. `PYTHONPATH` must point at the project's `src/` directory.
 
 ```json
 {
   "mcpServers": {
     "immich": {
-      "command": "python3",
+      "command": "/path/to/immich-photo-manager/ipm/bin/python",
       "args": ["-m", "immich_mcp_server"],
       "env": {
-        "PYTHONPATH": "/path/to/immich-photo-manager/src",
         "MCP_TRANSPORT": "stdio",
+        "PYTHONPATH": "/path/to/immich-photo-manager/src/",
+        "MCP_HOST": "0.0.0.0",
+        "MCP_PORT": "8626",
         "IMMICH_BASE_URL": "http://your-immich-server:2283",
         "IMMICH_API_KEY": "your-api-key"
       }
@@ -615,6 +633,11 @@ In the MCP client configuration, use the stdio entry point:
   }
 }
 ```
+
+Replace `/path/to/immich-photo-manager` with the real absolute path of your checkout
+(e.g. `/mnt/pool/apps/immich-photo-manager`). With `MCP_TRANSPORT=stdio`, the client
+launches the server as a child process, so `MCP_HOST`/`MCP_PORT` are ignored — they
+only apply to HTTP mode.
 
 ### Verifying it works
 
