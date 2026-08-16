@@ -1,0 +1,36 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Python virtual environment & caches
+ipm/
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Sensitive / local files (never bake into the image)
+start-mcp.sh
+.env
+.mcp.json
+mcp-server.log
+
+# Docs, tests, demos, and dev tooling (not needed at runtime)
+tests/
+doc/
+assets/
+commands/
+skills/
+scripts/
+deploy/
+
+# Explicitly listed non-runtime files (keep pyproject.toml, README.md, LICENSE, src/)
+CHANGELOG.md
+SECURITY.md
+glama.json
+build-plugin.sh
+test-mcp.py
+test-lmstudio-mcp.py

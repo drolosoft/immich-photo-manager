@@ -329,8 +329,16 @@ class ImmichClient:
         Returns:
             dict with 'data' (base64 string) and 'type' (mime type).
         """
-        url = f"{self.base_url}/api/assets/{asset_id}/{size}"
-        params = {"edited": "true"} if edited else {}
+        # Immich 3.0+ exposes previews through the thumbnail endpoint with
+        # `size=preview` (the dedicated `/preview` route no longer exists).
+        if size == "preview":
+            url = f"{self.base_url}/api/assets/{asset_id}/thumbnail"
+            params: dict[str, str] = {"size": "preview"}
+        else:
+            url = f"{self.base_url}/api/assets/{asset_id}/thumbnail"
+            params = {}
+        if edited:
+            params["edited"] = "true"
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(url, headers=self._headers, params=params)
             response.raise_for_status()

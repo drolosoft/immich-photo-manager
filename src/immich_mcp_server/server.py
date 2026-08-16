@@ -5,17 +5,31 @@ Part of the immich-photo-manager plugin.
 License: MIT
 """
 
+import base64
 import json
 import os
 import sys
+import warnings
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import httpx
-from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.fastmcp import FastMCP, Context, Image
 from mcp.server.transport_security import TransportSecuritySettings
 
 from .immich_client import ImmichClient
+
+# FastMCP's Settings model declares `lifespan` using a forward reference to the
+# FastMCP class (defined later in the SDK), which pydantic-settings reports as an
+# incomplete definition at startup. The field is never populated from environment
+# variables, so this is harmless — silence it to keep startup logs clean.
+try:
+    from pydantic_settings.sources.utils import IncompleteFieldDefinitionWarning
+except ImportError:  # pragma: no cover
+    IncompleteFieldDefinitionWarning = None
+
+if IncompleteFieldDefinitionWarning is not None:
+    warnings.filterwarnings("ignore", category=IncompleteFieldDefinitionWarning)
 
 
 @asynccontextmanager
@@ -43,11 +57,21 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[dict]:
 _extra_hosts = [h.strip() for h in os.environ.get("MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
 _transport_security = None
 if _extra_hosts:
+    # A configured host may be a bare host/IP (allow any port via the SDK's
+    # ":*" wildcard) or already include a port. The Host header always carries
+    # the port, so a bare value like "192.168.1.10" would never match
+    # "192.168.1.10:8626" — append a ":*" variant for portless entries.
+    _allowed_hosts = ["127.0.0.1:*", "localhost:*", "[::1]:*"]
+    _allowed_origins = ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"]
+    for h in _extra_hosts:
+        _allowed_hosts.append(h)
+        if ":" not in h:
+            _allowed_hosts.append(f"{h}:*")
+        _allowed_origins.extend((f"http://{h}", f"https://{h}"))
     _transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
-        allowed_hosts=_extra_hosts + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
-        allowed_origins=[f"https://{h}" for h in _extra_hosts]
-        + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
+        allowed_hosts=_allowed_hosts,
+        allowed_origins=_allowed_origins,
     )
 
 mcp = FastMCP(
@@ -661,62 +685,86 @@ async def remove_assets_from_album(ctx: Context, album_id: str, asset_ids: list[
 # ── Thumbnails ──────────────────────────────────────────────
 
 
+def _image_format_from_mime(mime: str) -> str:
+    """Map an image MIME type to an Image format label."""
+    mapping = {
+        "image/jpeg": "jpeg",
+        "image/jpg": "jpeg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/gif": "gif",
+        "image/heic": "heic",
+        "image/heif": "heic",
+        "image/avif": "avif",
+        "image/tiff": "tiff",
+    }
+    return mapping.get((mime or "image/jpeg").split(";")[0].strip().lower(), "jpeg")
+
+
+def _entry_to_image(entry: dict) -> Image:
+    """Convert a thumbnail entry dict (base64 data + MIME type) to an Image."""
+    data = entry.get("data", "")
+    raw = base64.b64decode(data) if data else b""
+    return Image(data=raw, format=_image_format_from_mime(entry.get("type", "image/jpeg")))
+
+
 @mcp.tool()
-async def get_asset_thumbnail(ctx: Context, asset_id: str, size: str = "thumbnail") -> str:
-    """Get a base64-encoded thumbnail image for a single asset. Use this to visually
-    inspect one photo. For multiple photos, use get_thumbnails_batch (by IDs) or
+async def get_asset_thumbnail(ctx: Context, asset_id: str, size: str = "thumbnail") -> Image:
+    """Get a thumbnail image for a single asset. Use this to visually inspect one
+    photo. For multiple photos, use get_thumbnails_batch (by IDs) or
     get_album_thumbnails (by album). Read-only.
 
     Args:
         asset_id: The asset's UUID.
         size: 'thumbnail' (250px, fast) or 'preview' (1440px, higher quality). Default: 'thumbnail'.
 
-    Returns: JSON with 'data' (base64 string) and 'type' (MIME type, e.g. 'image/jpeg').
+    Returns: An image block (MCP ImageContent) for visual display.
     """
     result = await _client(ctx).get_asset_thumbnail(asset_id, size)
-    return json.dumps(result)
+    raw = base64.b64decode(result["data"])
+    return Image(data=raw, format=_image_format_from_mime(result.get("type", "image/jpeg")))
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 async def get_album_thumbnails(
     ctx: Context, album_id: str, size: str = "thumbnail", limit: int = 20
-) -> str:
-    """Get base64-encoded thumbnails for photos in an album. Use this to generate visual
-    HTML galleries from an existing album. For thumbnails from search results (no album),
-    use get_thumbnails_batch instead. Read-only.
+) -> list[Image]:
+    """Get thumbnails for photos in an album, returned as images. Use this to visually
+    browse an album's photos. For thumbnails from search results (no album), use
+    get_thumbnails_batch instead. Read-only.
 
     Args:
         album_id: The album's UUID.
         size: 'thumbnail' (250px) or 'preview' (1440px). Default: 'thumbnail'.
         limit: Max thumbnails to return (1-50, default 20).
 
-    Returns: JSON with album info and thumbnails array (each with asset_id, base64 data, filename, date).
+    Returns: A list of image blocks suitable for visual display.
     """
     result = await _client(ctx).get_album_thumbnails(
         album_id, size, min(limit, 50)
     )
-    return json.dumps(result, default=str)
+    return [_entry_to_image(t) for t in result.get("thumbnails", [])]
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 async def get_thumbnails_batch(
     ctx: Context, asset_ids: list[str], size: str = "thumbnail", limit: int = 20
-) -> str:
-    """Get base64-encoded thumbnails for arbitrary asset IDs without needing an album.
-    Use this to visually display search results or any ad-hoc set of photos. For album-based
-    thumbnails, use get_album_thumbnails. For a single photo, use get_asset_thumbnail. Read-only.
+) -> list[Image]:
+    """Get thumbnails for arbitrary asset IDs, returned as images. Use this to visually
+    display search results or any ad-hoc set of photos. For album-based thumbnails, use
+    get_album_thumbnails. For a single photo, use get_asset_thumbnail. Read-only.
 
     Args:
         asset_ids: List of asset UUIDs to fetch thumbnails for.
         size: 'thumbnail' (250px) or 'preview' (1440px). Default: 'thumbnail'.
         limit: Max thumbnails to return (1-50, default 20). Only the first N IDs are fetched.
 
-    Returns: JSON with thumbnails array (each with asset_id, base64 data, filename, date).
+    Returns: A list of image blocks suitable for visual display.
     """
     result = await _client(ctx).get_thumbnails_batch(
         asset_ids, size, min(limit, 50)
     )
-    return json.dumps(result, default=str)
+    return [_entry_to_image(t) for t in result.get("thumbnails", [])]
 
 
 # ── Shared Links ────────────────────────────────────────────

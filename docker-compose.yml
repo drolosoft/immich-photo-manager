@@ -1,0 +1,24 @@
+services:
+  immich-mcp:
+    # Build locally (no registry needed):
+    #   docker compose up --build
+    #
+    # On TrueNAS SCALE, build the image in Shell first, then use it in
+    # "Custom App" with `image: immich-photo-manager:latest`. See
+    # doc/GETTING-STARTED.md → "TrueNAS SCALE".
+    build: .
+    image: immich-photo-manager:latest
+    container_name: immich-mcp
+    restart: unless-stopped
+    environment:
+      # REQUIRED — your Immich instance
+      IMMICH_BASE_URL: ${IMMICH_BASE_URL:-http://your-immich-server:2283}
+      IMMICH_API_KEY: ${IMMICH_API_KEY:-your-api-key}
+      # HTTP mode (the default for `python -m immich_mcp_server`)
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8626
+      # Comma-separated Host header values the client actually uses.
+      # Required when the server is reached via a non-localhost address.
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-192.168.1.10}
+    ports:
+      - "8626:8626"
