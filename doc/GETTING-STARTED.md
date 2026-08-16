@@ -584,16 +584,88 @@ export MCP_ALLOWED_HOSTS="192.168.1.10"
 
 ### Connecting Open WebUI
 
-1. Open Open WebUI → **Workspace / Tools / MCP** (or the equivalent place for MCP
-   servers).
-2. Add a new MCP server with type **Streamable HTTP**.
-3. URL: `http://192.168.1.10:8626/mcp`
-4. Save and wait for the connection to establish (the server log should show
-   `POST /mcp HTTP/1.1 200 OK`).
+Two transport options exist. Choose based on where Open WebUI runs:
 
-> If the server listens on `0.0.0.0`, you can reach it via any network interface of the
-> host (e.g. `192.168.1.10`). If it only listens on `127.0.0.1`, it's only reachable
-> locally on the same machine.
+| Mode | Works when | Who starts the server |
+|------|-----------|-----------------------|
+| **HTTP** | Open WebUI is on the same or a **remote** machine | You start it manually |
+| **stdio** | Open WebUI runs on the **same machine** as the checkout only | Open WebUI starts it as a child process |
+
+#### HTTP mode (recommended, works remotely)
+
+This is the setup to use when the server runs on TrueNAS SCALE (or any other box)
+and Open WebUI connects to it over the network.
+
+**1. Start the server manually:**
+
+```bash
+cd /path/to/immich-photo-manager
+
+export IMMICH_BASE_URL="http://your-immich-server:2283"
+export IMMICH_API_KEY="your-api-key"
+export MCP_TRANSPORT=http
+export MCP_HTTP_PORT=8001
+export MCP_ALLOWED_HOSTS="192.168.1.10"
+export MCP_HOST="0.0.0.0"
+export MCP_PORT=8626
+
+source ipm/bin/activate
+python3 -m immich_mcp_server
+```
+
+Keep this terminal running.
+
+**2. Add the server in Open WebUI:**
+
+Open **Tools → Integrations** (or **Workspace / Tools / MCP** depending on your
+Open WebUI version) and add a new MCP server:
+
+| Field | Value |
+|-------|-------|
+| Name | `Immich MCP` |
+| ID | `immich` |
+| Type | `MCP Streamable HTTP` |
+| URL | `http://192.168.1.10:8626/mcp` |
+
+> **ID note:** enter `immich` without a trailing underscore. Open WebUI displays it
+> as `immich_` (it appends an underscore internally), but the configured ID stays
+> `immich`.
+
+Save and wait for the connection to establish — the server log should show
+`POST /mcp HTTP/1.1 200 OK`.
+
+> If the server listens on `0.0.0.0`, it is reachable via any network interface of
+> the host (e.g. `192.168.1.10`). If it listens only on `127.0.0.1`, it is reachable
+> only from the same machine. Replace `192.168.1.10` above with the address Open
+> WebUI actually uses, and set the same value in `MCP_ALLOWED_HOSTS`.
+
+#### stdio mode (same machine only)
+
+When Open WebUI runs on the **same machine** as the checkout, it can launch the
+server itself as a child process. In this mode you **must not start the server
+manually** — Open WebUI does it.
+
+Configure the server in Open WebUI with a stdio entry:
+
+```json
+{
+  "mcpServers": {
+    "immich": {
+      "command": "/path/to/immich-photo-manager/ipm/bin/python",
+      "args": ["-m", "immich_mcp_server"],
+      "env": {
+        "MCP_TRANSPORT": "stdio",
+        "PYTHONPATH": "/path/to/immich-photo-manager/src/",
+        "IMMICH_BASE_URL": "http://your-immich-server:2283",
+        "IMMICH_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+Replace `/path/to/immich-photo-manager` with the real absolute path. This variant
+does **not** work for a remote Open WebUI — use HTTP mode instead.
 
 ### Connecting Claude Code / LM Studio (stdio)
 
