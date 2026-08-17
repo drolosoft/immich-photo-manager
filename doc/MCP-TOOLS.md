@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-The Immich Photo Manager MCP server exposes 50 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
+The Immich Photo Manager MCP server exposes 53 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
 
 ---
 
@@ -92,6 +92,16 @@ The Immich Photo Manager MCP server exposes 50 tools that Claude can use to inte
 | `get_album_thumbnails` | Get base64 thumbnails for assets in an album (batch) | Array of {asset_id, data, mime_type, filename, date} |
 | `get_thumbnails_batch` | Get base64 thumbnails for a list of asset IDs (no album needed) | Array of {asset_id, data, mime_type, filename, date} |
 
+### Images (3)
+
+Image-block variants of the thumbnail tools — return MCP `ImageContent` for clients that render images inline (Open WebUI, Claude Desktop). The `get_*_thumbnail(s)` tools above stay the default and return base64 JSON for HTML gallery embedding.
+
+| Tool | Description | Returns |
+|------|-------------|---------|
+| `get_asset_image` | Get a single asset's thumbnail as an image block | Image (ImageContent) |
+| `get_album_images` | Get an album's thumbnails as image blocks | List of images |
+| `get_images_batch` | Get thumbnails for arbitrary asset IDs as image blocks | List of images |
+
 ### Configuration (2)
 
 | Tool | Description | Modifies? |
@@ -178,6 +188,10 @@ Batch version of `get_asset_thumbnail` — fetches thumbnails for assets in an a
 ```
 
 Like `get_album_thumbnails` but works with arbitrary asset IDs — no album needed. Use this when displaying search results or orphan photos that aren't in any album. Default limit is 20, max 50.
+
+### `get_asset_image` / `get_album_images` / `get_images_batch`
+
+Image-block variants of `get_asset_thumbnail`, `get_album_thumbnails`, and `get_thumbnails_batch`. Same parameters, but they return MCP `ImageContent` blocks instead of base64 JSON, so clients that render images inline (Open WebUI, Claude Desktop) show the photos directly. They carry no filenames/dates — for HTML gallery generation (which needs the metadata and embeds base64 as `data:` URIs), keep using the JSON `get_*_thumbnail(s)` tools. These are additive; the JSON tools remain the default.
 
 ### `update_asset_metadata`
 
