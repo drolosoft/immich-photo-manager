@@ -171,6 +171,7 @@ Immich is excellent at storing and viewing your photos. But managing a large lib
 | Document | Description |
 |----------|-------------|
 | **[Getting Started](doc/GETTING-STARTED.md)** | Installation, manual MCP setup, deployment options, and troubleshooting |
+| **[Environment Setup](doc/GETTING-STARTED.md#environment-setup-detailed)** | Detailed setup: git, Python, venv, HTTP/stdio launch, Open WebUI, and common issues |
 | **[Skills Reference](doc/SKILLS.md)** | All 12 skills — workflows, triggers, parameters, output formats |
 | **[MCP Tools Reference](doc/MCP-TOOLS.md)** | All 50 MCP tools — parameters, return types, examples |
 | **[Architecture](doc/ARCHITECTURE.md)** | How base64-embedded thumbnails solve the Cowork sandbox restriction |

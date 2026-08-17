@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Example launch script for the Immich MCP Server (HTTP mode).
+#
+# Copy this file to `start-mcp.sh` and fill in your real values:
+#   cp start-mcp.sh.example start-mcp.sh
+#
+# NOTE: start-mcp.sh is git-ignored because it contains real credentials.
+# Only this .example template should ever be committed.
+
+cd /path/to/immich-photo-manager/
+
+# Your Immich instance URL (e.g. http://192.168.1.10:2283 or https://photos.example.com)
+export IMMICH_BASE_URL="http://your-immich-server:2283"
+
+# Your Immich API key (Immich > User Settings > API Keys)
+export IMMICH_API_KEY="your-api-key"
+
+# Transport: http (Streamable HTTP for Open WebUI) or stdio
+export MCP_TRANSPORT=http
+
+# Optional: extra HTTP port used by some setups
+export MCP_HTTP_PORT=8001
+
+# Host header value(s) the client actually uses (see doc/GETTING-STARTED.md § MCP_ALLOWED_HOSTS)
+export MCP_ALLOWED_HOSTS="192.168.1.10"
+
+# Listen on all interfaces so other machines can reach the server
+export MCP_HOST="0.0.0.0"
+export MCP_PORT=8626
+
+# Activate the virtual environment and start the server
+source ipm/bin/activate
+python3 -m immich_mcp_server
