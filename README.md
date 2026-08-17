@@ -95,7 +95,7 @@ Model:  gemma4-26b-it (local, LM Studio)
 Query:  "Show me my Lanzarote albums"
 
 1. Getting MCP tool schemas...
-   50 MCP tools available
+   53 MCP tools available
 
 2. Asking Gemma 4...
    Gemma 4 chose: list_albums({})
@@ -173,7 +173,7 @@ Immich is excellent at storing and viewing your photos. But managing a large lib
 | **[Getting Started](doc/GETTING-STARTED.md)** | Installation, manual MCP setup, deployment options, and troubleshooting |
 | **[Environment Setup](doc/GETTING-STARTED.md#environment-setup-detailed)** | Detailed setup: git, Python, venv, HTTP/stdio launch, Open WebUI, and common issues |
 | **[Skills Reference](doc/SKILLS.md)** | All 12 skills — workflows, triggers, parameters, output formats |
-| **[MCP Tools Reference](doc/MCP-TOOLS.md)** | All 50 MCP tools — parameters, return types, examples |
+| **[MCP Tools Reference](doc/MCP-TOOLS.md)** | All 53 MCP tools — parameters, return types, examples |
 | **[Architecture](doc/ARCHITECTURE.md)** | How base64-embedded thumbnails solve the Cowork sandbox restriction |
 | **[CORS Setup Guide](doc/CORS-SETUP.md)** | Optional — enable direct URL thumbnail loading for browser-viewed galleries |
 
