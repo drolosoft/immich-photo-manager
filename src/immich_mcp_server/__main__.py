@@ -1,14 +1,29 @@
 """Entry point: python -m immich_mcp_server"""
 
+import argparse
 import os
+
+
+def _resolve_transport(cli_value: str | None, default_transport: str) -> str:
+    """Resolve the transport with CLI flag > env var > default precedence."""
+    return (cli_value or os.environ.get("MCP_TRANSPORT") or default_transport).lower()
 
 
 def _run(default_transport: str = "http"):
     """Run the MCP server with the given default transport.
 
-    The MCP_TRANSPORT env var always takes precedence.
+    Precedence: --transport CLI flag > MCP_TRANSPORT env var > default_transport.
     """
-    transport = os.environ.get("MCP_TRANSPORT", default_transport).lower()
+    parser = argparse.ArgumentParser(description="Immich MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "http"),
+        default=None,
+        help="Transport to use: 'stdio' or 'http'. Overrides MCP_TRANSPORT.",
+    )
+    args, _ = parser.parse_known_args()
+
+    transport = _resolve_transport(args.transport, default_transport)
 
     if transport == "stdio":
         from .server import mcp

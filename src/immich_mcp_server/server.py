@@ -8,6 +8,7 @@ License: MIT
 import json
 import os
 import sys
+import warnings
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -16,6 +17,18 @@ from mcp.server.fastmcp import FastMCP, Context
 from mcp.server.transport_security import TransportSecuritySettings
 
 from .immich_client import ImmichClient
+
+# FastMCP's Settings model declares `lifespan` using a forward reference to the
+# FastMCP class (defined later in the SDK), which pydantic-settings reports as an
+# incomplete definition at startup. The field is never populated from environment
+# variables, so this is harmless — silence it to keep startup logs clean.
+try:
+    from pydantic_settings.sources.utils import IncompleteFieldDefinitionWarning
+except ImportError:  # pragma: no cover
+    IncompleteFieldDefinitionWarning = None
+
+if IncompleteFieldDefinitionWarning is not None:
+    warnings.filterwarnings("ignore", category=IncompleteFieldDefinitionWarning)
 
 
 @asynccontextmanager
@@ -43,11 +56,21 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[dict]:
 _extra_hosts = [h.strip() for h in os.environ.get("MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
 _transport_security = None
 if _extra_hosts:
+    # A configured host may be a bare host/IP (allow any port via the SDK's
+    # ":*" wildcard) or already include a port. The Host header always carries
+    # the port, so a bare value like "192.168.1.10" would never match
+    # "192.168.1.10:8626" — append a ":*" variant for portless entries.
+    _allowed_hosts = ["127.0.0.1:*", "localhost:*", "[::1]:*"]
+    _allowed_origins = ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"]
+    for h in _extra_hosts:
+        _allowed_hosts.append(h)
+        if ":" not in h:
+            _allowed_hosts.append(f"{h}:*")
+        _allowed_origins.extend((f"http://{h}", f"https://{h}"))
     _transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
-        allowed_hosts=_extra_hosts + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
-        allowed_origins=[f"https://{h}" for h in _extra_hosts]
-        + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
+        allowed_hosts=_allowed_hosts,
+        allowed_origins=_allowed_origins,
     )
 
 mcp = FastMCP(
