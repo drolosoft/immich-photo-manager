@@ -6,6 +6,19 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+### Added
+- **Image-block thumbnail tools** — `get_asset_image`, `get_album_images`, `get_images_batch` return MCP `ImageContent` for clients that render images inline (Open WebUI, Claude Desktop). Additive: the existing `get_*_thumbnail(s)` tools keep returning base64 JSON (the default the skills embed into HTML galleries). Tool count 50 → 53 ([#13](https://github.com/drolosoft/immich-photo-manager/pull/13), idea from @developersorli).
+- **Docker deployment** — `Dockerfile`, `docker-compose.yml`, `.dockerignore` for a local build (no registry), plus TrueNAS SCALE / Open WebUI docs in `GETTING-STARTED.md` ([#12](https://github.com/drolosoft/immich-photo-manager/pull/12), thanks @developersorli).
+- **`--transport` CLI flag** (`stdio`/`http`) with precedence CLI > `MCP_TRANSPORT` env > default.
+- **`start-mcp.sh.example`** launch template; `start-mcp.sh` is git-ignored (holds real credentials).
+
+### Changed
+- **`MCP_ALLOWED_HOSTS`** accepts a bare host/IP — a `:*` wildcard is appended for portless entries, since the `Host` header always carries a port.
+
+### Fixed
+- **Preview thumbnails** use `thumbnail?size=preview` (Immich 3.x removed the dedicated `/preview` route). Return shape unchanged.
+- **Startup logs** — silence the harmless pydantic-settings `IncompleteFieldDefinitionWarning`.
+
 ## [v1.4.0] — 2026-07-27
 
 ### Fixed
