@@ -6,6 +6,8 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.5.0] — 2026-08-25
+
 ### Added
 - **Image-block thumbnail tools** — `get_asset_image`, `get_album_images`, `get_images_batch` return MCP `ImageContent` for clients that render images inline (Open WebUI, Claude Desktop). Additive: the existing `get_*_thumbnail(s)` tools keep returning base64 JSON (the default the skills embed into HTML galleries). Tool count 50 → 53 ([#13](https://github.com/drolosoft/immich-photo-manager/pull/13), idea from @developersorli).
 - **Docker deployment** — `Dockerfile`, `docker-compose.yml`, `.dockerignore` for a local build (no registry), plus TrueNAS SCALE / Open WebUI docs in `GETTING-STARTED.md` ([#12](https://github.com/drolosoft/immich-photo-manager/pull/12), thanks @developersorli).
@@ -90,6 +92,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.5.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.0
 [v1.4.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.4.0
 [v1.3.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.3.1
 [v1.3.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.3.0
