@@ -44,6 +44,9 @@ def _mock_immich(url):
     respx.get(f"{url}/api/server/ping").mock(
         return_value=httpx.Response(200, json={"res": "pong"})
     )
+    respx.get(f"{url}/api/users/me").mock(
+        return_value=httpx.Response(200, json={"id": "u1", "email": "x@y"})
+    )
     respx.get(f"{url}/api/server/statistics").mock(
         return_value=httpx.Response(200, json={"photos": 7, "videos": 2})
     )
@@ -95,7 +98,7 @@ async def test_update_credentials_does_not_mutate_environment(
 async def test_update_credentials_rejects_unreachable_server(
     isolated_cache, env_credentials, fake_ctx
 ):
-    respx.get(f"{NEW_URL}/api/server/ping").mock(side_effect=httpx.ConnectError)
+    respx.get(f"{NEW_URL}/api/users/me").mock(side_effect=httpx.ConnectError)
     old_client = ImmichClient(base_url=OLD_URL, api_key=OLD_KEY)
     ctx = fake_ctx(old_client)
 

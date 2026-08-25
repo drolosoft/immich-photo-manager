@@ -145,7 +145,7 @@ Image-block variants of the thumbnail tools — return MCP `ImageContent` for cl
 | `list_tags` | List all tags with IDs, names, colors | No |
 | `get_tag` | Get tag details | No |
 | `create_tag` | Create a new tag with name and optional color | Yes |
-| `update_tag` | Update tag name or color | Yes |
+| `update_tag` | Update tag color (Immich's API cannot rename tags) | Yes |
 | `delete_tag` | Delete a tag (removed from all assets) | Yes |
 | `tag_assets` | Add a tag to multiple assets | Yes |
 | `untag_assets` | Remove a tag from multiple assets | Yes |
@@ -370,14 +370,14 @@ Returns all duplicate groups detected by Immich's ML engine. Each group contains
   "groups": [
     {
       "duplicateId": "group-uuid",
-      "assetIds": ["uuid-to-keep"],
-      "trashIds": ["uuid-to-trash-1", "uuid-to-trash-2"]
+      "keepAssetIds": ["uuid-to-keep"],
+      "trashAssetIds": ["uuid-to-trash-1", "uuid-to-trash-2"]
     }
   ]
 }
 ```
 
-Resolves duplicate groups by specifying which assets to keep and which to trash. Trashed assets can be restored via `restore_assets` or `restore_trash`.
+Resolves duplicate groups by specifying which assets to keep and which to trash (the legacy keys `assetIds`/`trashIds` are still accepted). Uses `POST /duplicates/resolve` (Immich ≥ 2.6); on older servers the rejected assets are trashed and the duplicate flag cleared. Trashed assets can be restored via `restore_assets` or `restore_trash`.
 
 ### `search_metadata` — Pagination
 

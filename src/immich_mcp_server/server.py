@@ -157,9 +157,18 @@ async def update_credentials(ctx: Context, base_url: str, api_key: str) -> str:
             "error": f"Invalid credentials: {e}",
         })
 
-    # 2. Verify the new credentials actually work
+    # 2. Verify the new credentials actually work. /server/ping is public and
+    # would accept any key; verify_access() needs the key to be honoured.
     try:
-        await new_client.ping()
+        await new_client.verify_access()
+    except httpx.HTTPStatusError as e:
+        return json.dumps({
+            "success": False,
+            "error": (
+                f"Immich at {base_url} rejected the API key "
+                f"(HTTP {e.response.status_code}). Check the API key is correct."
+            ),
+        })
     except Exception as e:
         return json.dumps({
             "success": False,
@@ -1303,22 +1312,28 @@ async def create_tag(ctx: Context, name: str, color: str = "") -> str:
 
 @mcp.tool()
 async def update_tag(ctx: Context, tag_id: str, name: str | None = None, color: str | None = None) -> str:
-    """Update a tag's name or color. Side effect: changes apply to all assets using this tag.
+    """Update a tag's color. Side effect: changes apply to all assets using this tag.
+    Immich's API cannot rename a tag (TagUpdateDto only carries `color`); to rename,
+    create_tag with the new name, tag_assets, then delete_tag the old one.
 
     Args:
         tag_id: The tag's UUID.
-        name: New tag name. Omit to keep current.
+        name: Not supported by Immich — passing it returns an error explaining the workaround.
         color: New hex color (e.g. '#FF5733'). Omit to keep current.
 
     Returns: JSON with the updated tag object.
     """
-    fields: dict = {}
     if name is not None:
-        fields["name"] = name
+        return json.dumps({
+            "error": "Immich's API cannot rename a tag (only its color can change). "
+                     "To rename: create_tag with the new name, tag_assets the same assets, "
+                     "then delete_tag the old tag."
+        })
+    fields: dict = {}
     if color is not None:
         fields["color"] = color
     if not fields:
-        return json.dumps({"error": "No fields to update. Provide name or color."})
+        return json.dumps({"error": "No fields to update. Provide color."})
     try:
         result = await _client(ctx).update_tag(tag_id, **fields)
         return json.dumps(result, default=str)
@@ -1460,7 +1475,7 @@ async def list_assets(
     Args:
         is_favorite: true = only favorites, false = only non-favorites, omit = all.
         is_archived: true = only archived, false = only non-archived, omit = all.
-        is_trashed: true = only trashed items, false = only active, omit = all.
+        is_trashed: true = only trashed items; false/omit = active library (Immich never mixes both).
         asset_type: 'IMAGE' or 'VIDEO'. Omit for both.
         page: Page number, starting from 1 (default 1).
         size: Results per page (1-200, default 50).

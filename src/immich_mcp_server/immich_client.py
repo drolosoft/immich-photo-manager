@@ -129,8 +129,20 @@ class ImmichClient:
     # ── Health ──────────────────────────────────────────────
 
     async def ping(self) -> dict:
-        """Check server connectivity."""
+        """Check server connectivity (unauthenticated endpoint)."""
         return await self._request("GET", "/server/ping")
+
+    async def verify_access(self) -> None:
+        """Prove the API key is accepted. /server/ping is public, so it cannot
+        validate credentials; /users/me (permission user.read) can. A scoped key
+        without that permission answers 403, which still proves the key is valid.
+        Raises httpx.HTTPStatusError on 401 and on network errors."""
+        try:
+            await self._request("GET", "/users/me")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 403:
+                return
+            raise
 
     async def get_server_version(self) -> dict:
         """Get Immich server version."""
@@ -165,8 +177,11 @@ class ImmichClient:
             body["isFavorite"] = is_favorite
         if is_archived is not None:
             body["isArchived"] = is_archived
-        if is_trashed is not None:
-            body["isTrashed"] = is_trashed
+        if is_trashed:
+            # MetadataSearchDto has no `isTrashed`; trashed assets are selected by
+            # including deleted rows and requiring a deletion timestamp.
+            body["withDeleted"] = True
+            body["trashedAfter"] = "1970-01-01T00:00:00.000Z"
         if asset_type:
             body["type"] = asset_type
         # Ensure at least one filter (Immich /search/metadata requires it)
@@ -538,8 +553,12 @@ class ImmichClient:
         return await self._request("GET", "/faces", params={"id": asset_id})
 
     async def reassign_face(self, face_id: str, person_id: str) -> dict:
-        """Reassign a face to a different person."""
-        return await self._request("PUT", f"/faces/{face_id}", json={"id": person_id})
+        """Reassign a face to a different person.
+
+        Immich's PUT /faces/{id} takes the *person* id in the path and the *face*
+        id in the body (FaceDto.id = "Face ID"); the reverse silently does nothing.
+        """
+        return await self._request("PUT", f"/faces/{person_id}", json={"id": face_id})
 
     # ── Asset Edits (rotate, mirror, crop) ───────────────────
 
@@ -582,8 +601,33 @@ class ImmichClient:
         return await self._request("GET", "/duplicates")
 
     async def resolve_duplicates(self, groups: list[dict]) -> None:
-        """Resolve duplicate groups (keep/trash decisions)."""
-        await self._request("POST", "/duplicates/resolve", json=groups)
+        """Resolve duplicate groups (keep/trash decisions).
+
+        Immich >= 2.6 exposes POST /duplicates/resolve with
+        {"groups": [{"duplicateId", "keepAssetIds", "trashAssetIds"}]}. Older
+        servers (404) get the equivalent: trash the rejected assets and clear the
+        duplicate flag. Accepts the legacy keys assetIds/trashIds too.
+        """
+        normalized = [
+            {
+                "duplicateId": g.get("duplicateId"),
+                "keepAssetIds": list(g.get("keepAssetIds") or g.get("assetIds") or []),
+                "trashAssetIds": list(g.get("trashAssetIds") or g.get("trashIds") or []),
+            }
+            for g in groups
+        ]
+        try:
+            await self._request("POST", "/duplicates/resolve", json={"groups": normalized})
+            return
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code != 404:
+                raise
+        trash_ids = [aid for g in normalized for aid in g["trashAssetIds"]]
+        if trash_ids:
+            await self._request("DELETE", "/assets", json={"ids": trash_ids, "force": False})
+        await self._request(
+            "DELETE", "/duplicates", json={"ids": [g["duplicateId"] for g in normalized]}
+        )
 
     # ── Tags ──────────────────────────────────────────────
 

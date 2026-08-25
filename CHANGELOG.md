@@ -6,6 +6,17 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.5.2] — 2026-08-25
+
+Every tool was exercised over the MCP protocol against live Immich 2.7.5 and 3.1.0 instances. Five defects surfaced; all are fixed and covered by tests.
+
+### Fixed
+- **`list_assets(is_trashed=true)`** returned the *active* library — Immich's search has no `isTrashed` filter, so it was silently ignored. Trashed assets are now selected with `withDeleted` + `trashedAfter`.
+- **`resolve_duplicates`** sent the wrong body (bare list, `assetIds`/`trashIds`) so nothing was trashed. Now sends `{"groups": [{duplicateId, keepAssetIds, trashAssetIds}]}` as `POST /duplicates/resolve` expects (Immich ≥ 2.6), still accepts the legacy keys, and falls back to trash + un-flag on older servers.
+- **`reassign_face`** had the person and face ids swapped (`PUT /faces/{personId}` with `{"id": faceId}`), so the reassignment never happened.
+- **`update_credentials`** validated the new key against `/server/ping`, which needs no auth, so a wrong key was accepted and persisted. It now validates with `/users/me` (a 403 from a scoped key still counts as valid).
+- **`update_tag`** claimed to rename tags; Immich's API only updates the color. Passing `name` now returns a clear error with the create/retag/delete workaround.
+
 ## [v1.5.1] — 2026-08-25
 
 ### Fixed
@@ -97,6 +108,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.5.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.2
 [v1.5.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.1
 [v1.5.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.0
 [v1.4.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.4.0
