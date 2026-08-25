@@ -305,7 +305,7 @@ class ImmichClient:
             result = await self._request(
                 "POST",
                 "/search/metadata",
-                json={"albumIds": [album_id], "page": page, "size": page_size},
+                json={"albumIds": [album_id], "page": page, "size": page_size, "withPeople": True},
             )
             block = result.get("assets", {}) if isinstance(result, dict) else {}
             items = block.get("items", [])

@@ -86,7 +86,7 @@ class StubClient3:
         self.searched = []
 
     async def get_album(self, album_id):
-        return {"id": album_id, "albumName": "Trip", "assetCount": 2}
+        return {"id": album_id, "albumName": "Trip", "assetCount": 2, "assets": [_asset(7)]}  # 2.x inline list must be ignored
 
     async def get_album_assets(self, album_id, limit=None):
         self.searched.append(album_id)
@@ -113,3 +113,26 @@ async def test_server_rotate_by_album_on_immich3(fake_ctx):
     out = json.loads(await server.rotate_assets(fake_ctx(stub), angle=90, album_id="alb1"))
     assert "error" not in out
     assert out["rotated"] == 2
+
+
+class StubDup(StubClient3):
+    async def get_duplicates(self):
+        return [{"duplicateId": "g1", "assets": [{"id": "a1"}, {"id": "zz"}]},
+                {"duplicateId": "g2", "assets": [{"id": "x1"}, {"id": "x2"}]}]
+
+    async def get_album_assets(self, album_id, limit=None):
+        return [{**_asset(1), "people": [{"id": "p1", "name": "Abe"}]}, {**_asset(2), "people": [{"id": "p1", "name": "Abe"}]}]
+
+
+@pytest.mark.asyncio
+async def test_get_album_reports_people_per_asset(fake_ctx):
+    out = json.loads(await server.get_album(fake_ctx(StubDup()), album_id="alb1"))
+    assert [a["people"][0]["name"] for a in out["assets"]] == ["Abe", "Abe"]
+    assert out["asset_ids"] == ["a1", "a2"]
+
+
+@pytest.mark.asyncio
+async def test_get_duplicates_scoped_to_album(fake_ctx):
+    out = json.loads(await server.get_duplicates(fake_ctx(StubDup()), album_id="alb1"))
+    assert [g["duplicateId"] for g in out["groups"]] == ["g1"]
+    assert out["groups"][0]["inAlbum"] == ["a1"] and out["groups"][0]["outsideAlbum"] == ["zz"]

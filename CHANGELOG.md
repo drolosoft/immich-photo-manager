@@ -6,6 +6,12 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.5.3] — 2026-08-25
+
+### Added
+- **`get_album` returns an `assets` array** (id, filename, type, date, recognized people) so "who appears in this album / which photos show the same person" is answered in one call, on Immich 2.x and 3.x alike (album contents are now always read through `POST /search/metadata` with `withPeople`, since the 2.x inline list carries no people and 3.x has no inline list).
+- **`get_duplicates(album_id=…)`** scopes ML duplicate groups to an album and reports which assets of each group are inside/outside it. The tool now states explicitly that "duplicates" means the same picture, not the same person.
+
 ## [v1.5.2] — 2026-08-25
 
 Every tool was exercised over the MCP protocol against live Immich 2.7.5 and 3.1.0 instances. Five defects surfaced; all are fixed and covered by tests.
@@ -108,6 +114,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.5.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.3
 [v1.5.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.2
 [v1.5.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.1
 [v1.5.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.0

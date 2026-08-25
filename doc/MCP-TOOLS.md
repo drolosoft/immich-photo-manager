@@ -135,7 +135,7 @@ Image-block variants of the thumbnail tools — return MCP `ImageContent` for cl
 
 | Tool | Description | Modifies? |
 |------|-------------|-----------|
-| `get_duplicates` | Get all ML-detected duplicate groups with similarity scores | No |
+| `get_duplicates` (optional `album_id`) | Get all ML-detected duplicate groups with similarity scores | No |
 | `resolve_duplicates` | Resolve duplicate groups — specify which to keep, which to trash | Yes |
 
 ### Tags (7)

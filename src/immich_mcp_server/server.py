@@ -91,12 +91,11 @@ def _client(ctx: Context) -> ImmichClient:
 
 
 async def _album_assets(client, album_id: str, album: dict) -> list[dict]:
-    """Album assets across Immich versions: inline `assets` on < 3.0,
-    POST /search/metadata (albumIds) on >= 3.0 where the field is gone."""
-    assets = album.get("assets")
-    if assets is None:
-        assets = await client.get_album_assets(album_id)
-    return assets
+    """Album assets across Immich versions, always via POST /search/metadata
+    (albumIds, withPeople). Immich >= 3.0 no longer inlines `assets` in the album,
+    and the inline list on 2.x lacks recognized people, so the search path is the
+    only one that is both version-independent and complete."""
+    return await client.get_album_assets(album_id)
 
 
 @mcp.tool()
@@ -583,11 +582,13 @@ async def get_album(ctx: Context, album_id: str) -> str:
     Args:
         album_id: The album's UUID (from list_albums or create_album).
 
-    Returns: JSON with album metadata and a flat list of all asset_ids in the album.
+    Returns: JSON with album metadata, a flat list of all asset_ids, and an assets array
+    (id, filename, type, date, recognized people) so "who appears in this album / who
+    repeats" can be answered without further calls.
     """
     client = _client(ctx)
     result = await client.get_album(album_id)
-    asset_ids = [a["id"] for a in await _album_assets(client, album_id, result)]
+    assets = await _album_assets(client, album_id, result)
     return json.dumps(
         {
             "id": result["id"],
@@ -598,7 +599,20 @@ async def get_album(ctx: Context, album_id: str) -> str:
             "hasSharedLink": result.get("hasSharedLink", False),
             "createdAt": result.get("createdAt", ""),
             "updatedAt": result.get("updatedAt", ""),
-            "asset_ids": asset_ids,
+            "asset_ids": [a["id"] for a in assets],
+            "assets": [
+                {
+                    "id": a["id"],
+                    "originalFileName": a.get("originalFileName", ""),
+                    "type": a.get("type", ""),
+                    "fileCreatedAt": a.get("fileCreatedAt", ""),
+                    "people": [
+                        {"id": p.get("id"), "name": p.get("name") or ""}
+                        for p in (a.get("people") or [])
+                    ],
+                }
+                for a in assets
+            ],
         },
         default=str,
     )
@@ -1231,14 +1245,35 @@ async def restore_assets(ctx: Context, asset_ids: list[str]) -> str:
 
 
 @mcp.tool()
-async def get_duplicates(ctx: Context) -> str:
-    """Get all ML-detected duplicate asset groups. Use this to review potential duplicates
-    before resolving them with resolve_duplicates. Requires Immich ML service. Read-only.
+async def get_duplicates(ctx: Context, album_id: str = "") -> str:
+    """Get ML-detected duplicate asset groups (same image stored more than once). Use this
+    to review potential duplicates before resolving them with resolve_duplicates. Requires
+    Immich ML service. Note: "duplicates" means the same picture, not the same person —
+    for people use get_album (assets[].people) or get_asset_faces. Read-only.
+
+    Args:
+        album_id: Optional. Restrict to groups that touch this album; each group then also
+            reports which of its assets are inside/outside the album.
 
     Returns: JSON array of duplicate groups (each with duplicateId, assets array, and similarity scores).
     """
-    result = await _client(ctx).get_duplicates()
-    return json.dumps(result, default=str)
+    client = _client(ctx)
+    groups = await client.get_duplicates()
+    if not album_id:
+        return json.dumps(groups, default=str)
+    album = await client.get_album(album_id)
+    in_album = {a["id"] for a in await _album_assets(client, album_id, album)}
+    out = []
+    for g in groups:
+        ids = [a["id"] for a in g.get("assets", [])]
+        inside = [i for i in ids if i in in_album]
+        if inside:
+            out.append({**g, "inAlbum": inside, "outsideAlbum": [i for i in ids if i not in in_album]})
+    return json.dumps(
+        {"albumId": album_id, "albumName": album.get("albumName", ""), "groups": out,
+         "note": "Groups fully inside the album have an empty outsideAlbum list."},
+        default=str,
+    )
 
 
 @mcp.tool()
