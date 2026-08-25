@@ -273,8 +273,33 @@ class ImmichClient:
         return await self._request("GET", "/albums", params=params)
 
     async def get_album(self, album_id: str) -> dict:
-        """Get album details including all assets."""
+        """Get album details. Immich < 3.0 also inlines `assets`; 3.0+ does not."""
         return await self._request("GET", f"/albums/{album_id}")
+
+    async def get_album_assets(self, album_id: str, limit: int | None = None) -> list[dict]:
+        """List the assets of an album via POST /search/metadata (albumIds).
+
+        Works on Immich 2.x and 3.x. Immich 3.0 removed the `assets` list from
+        GET /albums/{id}, so this is the only version-independent way to read
+        album contents. Pages through results; stops at `limit` if given.
+        """
+        page_size = 1000 if limit is None else max(1, min(limit, 1000))
+        assets: list[dict] = []
+        page = 1
+        while True:
+            result = await self._request(
+                "POST",
+                "/search/metadata",
+                json={"albumIds": [album_id], "page": page, "size": page_size},
+            )
+            block = result.get("assets", {}) if isinstance(result, dict) else {}
+            items = block.get("items", [])
+            assets.extend(items)
+            if limit is not None and len(assets) >= limit:
+                return assets[:limit]
+            if not items or not block.get("nextPage"):
+                return assets
+            page += 1
 
     async def create_album(
         self, name: str, description: str = "", asset_ids: list[str] | None = None
@@ -360,7 +385,10 @@ class ImmichClient:
             dict with album info and list of thumbnail entries.
         """
         album = await self.get_album(album_id)
-        assets = album.get("assets", [])[:limit]
+        assets = album.get("assets")
+        if assets is None:  # Immich >= 3.0
+            assets = await self.get_album_assets(album_id, limit=limit)
+        assets = assets[:limit]
         thumbnails = []
         for asset in assets:
             aid = asset["id"]

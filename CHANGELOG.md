@@ -6,6 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.5.1] — 2026-08-25
+
+### Fixed
+- **Album contents on Immich 3.x** — Immich 3.0 removed the `assets` list from `GET /albums/{id}`, so `get_album`, `get_album_thumbnails`, `get_album_images` and `rotate_assets(album_id=…)` returned an empty album on 3.x servers. They now fall back to `POST /search/metadata` (`albumIds`, paginated), which works on 2.x and 3.x. New client method `get_album_assets`. 6 regression tests.
+
 ## [v1.5.0] — 2026-08-25
 
 ### Added
@@ -92,6 +97,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.5.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.1
 [v1.5.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.0
 [v1.4.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.4.0
 [v1.3.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.3.1

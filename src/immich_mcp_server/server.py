@@ -90,6 +90,15 @@ def _client(ctx: Context) -> ImmichClient:
 # ── Health & Stats ──────────────────────────────────────────
 
 
+async def _album_assets(client, album_id: str, album: dict) -> list[dict]:
+    """Album assets across Immich versions: inline `assets` on < 3.0,
+    POST /search/metadata (albumIds) on >= 3.0 where the field is gone."""
+    assets = album.get("assets")
+    if assets is None:
+        assets = await client.get_album_assets(album_id)
+    return assets
+
+
 @mcp.tool()
 async def ping(ctx: Context) -> str:
     """Check Immich server connectivity. Use this to verify the server is reachable
@@ -289,7 +298,7 @@ async def rotate_assets(
     if album_id:
         album = await client.get_album(album_id)
         album_name = album.get("albumName", "")
-        ids = [a["id"] for a in album.get("assets", [])]
+        ids = [a["id"] for a in await _album_assets(client, album_id, album)]
         if not ids:
             return json.dumps({"error": f"Album '{album_name}' is empty."})
     elif asset_ids:
@@ -361,7 +370,7 @@ async def revert_asset_edits(
     if album_id:
         album = await client.get_album(album_id)
         album_name = album.get("albumName", "")
-        ids = [a["id"] for a in album.get("assets", [])]
+        ids = [a["id"] for a in await _album_assets(client, album_id, album)]
         if not ids:
             return json.dumps({"error": f"Album '{album_name}' is empty."})
     elif asset_ids:
@@ -567,9 +576,9 @@ async def get_album(ctx: Context, album_id: str) -> str:
 
     Returns: JSON with album metadata and a flat list of all asset_ids in the album.
     """
-    result = await _client(ctx).get_album(album_id)
-    assets = result.get("assets", [])
-    asset_ids = [a["id"] for a in assets]
+    client = _client(ctx)
+    result = await client.get_album(album_id)
+    asset_ids = [a["id"] for a in await _album_assets(client, album_id, result)]
     return json.dumps(
         {
             "id": result["id"],
