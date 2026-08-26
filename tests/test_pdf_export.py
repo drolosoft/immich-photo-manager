@@ -115,3 +115,19 @@ def test_no_backend_message(monkeypatch):
     with pytest.raises(pdf_export.NoPdfBackend) as exc:
         pdf_export.build(_doc())
     assert "immich-photo-manager[pdf]" in str(exc.value)
+
+
+def test_render_map_uses_at_most_16_tiles_and_draws_points():
+    calls = []
+    def fetch(z, x, y):
+        calls.append((z, x, y))
+        return _png("white")
+    png = pdf_export.render_map([(41.4, 2.2), (40.4, -3.7)], fetch)
+    assert png[:8] == b"\x89PNG\r\n\x1a\n" and 1 <= len(calls) <= 16
+    assert len({c[0] for c in calls}) == 1   # single zoom level
+
+
+def test_render_map_returns_none_when_tiles_fail():
+    def fetch(z, x, y): raise RuntimeError("offline")
+    assert pdf_export.render_map([(41.4, 2.2)], fetch) is None
+    assert pdf_export.render_map([], fetch) is None

@@ -7,6 +7,7 @@ dependency `fpdf2` (`pip install immich-photo-manager[pdf]`), which brings Pillo
 from __future__ import annotations
 
 import io
+import math
 import os
 import re
 from dataclasses import dataclass, field
@@ -276,3 +277,50 @@ def build(doc: Document) -> bytes:
             _detail(p, a, link)
     p.footer_all()
     return bytes(p.pdf.output())
+
+
+MAX_TILES = 16
+TILE = 256
+
+
+def _tile_xy(lat: float, lon: float, z: int) -> tuple[float, float]:
+    n = 2 ** z
+    x = (lon + 180.0) / 360.0 * n
+    y = (1 - math.log(math.tan(math.radians(lat)) + 1 / math.cos(math.radians(lat))) / math.pi) / 2 * n
+    return x, y
+
+
+def render_map(points: list[tuple[float, float]], fetch_tile) -> bytes | None:
+    """Stitch OSM tiles around `points` (≤ MAX_TILES) and draw a dot per point. None on failure."""
+    if not points:
+        return None
+    try:
+        from PIL import Image as PILImage, ImageDraw
+
+        lats = [p[0] for p in points]
+        lons = [p[1] for p in points]
+        for z in range(12, 0, -1):
+            x0, y1 = _tile_xy(min(lats), min(lons), z)
+            x1, y0 = _tile_xy(max(lats), max(lons), z)
+            tx0, tx1 = int(math.floor(x0)), int(math.floor(x1))
+            ty0, ty1 = int(math.floor(y0)), int(math.floor(y1))
+            tx0, tx1 = sorted((tx0, tx1))
+            ty0, ty1 = sorted((ty0, ty1))
+            if (tx1 - tx0 + 1) * (ty1 - ty0 + 1) <= MAX_TILES:
+                break
+        cols, rows = tx1 - tx0 + 1, ty1 - ty0 + 1
+        canvas = PILImage.new("RGB", (cols * TILE, rows * TILE), "white")
+        for tx in range(tx0, tx1 + 1):
+            for ty in range(ty0, ty1 + 1):
+                tile = PILImage.open(io.BytesIO(fetch_tile(z, tx, ty))).convert("RGB")
+                canvas.paste(tile, ((tx - tx0) * TILE, (ty - ty0) * TILE))
+        draw = ImageDraw.Draw(canvas)
+        for lat, lon in points:
+            x, y = _tile_xy(lat, lon, z)
+            px, py = (x - tx0) * TILE, (y - ty0) * TILE
+            draw.ellipse([px - 6, py - 6, px + 6, py + 6], fill="#d33", outline="white", width=2)
+        out = io.BytesIO()
+        canvas.save(out, format="PNG")
+        return out.getvalue()
+    except Exception:
+        return None
