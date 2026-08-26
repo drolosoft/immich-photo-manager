@@ -159,7 +159,33 @@ def _fake_extract(data, count, size, backend=None, start=0.0, end=0.0, interval=
 
 
 @pytest.mark.asyncio
+async def test_get_video_frames_gate_above_12_returns_plan(fake_ctx, monkeypatch):
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 24.0)
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_extract)
+    raw = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1", count=0, interval=1.0)
+    d = json.loads(raw)
+    assert d["confirm_required"] is True and d["frames_planned"] == 24
+    assert d["estimated_tokens"] == 24 * 1600 and d["segment"] == [0.0, 24.0]
+
+
+@pytest.mark.asyncio
+async def test_get_video_frames_confirm_true_extracts(fake_ctx, monkeypatch):
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 24.0)
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_extract)
+    result = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1", count=20, confirm=True)
+    assert len(result) == 20 and all(isinstance(x, Image) for x in result)
+
+
+@pytest.mark.asyncio
+async def test_get_video_frames_over_cap_is_error_json(fake_ctx, monkeypatch):
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 300.0)
+    raw = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1", interval=1.0, confirm=True)
+    assert "120" in json.loads(raw)["error"]
+
+
+@pytest.mark.asyncio
 async def test_get_video_frames_returns_image_blocks(fake_ctx, monkeypatch):
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 10.0)
     monkeypatch.setattr(video_frames, "extract_frames", _fake_extract)
     result = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1", count=4)
     assert [type(x) for x in result] == [Image] * 4
@@ -169,13 +195,16 @@ async def test_get_video_frames_returns_image_blocks(fake_ctx, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_video_frames_caps_count(fake_ctx, monkeypatch):
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 60.0)
     monkeypatch.setattr(video_frames, "extract_frames", _fake_extract)
-    result = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1", count=50)
-    assert len(result) == 50
+    raw = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1", count=50)
+    d = json.loads(raw)
+    assert d["confirm_required"] is True and d["frames_planned"] == 50
 
 
 @pytest.mark.asyncio
 async def test_get_video_frames_json_has_timestamps_and_base64(fake_ctx, monkeypatch):
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 10.0)
     monkeypatch.setattr(video_frames, "extract_frames", _fake_extract)
     raw = await server.get_video_frames_json(fake_ctx(StubClient()), asset_id="vid1", count=2)
     assert isinstance(raw, str)
@@ -187,6 +216,7 @@ async def test_get_video_frames_json_has_timestamps_and_base64(fake_ctx, monkeyp
 
 @pytest.mark.asyncio
 async def test_get_video_frames_json_reports_missing_backend(fake_ctx, monkeypatch):
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 10.0)
     def boom(*a, **k):
         raise video_frames.NoVideoBackend("install immich-photo-manager[video] or ffmpeg")
     monkeypatch.setattr(video_frames, "extract_frames", boom)
