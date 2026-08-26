@@ -33,11 +33,19 @@ dependencies = [
 video = [
   "av>=12",
 ]
+pdf = [
+  "fpdf2>=2.7",
+]
+all = [
+  "av>=12",
+  "fpdf2>=2.7",
+]
 dev = [
   "pytest>=8",
   "pytest-asyncio>=0.24",
   "respx>=0.21",
   "ruff>=0.6",
+  "pypdf>=4",
 ]
 
 [project.urls]
