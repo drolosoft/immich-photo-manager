@@ -1038,9 +1038,12 @@ async def _asset_entry(client, raw: dict, image_size: str, frames: int, interval
         try:
             data = await client.get_video_playback(entry.id)
             r = await asyncio.to_thread(video_frames.extract_frames, data, frames, "thumbnail", None, 0.0, 0.0, interval)
-            entry.images = [base64.b64decode(f["data"]) for f in r["frames"]]
-            entry.timestamps = [f["timestamp"] for f in r["frames"]]
-            return entry
+            if not r["frames"]:
+                warnings.append(f"{entry.filename}: no frames decoded; poster used")
+            else:
+                entry.images = [base64.b64decode(f["data"]) for f in r["frames"]]
+                entry.timestamps = [f["timestamp"] for f in r["frames"]]
+                return entry
         except video_frames.TooManyFrames as exc:
             warnings.append(f"{entry.filename}: {exc}; poster used")
         except video_frames.NoVideoBackend as exc:
@@ -1144,17 +1147,20 @@ async def export_pdf(
     try:
         from pypdf import PdfReader
         pages = len(PdfReader(io.BytesIO(pdf)).pages)
-    except ImportError:
+    except Exception:  # pypdf missing or unable to parse: fall back, never break the JSON contract
         pages = pdf.count(b"/Type /Page") - pdf.count(b"/Type /Pages")
-    out = {
-        "path": path, "pages": pages, "bytes": len(pdf),
-        "assets_included": len(entries), "assets_skipped": skipped, "warnings": warnings,
-    }
+    pdf_b64 = None
     if return_base64:
         if len(pdf) > 20 * 1024 * 1024:
             warnings.append("PDF larger than 20 MB: base64 not returned")
         else:
-            out["pdf_base64"] = base64.b64encode(pdf).decode("ascii")
+            pdf_b64 = base64.b64encode(pdf).decode("ascii")
+    out = {
+        "path": path, "pages": pages, "bytes": len(pdf),
+        "assets_included": len(entries), "assets_skipped": skipped, "warnings": warnings,
+    }
+    if pdf_b64 is not None:
+        out["pdf_base64"] = pdf_b64
     return json.dumps(out)
 
 

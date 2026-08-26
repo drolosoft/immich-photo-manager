@@ -7,10 +7,17 @@ dependency `fpdf2` (`pip install immich-photo-manager[pdf]`), which brings Pillo
 from __future__ import annotations
 
 import io
+import logging
 import math
 import os
 import re
 from dataclasses import dataclass, field
+
+# fpdf2's font subsetting (fontTools) logs "glyf pruned"/"Retaining" chatter at
+# INFO level straight to stderr; this is noise for an MCP server, so silence it
+# at import time regardless of the caller's root logging config.
+logging.getLogger("fontTools").setLevel(logging.WARNING)
+logging.getLogger("fontTools.subset").setLevel(logging.WARNING)
 
 A4_W, A4_H, MARGIN = 210.0, 297.0, 15.0
 CONTENT_W = A4_W - 2 * MARGIN

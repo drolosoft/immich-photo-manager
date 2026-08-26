@@ -76,6 +76,15 @@ class StubClient:
     base_url = "https://env.example.com"
 
 
+class FailingThumbClient(StubClient):
+    """StubClient whose get_asset_thumbnail raises for one asset id."""
+
+    async def get_asset_thumbnail(self, asset_id, size="thumbnail"):
+        if asset_id == "a2":
+            raise RuntimeError("boom 500")
+        return await super().get_asset_thumbnail(asset_id, size)
+
+
 @pytest.mark.asyncio
 async def test_get_export_preview_album(fake_ctx):
     d = json.loads(await server.get_export_preview(fake_ctx(StubClient()), album_id="alb"))
@@ -143,12 +152,32 @@ async def test_export_pdf_video_without_decoder_uses_poster(fake_ctx, tmp_path, 
 
 
 @pytest.mark.asyncio
+async def test_export_pdf_too_many_frames_uses_poster(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    def boom(*a, **k): raise video_frames.TooManyFrames("999 frames requested; the cap is 120")
+    monkeypatch.setattr(video_frames, "extract_frames", boom)
+    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "tmf.pdf")))
+    assert d["assets_included"] == 3
+    assert any("poster used" in w for w in d["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_skips_failing_asset(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    d = json.loads(await server.export_pdf(fake_ctx(FailingThumbClient()), album_id="alb", output_path=str(tmp_path / "sk.pdf")))
+    assert d["assets_included"] == 2
+    assert d["assets_skipped"] == [{"id": "a2", "reason": "boom 500"}]
+
+
+@pytest.mark.asyncio
 async def test_export_pdf_base64_and_errors(fake_ctx, tmp_path, monkeypatch):
     from immich_mcp_server import video_frames
     monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
     d = json.loads(await server.export_pdf(fake_ctx(StubClient()), asset_ids=["a1"], output_path=str(tmp_path / "b.pdf"),
                                            return_base64=True, map=True))
     assert base64.b64decode(d["pdf_base64"])[:4] == b"%PDF"
+    assert d["warnings"] == []
     assert "error" in json.loads(await server.export_pdf(fake_ctx(StubClient()), output_path=str(tmp_path / "e.pdf")))
 
 
