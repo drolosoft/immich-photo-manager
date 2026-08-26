@@ -951,6 +951,76 @@ async def get_video_frames_json(
     )
 
 
+# ── PDF export ──────────────────────────────────────────────
+
+EXPORT_MAX = 500
+
+
+def _duration_seconds(raw: dict) -> float:
+    d = raw.get("duration")
+    if isinstance(d, (int, float)):
+        return float(d) / 1000.0 if d > 1000 else float(d)
+    if isinstance(d, str) and ":" in d:
+        h, m, s = d.split(":")
+        return round(int(h) * 3600 + int(m) * 60 + float(s), 3)
+    return 0.0
+
+
+def _place(raw: dict) -> str:
+    exif = raw.get("exifInfo") or {}
+    return ", ".join(p for p in (exif.get("city"), exif.get("country")) if p)
+
+
+def _summary(raw: dict) -> dict:
+    return {
+        "id": raw["id"], "type": raw.get("type", ""), "filename": raw.get("originalFileName", ""),
+        "taken_at": raw.get("fileCreatedAt", ""), "place": _place(raw),
+        "people": [p.get("name", "") for p in (raw.get("people") or []) if p.get("name")],
+        "duration": _duration_seconds(raw) if raw.get("type") == "VIDEO" else None,
+    }
+
+
+async def _collect_assets(client, album_id: str, asset_ids: list[str], limit: int):
+    """(title, raw assets, warnings). Exactly one of album_id / asset_ids."""
+    if bool(album_id) == bool(asset_ids):
+        raise ValueError("Pass exactly one of album_id or asset_ids.")
+    limit = max(1, min(int(limit or 100), EXPORT_MAX))
+    warnings: list[str] = []
+    if album_id:
+        album = await client.get_album(album_id)
+        title = album.get("albumName") or "Immich export"
+        raw = await client.get_album_assets(album_id, limit=limit + 1, with_exif=True)
+    else:
+        title = ""
+        raw = await client.get_assets_by_ids(asset_ids[: limit + 1], with_exif=True)
+    if len(raw) > limit:
+        raw = raw[:limit]
+        warnings.append(f"limit {limit} reached: only the first {limit} assets are included")
+    if not raw:
+        raise ValueError("No assets found for that album/ids.")
+    return title, raw, warnings
+
+
+@mcp.tool()
+async def get_export_preview(ctx: Context, album_id: str = "", asset_ids: list[str] = [], limit: int = 100) -> str:
+    """List what export_pdf would include (id, type, filename, date, place, people,
+    video duration) so you know which assets exist before looking at images and
+    writing captions. Pass exactly one of album_id / asset_ids. Read-only.
+
+    Args:
+        album_id: Album UUID, or
+        asset_ids: Explicit asset UUIDs (search results, a selection).
+        limit: Max assets (1-500, default 100).
+
+    Returns: JSON {title, count, assets:[...], warnings:[...]} or {"error": ...}.
+    """
+    try:
+        title, raw, warnings = await _collect_assets(_client(ctx), album_id, asset_ids, limit)
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
+    return json.dumps({"title": title, "count": len(raw), "assets": [_summary(a) for a in raw], "warnings": warnings})
+
+
 # ── Shared Links ────────────────────────────────────────────
 
 
