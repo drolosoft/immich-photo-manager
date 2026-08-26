@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-The Immich Photo Manager MCP server exposes 55 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
+The Immich Photo Manager MCP server exposes 57 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
 
 ---
 
@@ -104,12 +104,21 @@ Image-block variants of the thumbnail tools — return MCP `ImageContent` for cl
 
 ### Video (2)
 
-Immich keeps one poster thumbnail per video and no per-frame previews. These tools download the video (`GET /assets/{id}/video/playback`) and cut frames locally, so a model can "watch" a clip. They need a decoder: PyAV (`pip install immich-photo-manager[video]`) or `ffmpeg` on PATH; without one they return a clear error naming both.
+Immich keeps one poster thumbnail per video and no per-frame previews. These tools download the video (`GET /assets/{id}/video/playback`) and cut frames locally, so a model can "watch" a clip, a segment of it (`start`/`end`), or a fixed cadence (`interval`, down to one frame per second). They need a decoder: PyAV (`pip install immich-photo-manager[video]`) or `ffmpeg` on PATH; without one they return a clear error naming both. Above 12 frames the tool asks for confirmation instead of extracting: it returns `{confirm_required: true, frames_planned, estimated_tokens, ...}` so the caller can tell the user the cost before spending it; call again with `confirm=true` to proceed. Hard cap: 120 frames per call.
 
 | Tool | Description | Returns |
 |------|-------------|---------|
-| `get_video_frames` | Evenly spaced frames of a video as image blocks (1-12, default 6) | List of images |
+| `get_video_frames` | Frames of a video as image blocks, evenly spaced or at a fixed interval, over the whole clip or a `start`/`end` segment (default 6, cap 120, confirmation above 12) | List of images, or a confirmation/error JSON |
 | `get_video_frames_json` | Same frames as base64 JPEG with timestamps, for galleries | JSON |
+
+### Export (2)
+
+Turn an album or a selection into a PDF, built on the machine running the server.
+
+| Tool | Description | Returns |
+|------|-------------|---------|
+| `get_export_preview` | List what `export_pdf` would include (id, type, filename, date, place, people, video duration) — read-only | JSON |
+| `export_pdf` | Build the PDF (cover, index, places, one section per asset) from an album or asset IDs | JSON {path, pages, bytes, ...} |
 
 ### Configuration (2)
 
@@ -206,12 +215,17 @@ Image-block variants of `get_asset_thumbnail`, `get_album_thumbnails`, and `get_
 
 **Parameters:**
 - `asset_id` (string, required): The video asset's UUID
-- `count` (int, optional): Frames to extract, evenly spaced over the duration. 1-12, default 6 (capped at 12)
-- `size` (string, optional): `"thumbnail"` (250px, default) or `"preview"` (1440px)
+- `count` (int, optional): Frames to extract, evenly spaced over the segment. Default 6. Ignored when `interval > 0`.
+- `size` (string, optional): `"thumbnail"` (250px, ~1.6k tokens/frame, default) or `"preview"` (1440px, ~6.4k tokens/frame)
+- `start` / `end` (float, optional): Segment bounds in seconds (default 0 / 0, where `end=0` means to the end of the clip)
+- `interval` (float, optional): One frame every N seconds instead of `count` (e.g. `interval=1` for one frame per second — the maximum granularity)
+- `confirm` (bool, optional): Required (`true`) when the plan produces more than 12 frames
 
-Frames are taken at the centre of `count` equal time bins, so a 3 s clip with `count=3` yields 0.5 s, 1.5 s, 2.5 s (never the black first frame). `get_video_frames` returns JPEG image blocks in time order; `get_video_frames_json` returns `{asset_id, duration, backend, count, frames: [{timestamp, data, type}]}` for HTML galleries.
+Frames are taken at the centre of equal time bins within the segment, so a 3 s clip with `count=3` yields 0.5 s, 1.5 s, 2.5 s (never the black first frame). `get_video_frames` returns JPEG image blocks in time order; `get_video_frames_json` returns `{asset_id, duration, backend, count, frames: [{timestamp, data, type}]}` for HTML galleries.
 
-**Cost:** every frame is one image for the model. Six thumbnail frames are cheap; twelve preview frames are not. Start with the default and raise `count` only for the clips that need it.
+**Confirmation gate:** a plan over 12 frames is not extracted automatically. Instead the tool returns `{confirm_required: true, asset_id, duration, segment: [start, end], frames_planned, estimated_tokens, hint}` — tell the user the number of frames and the estimated tokens, and call again with `confirm=true` only if they agree. The hard cap is 120 frames per call regardless of `confirm`.
+
+**Cost:** every frame is one image for the model. Six thumbnail frames are cheap; a `interval=1` pass over a long clip is not. Start with the default and narrow with `start`/`end` or `interval` only for the clips that need it.
 
 **Decoder:** PyAV is tried first (in-process, `pip install immich-photo-manager[video]`), then the `ffmpeg` binary. Neither is installed by default; the error message tells you which to add. The whole video file is downloaded to a temp file and deleted after extraction.
 
@@ -219,6 +233,45 @@ Frames are taken at the centre of `count` equal time bins, so a 3 s clip with `c
 ```
 "Show me 6 frames of that hypercar clip"
 "What happens in this video? Cut 8 frames"
+"Cut one frame per second between 8s and 12s of that clip"
+```
+
+### `export_pdf` / `get_export_preview`
+
+Turn an album or a selection into a PDF (cover, index, places, one section per asset), built on the machine running the server. `get_export_preview` is the read-only look-before-you-leap step; `export_pdf` does the work.
+
+**Common parameters (both tools):**
+- `album_id` (string) or `asset_ids` (list of strings): exactly one of the two must be passed
+- `limit` (int, optional): max assets, 1-500, default 100
+
+**`get_export_preview` returns:** JSON `{title, count, assets: [{id, type, filename, taken_at, place, people, duration}], warnings: []}` — nothing here costs tokens on images, it is metadata only.
+
+**`export_pdf` parameters:**
+- `output_path` (string, optional): where to write the file. Default `~/Desktop/<title>.pdf`. An existing file is never overwritten — `report.pdf` becomes `report-2.pdf`, `report-3.pdf`, ...
+- `title` (string, optional): cover title. Default: the album's name, or `"Immich export <date>"`.
+- `captions` (dict, optional): `{asset_id: text}` — Claude's own description of each photo/video after looking at it. Immich's own metadata (date, place, camera, people, tags) is always included regardless of captions.
+- `layout` (string, optional): `"detail"` (one asset per page, default) or `"grid"` (six per page, smaller images, shorter captions)
+- `frames_per_video` (int, optional): frames per video, evenly spaced, 0-120, default 4 (`0` = poster only)
+- `frame_interval` (float, optional): one frame every N seconds instead of `frames_per_video` (same 120 cap)
+- `image_size` (string, optional): `"preview"` (default) or `"thumbnail"` for photos
+- `map` (bool, optional): add an OpenStreetMap map to the Places page (fetches tiles from `tile.openstreetmap.org`)
+- `return_base64` (bool, optional): also return the PDF bytes in the JSON response (skipped above 20 MB)
+
+**`export_pdf` returns:** JSON `{path, pages, bytes, assets_included, assets_skipped: [{id, reason}], warnings: []}`, or `{"pdf_base64": "..."}` in addition when `return_base64=true`.
+
+**PDF structure:** cover page (title, subtitle, first image) → index (one line per asset, each linking to its page) → Places (a table of country/city/count, plus a stitched OpenStreetMap image when `map=true` and GPS data exists) → one detail page per asset in `"detail"` layout (metadata block plus the photo or, for a video, its frames laid out four per row with a timestamp under each), or a six-per-page grid in `"grid"` layout → a footer with the plugin version, server URL, and page number on every page.
+
+**Cost:** frames that go into the PDF cost no tokens — they never enter the conversation. Only the frames you look at while writing captions do. A PDF with `frames_per_video=120` on ten videos costs nothing extra over the default; looking at 120 frames to caption them does.
+
+**What leaves the network:** Immich → your machine (metadata and images, same as any other tool). The PDF itself stays on disk and is not sent anywhere unless `return_base64=true`, in which case it goes back over MCP like any other tool result. `map=true` is the only call that reaches outside your Immich: it fetches tiles from `tile.openstreetmap.org`.
+
+**Requirements:** `pip install immich-photo-manager[pdf]` for `fpdf2`; video frames additionally need `[video]` (PyAV) or `ffmpeg` on PATH; `[all]` installs both extras.
+
+**Example:**
+```
+"Make a PDF of the hypercars album with what you see in each video"
+"Export the photos of Curie to a PDF, grid layout"
+"Preview what would be exported before we look at anything"
 ```
 
 ### `update_asset_metadata`

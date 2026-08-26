@@ -6,6 +6,20 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.7.0] — 2026-08-27
+
+### Added
+- **`export_pdf(album_id / asset_ids, captions, layout, frames_per_video, frame_interval, image_size, map, ...)`** builds a PDF (cover, index with links, places table with an optional OpenStreetMap map, one detail page per asset or a six-per-page grid, video frames laid out four per row with timestamps, footer on every page) from an album or a list of assets, on the machine running the server. Immich metadata (date, place, camera, people, tags) is always included; `captions` add the model's own description of each asset. The file is never sent anywhere unless `return_base64=true`. Needs `pip install immich-photo-manager[pdf]`.
+- **`get_export_preview(album_id / asset_ids, limit)`**, the read-only look-before-you-leap step: lists what `export_pdf` would include (id, type, filename, date, place, people, video duration) without looking at a single image.
+- **`album-report` skill** — a report workflow that previews an album or selection, looks at the photos and video frames, writes one caption per asset, and calls `export_pdf` to produce the PDF.
+- **`start` / `end` / `interval` / `confirm` on `get_video_frames` / `get_video_frames_json`** — a video can now be watched by segment (`start`/`end` in seconds) or at a fixed cadence (`interval`, down to one frame per second) instead of only evenly spaced over the whole clip.
+- **Extras `[pdf]` and `[all]`** in `pyproject.toml` (`fpdf2` for PDF export; `[all]` installs both `[video]` and `[pdf]`).
+- **Immich 2.7.5 compatibility**: `POST /search/metadata` silently ignores the `ids` filter on that version and returns unrelated assets instead. Assets requested by id now fall back to `GET /assets/{id}` per id for anything not found in the `/search/metadata` response, so `export_pdf`/`get_export_preview` with `asset_ids` work the same on 2.7.5 and 3.x.
+
+### Changed
+- **Video frame cap raised from 12 to 120 per call.** Above 12 frames, `get_video_frames`/`get_video_frames_json` no longer extract automatically: they return `{confirm_required: true, frames_planned, estimated_tokens, ...}` and wait for a call with `confirm=true`, so a large request is never made without the user seeing its cost first.
+- **Numeric video durations are read as milliseconds** (Immich's `duration` field), rather than assumed to already be seconds.
+
 ## [v1.6.0] — 2026-08-26
 
 ### Added
@@ -121,6 +135,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.7.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.7.0
 [v1.6.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.6.0
 [v1.5.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.3
 [v1.5.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.2

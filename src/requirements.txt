@@ -1,3 +1,4 @@
 mcp>=1.0.0
 httpx>=0.24.0
 uvicorn>=0.24.0
+# optional: av (video frames), fpdf2 (PDF export)

@@ -1,6 +1,6 @@
 # Skills Reference
 
-Complete documentation for all 12 skills in the Immich Photo Manager plugin. Each skill is a specialized workflow that uses the MCP tools to perform intelligent photo management tasks.
+Complete documentation for all 13 skills in the Immich Photo Manager plugin. Each skill is a specialized workflow that uses the MCP tools to perform intelligent photo management tasks.
 
 ---
 
@@ -20,6 +20,7 @@ Complete documentation for all 12 skills in the Immich Photo Manager plugin. Eac
 | 10 | [People Report](#10-people-report) | Analysis | No | PostgreSQL |
 | 11 | [Travel Map](#11-travel-map) | Visualization | No | PostgreSQL |
 | 12 | [Rotate Photos](#12-rotate-photos) | Maintenance | Yes (applies edits) | MCP tools |
+| 13 | [Album Report](#13-album-report) | Analysis | No | MCP tools |
 
 **Safety principle**: Skills that modify data NEVER act automatically. They present findings, ask for approval, and only proceed with explicit confirmation.
 
@@ -501,6 +502,47 @@ Bulk rotate photos by album or asset IDs. Non-destructive — uses Immich's buil
 |------|---------|
 | `rotate_assets` | Apply rotation (accepts `album_id` or `asset_ids`) |
 | `revert_asset_edits` | Remove all edits, restore original orientation |
+
+---
+
+## 13. Album Report
+
+**Trigger phrases**: "PDF of the album", "album report", "export to PDF", "make a document with these photos", "catalog the album", "identify what is in each video and put it in a PDF"
+
+### What it does
+
+Turns an album or a selection into a PDF: metadata per photo (date, place, camera, people, tags), frames per video, and Claude's own description of what is in each one, written after looking at the images. The file is built on the machine running the server and is never sent anywhere unless explicitly asked for.
+
+### Workflow
+
+1. **Preview** — `get_export_preview(album_id="...")` (or `asset_ids=[...]` from a search) lists what would be included: count, type, and video durations
+2. **Look** — `get_album_images` for photos, `get_video_frames(asset_id, count=6)` for each video
+3. **Narrow** — for a video that needs a closer look, `get_video_frames` again with `start`/`end` or `interval=1`; above 12 frames the tool asks for confirmation first
+4. **Caption** — one line per asset, in the user's language, collected into `captions={asset_id: text}`
+5. **Build** — `export_pdf(album_id="...", captions=..., frames_per_video=6)` writes the PDF and reports the path, page count, and any warnings
+
+### PDF Structure
+
+Cover page, an index with links to each asset, a Places table (with an optional OpenStreetMap map when `map=true`), one detail page per asset (or a six-per-page grid with `layout="grid"`), video frames laid out four per row with timestamps, and a footer on every page.
+
+### Key Behavior
+
+| Behavior | Detail |
+|----------|--------|
+| Never overwrites | An existing file gets `-2`, `-3`, ... appended to the name |
+| Cost | Frames that go only into the PDF are free; frames looked at during captioning are the only ones that cost tokens |
+| Network | Reads from Immich only; the PDF stays on disk unless `return_base64=true`; `map=true` fetches tiles from `tile.openstreetmap.org` |
+
+### MCP Tools Used
+
+| Tool | Purpose |
+|------|---------|
+| `get_export_preview` | List what would be exported, before spending any tokens looking at images |
+| `export_pdf` | Build the PDF from an album or a list of asset IDs |
+
+### Requirements
+
+`pip install immich-photo-manager[pdf]` for PDF generation, `[video]` (or `ffmpeg` on PATH) for video frames, `[all]` for both.
 
 ---
 
