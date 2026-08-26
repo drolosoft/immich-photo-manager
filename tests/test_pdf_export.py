@@ -118,6 +118,8 @@ def test_no_backend_message(monkeypatch):
 
 
 def test_render_map_uses_at_most_16_tiles_and_draws_points():
+    from PIL import Image as PILImage
+
     calls = []
     def fetch(z, x, y):
         calls.append((z, x, y))
@@ -125,6 +127,18 @@ def test_render_map_uses_at_most_16_tiles_and_draws_points():
     png = pdf_export.render_map([(41.4, 2.2), (40.4, -3.7)], fetch)
     assert png[:8] == b"\x89PNG\r\n\x1a\n" and 1 <= len(calls) <= 16
     assert len({c[0] for c in calls}) == 1   # single zoom level
+
+    # Verify a dot was drawn at the first point
+    z = calls[0][0]
+    min_tx = min(c[1] for c in calls)
+    min_ty = min(c[2] for c in calls)
+    lat, lon = 41.4, 2.2
+    x, y = pdf_export._tile_xy(lat, lon, z)
+    px, py = (x - min_tx) * pdf_export.TILE, (y - min_ty) * pdf_export.TILE
+    img = PILImage.open(io.BytesIO(png))
+    pixel = img.getpixel((int(px), int(py)))
+    # "#d33" is (221, 51, 51) or similar red; white is (255, 255, 255)
+    assert pixel[0] > 150 and pixel[1] < 120  # red channel high, green low
 
 
 def test_render_map_returns_none_when_tiles_fail():
