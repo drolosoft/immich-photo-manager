@@ -7,7 +7,7 @@ import httpx
 import pytest
 import respx
 
-from immich_mcp_server import server
+from immich_mcp_server import pdf_export, server
 from immich_mcp_server.immich_client import ImmichClient
 
 BASE = "https://env.example.com"
@@ -73,8 +73,7 @@ class StubClient:
     async def fetch_tile(self, z, x, y):
         return PNG_RED
 
-    def _base(self):
-        return "https://env.example.com"
+    base_url = "https://env.example.com"
 
 
 @pytest.mark.asyncio
@@ -103,3 +102,58 @@ def test_duration_seconds_numeric_is_milliseconds():
     assert server._duration_seconds({"duration": 23567}) == 23.567
     assert server._duration_seconds({"duration": "0:00:03.000"}) == 3.0
     assert server._duration_seconds({"duration": None}) == 0.0
+
+
+def _fake_frames(data, count=6, size="thumbnail", backend=None, start=0.0, end=0.0, interval=0.0):
+    n = count if not interval else 3
+    return {"duration": 3.0, "backend": "stub",
+            "frames": [{"timestamp": float(i), "data": base64.b64encode(PNG_RED).decode(), "type": "image/jpeg"} for i in range(n)]}
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_writes_file_and_reports(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    out = tmp_path / "out.pdf"
+    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(out),
+                                           captions={"a1": "A red car"}, frames_per_video=3))
+    assert d["path"] == str(out) and out.read_bytes()[:4] == b"%PDF"
+    assert d["pages"] == 3 + 3 and d["assets_included"] == 3 and d["assets_skipped"] == []
+    from pypdf import PdfReader
+    assert "A red car" in PdfReader(str(out)).pages[3].extract_text()
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_never_overwrites(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    out = tmp_path / "out.pdf"
+    out.write_bytes(b"old")
+    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(out)))
+    assert d["path"] == str(tmp_path / "out-2.pdf") and out.read_bytes() == b"old"
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_video_without_decoder_uses_poster(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    def boom(*a, **k): raise video_frames.NoVideoBackend("no decoder")
+    monkeypatch.setattr(video_frames, "extract_frames", boom)
+    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "p.pdf")))
+    assert d["assets_included"] == 3 and any("poster" in w for w in d["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_base64_and_errors(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), asset_ids=["a1"], output_path=str(tmp_path / "b.pdf"),
+                                           return_base64=True, map=True))
+    assert base64.b64decode(d["pdf_base64"])[:4] == b"%PDF"
+    assert "error" in json.loads(await server.export_pdf(fake_ctx(StubClient()), output_path=str(tmp_path / "e.pdf")))
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_no_fpdf(fake_ctx, tmp_path, monkeypatch):
+    monkeypatch.setattr(pdf_export, "_fpdf_available", lambda: False)
+    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), asset_ids=["a1"], output_path=str(tmp_path / "n.pdf")))
+    assert "immich-photo-manager[pdf]" in d["error"]

@@ -7,6 +7,8 @@ License: MIT
 
 import asyncio
 import base64
+import datetime
+import io
 import json
 import os
 import sys
@@ -18,8 +20,9 @@ import httpx
 from mcp.server.fastmcp import FastMCP, Context, Image
 from mcp.server.transport_security import TransportSecuritySettings
 
-from . import video_frames
+from . import __version__, pdf_export, video_frames
 from .immich_client import ImmichClient
+from .pdf_export import AssetEntry, Document
 
 # FastMCP's Settings model declares `lifespan` using a forward reference to the
 # FastMCP class (defined later in the SDK), which pydantic-settings reports as an
@@ -1019,6 +1022,140 @@ async def get_export_preview(ctx: Context, album_id: str = "", asset_ids: list[s
     except ValueError as exc:
         return json.dumps({"error": str(exc)})
     return json.dumps({"title": title, "count": len(raw), "assets": [_summary(a) for a in raw], "warnings": warnings})
+
+
+async def _asset_entry(client, raw: dict, image_size: str, frames: int, interval: float,
+                       warnings: list[str], captions: dict) -> AssetEntry:
+    exif = raw.get("exifInfo") or {}
+    s = _summary(raw)
+    entry = AssetEntry(
+        id=s["id"], kind=s["type"], filename=s["filename"], taken_at=s["taken_at"][:19].replace("T", " "),
+        place=s["place"], camera=" ".join(p for p in (exif.get("make"), exif.get("model")) if p),
+        people=s["people"], tags=[t.get("name", "") for t in (raw.get("tags") or []) if t.get("name")],
+        caption=str(captions.get(s["id"], "")), lat=exif.get("latitude"), lon=exif.get("longitude"),
+    )
+    if entry.kind == "VIDEO" and (frames > 0 or interval > 0):
+        try:
+            data = await client.get_video_playback(entry.id)
+            r = await asyncio.to_thread(video_frames.extract_frames, data, frames, "thumbnail", None, 0.0, 0.0, interval)
+            entry.images = [base64.b64decode(f["data"]) for f in r["frames"]]
+            entry.timestamps = [f["timestamp"] for f in r["frames"]]
+            return entry
+        except video_frames.TooManyFrames as exc:
+            warnings.append(f"{entry.filename}: {exc}; poster used")
+        except video_frames.NoVideoBackend as exc:
+            if not any("poster" in w for w in warnings):
+                warnings.append(f"video frames unavailable ({exc}): posters used")
+        except Exception as exc:  # decode failure on one file must not kill the export
+            warnings.append(f"{entry.filename}: frames failed ({exc}); poster used")
+    thumb = await client.get_asset_thumbnail(entry.id, image_size)
+    entry.images = [base64.b64decode(thumb["data"])]
+    return entry
+
+
+@mcp.tool()
+async def export_pdf(
+    ctx: Context, album_id: str = "", asset_ids: list[str] = [], output_path: str = "",
+    title: str = "", captions: dict = {}, layout: str = "detail", frames_per_video: int = 4,
+    frame_interval: float = 0.0, image_size: str = "preview", map: bool = False,
+    limit: int = 100, return_base64: bool = False,
+) -> str:
+    """Build a PDF (cover, index, places, one section per asset) from an album or a
+    list of assets, on the machine running this server. Immich metadata (date, place,
+    camera, people, tags) is always included; pass `captions` {asset_id: text} with
+    what you saw to add your analysis. Video frames go straight into the PDF and cost
+    no tokens (up to 120 per video). The PDF never enters the conversation unless
+    return_base64=True. Needs `pip install immich-photo-manager[pdf]`.
+
+    Args:
+        album_id: Album UUID, or asset_ids: explicit asset UUIDs (exactly one of the two).
+        output_path: Where to write (default ~/Desktop/<title>.pdf). Existing files are never overwritten.
+        title: Cover title (default: album name or "Immich export <date>").
+        captions: {asset_id: text} written after looking at the images.
+        layout: 'detail' (one asset per page, default) or 'grid' (six per page).
+        frames_per_video: Frames per video, evenly spaced (0-120, default 4; 0 = poster only).
+        frame_interval: One frame every N seconds instead of frames_per_video (same 120 cap).
+        image_size: 'preview' (default) or 'thumbnail' for photos.
+        map: Add an OpenStreetMap map to the Places page (fetches tiles from tile.openstreetmap.org).
+        limit: Max assets (1-500, default 100).
+        return_base64: Also return the PDF bytes (skipped above 20 MB).
+
+    Returns: JSON {path, pages, bytes, assets_included, assets_skipped:[{id, reason}], warnings:[...]}.
+    """
+    client = _client(ctx)
+    try:
+        album_title, raw, warnings = await _collect_assets(client, album_id, asset_ids, limit)
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)})
+    if not pdf_export._fpdf_available():
+        return json.dumps({"error": "PDF export needs fpdf2: `pip install immich-photo-manager[pdf]`."})
+    frames = max(0, min(int(frames_per_video or 0), video_frames.MAX_FRAMES))
+    if layout not in ("detail", "grid"):
+        layout = "detail"
+    if image_size not in ("thumbnail", "preview"):
+        image_size = "preview"
+    title = title or album_title or f"Immich export {datetime.date.today().isoformat()}"
+
+    entries: list[AssetEntry] = []
+    skipped: list[dict] = []
+    for a in raw:
+        try:
+            entries.append(await _asset_entry(client, a, image_size, frames, float(frame_interval or 0), warnings, captions or {}))
+        except Exception as exc:
+            skipped.append({"id": a.get("id"), "reason": str(exc)[:200]})
+    if not entries:
+        return json.dumps({"error": "No asset could be fetched.", "assets_skipped": skipped})
+
+    map_png = None
+    if map:
+        points = [(e.lat, e.lon) for e in entries if e.lat is not None and e.lon is not None]
+        if points:
+            tiles: dict = {}
+            loop = asyncio.get_running_loop()
+
+            def fetch(z, x, y):
+                key = (z, x, y)
+                if key not in tiles:
+                    tiles[key] = asyncio.run_coroutine_threadsafe(client.fetch_tile(z, x, y), loop).result(15)
+                return tiles[key]
+
+            map_png = await asyncio.to_thread(pdf_export.render_map, points, fetch)
+            if map_png is None:
+                warnings.append("map could not be drawn (tiles unavailable); Places table only")
+        else:
+            warnings.append("map requested but no asset has GPS data")
+
+    photos = sum(1 for e in entries if e.kind == "IMAGE")
+    doc = Document(
+        title=title, subtitle=f"{len(entries)} assets · {photos} photos, {len(entries) - photos} videos · exported {datetime.date.today().isoformat()}",
+        source_url=client.base_url, version=__version__, layout=layout, assets=entries,
+        places=pdf_export.places_table(entries), map_png=map_png,
+    )
+    try:
+        pdf = await asyncio.to_thread(pdf_export.build, doc)
+    except pdf_export.NoPdfBackend as exc:
+        return json.dumps({"error": str(exc)})
+
+    path = os.path.expanduser(output_path) if output_path else os.path.expanduser(f"~/Desktop/{pdf_export.slugify(title)}.pdf")
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    path = pdf_export.unique_path(path)
+    with open(path, "wb") as fh:
+        fh.write(pdf)
+    try:
+        from pypdf import PdfReader
+        pages = len(PdfReader(io.BytesIO(pdf)).pages)
+    except ImportError:
+        pages = pdf.count(b"/Type /Page") - pdf.count(b"/Type /Pages")
+    out = {
+        "path": path, "pages": pages, "bytes": len(pdf),
+        "assets_included": len(entries), "assets_skipped": skipped, "warnings": warnings,
+    }
+    if return_base64:
+        if len(pdf) > 20 * 1024 * 1024:
+            warnings.append("PDF larger than 20 MB: base64 not returned")
+        else:
+            out["pdf_base64"] = base64.b64encode(pdf).decode("ascii")
+    return json.dumps(out)
 
 
 # ── Shared Links ────────────────────────────────────────────
