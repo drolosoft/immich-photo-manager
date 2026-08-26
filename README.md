@@ -97,7 +97,7 @@ Then restart Claude Code. `drolosoft-marketplace` is the name the marketplace ge
 
 The plugin process runs on your machine and only talks to your Immich. But everything the assistant *reads* through it goes to the model you use: filenames, dates, EXIF, album lists, and, when you ask it to look at pictures, thumbnails (250px by default, 1440px previews on request). Originals are never fetched. With Claude that means those thumbnails leave your network; with a local model over MCP (LM Studio, Ollama) nothing does. Nothing is sent unless you ask for it: listing albums or fixing dates moves text only, "tell me what's in these photos" moves images.
 
-A PDF report follows the same rule: `export_pdf` writes the file to disk on the machine running the server, and it is not sent anywhere unless you pass `return_base64=true`. Frames that only go into the PDF never leave your machine and cost no tokens; only the frames you ask the model to look at do. Passing `map=true` fetches map tiles from `tile.openstreetmap.org` to draw the Places page — the only outside network call this plugin makes.
+A PDF report follows the same rule: `export_pdf` writes the file to disk on the machine running the server, and it is not sent anywhere unless you pass `return_base64=true`. The file goes where `output_path` says (default your Desktop); existing files are never overwritten. Frames that only go into the PDF never leave your machine and cost no tokens; only the frames you ask the model to look at do. Passing `map=true` fetches map tiles from `tile.openstreetmap.org` to draw the Places page — the only outside network call this plugin makes.
 
 ### Connect, check, switch — all by talking
 
@@ -198,8 +198,8 @@ RESULT: Zero cloud dependency — fully self-hosted stack.
 - **Library cleanup** — detect screenshots, duplicates, and low-quality images with multi-signal analysis
 - **Duplicate detection** — cross-source analysis using perceptual hashing (finds re-encoded copies across Apple Photos, Google Photos, and other imports)
 - **Bulk rotation** — rotate entire albums or selections at once (90°/180°/270°); non-destructive, accumulates across calls, one-click revert
-- **PDF reports** — album or selection to a PDF with metadata, video frames and Claude's captions, built on your machine (needs `pip install immich-photo-manager[pdf]`, or `[all]` for PDF + video frames together)
-- **Video frames** — cut evenly spaced frames out of any clip, or a segment (`start`/`end`) down to one frame per second (`interval`), so Claude can describe what happens in it; Immich itself keeps one poster per video (needs PyAV via `pip install immich-photo-manager[video]` or `ffmpeg`)
+- **PDF reports** — album or selection to a PDF with metadata, video frames and Claude's captions, built on your machine (needs `pip install immich-photo-manager[pdf]`, or `[all]` for PDF + video frames together; plugin route: `pip3 install av fpdf2`)
+- **Video frames** — cut evenly spaced frames out of any clip, or a segment (`start`/`end`) down to one frame per second (`interval`), so Claude can describe what happens in it; Immich itself keeps one poster per video (needs PyAV via `pip install immich-photo-manager[video]` or `ffmpeg`; plugin route: `pip3 install av fpdf2`)
 - **People & face management** — list, search, merge, and organize recognized people; reassign misidentified faces; view face thumbnails
 - **Trash & asset lifecycle** — safely delete assets to trash, permanently remove, restore from trash; complete asset lifecycle management
 - **Library health** — one command for asset inventory, metadata quality, storage breakdown, and recommendations

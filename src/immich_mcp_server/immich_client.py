@@ -297,6 +297,7 @@ class ImmichClient:
         Works on Immich 2.x and 3.x. Immich 3.0 removed the `assets` list from
         GET /albums/{id}, so this is the only version-independent way to read
         album contents. Pages through results; stops at `limit` if given.
+        `with_exif` adds EXIF data (camera, GPS, etc.) to each returned asset.
         """
         page_size = 1000 if limit is None else max(1, min(limit, 1000))
         assets: list[dict] = []
@@ -322,10 +323,14 @@ class ImmichClient:
     async def get_assets_by_ids(self, ids: list[str], with_exif: bool = True) -> list[dict]:
         """Assets for explicit ids via POST /search/metadata {ids}, in the order given; unknown ids are dropped.
 
+        `size` is capped at 1000 (the /search/metadata ceiling): pass at most 1000
+        ids per call.
+
         Some Immich versions (e.g. 2.7.5) silently ignore the `ids` filter on
         /search/metadata and return unrelated assets instead. Any id not found in
         the response is fetched individually via GET /assets/{id} as a fallback;
-        ids that genuinely don't exist (404) are dropped, same as before.
+        ids that genuinely don't exist (404) are dropped, same as before. Any other
+        error from that fallback request (5xx, auth, etc.) is raised, not swallowed.
         """
         if not ids:
             return []
@@ -338,8 +343,10 @@ class ImmichClient:
         for missing_id in [i for i in ids if i not in by_id]:
             try:
                 by_id[missing_id] = await self.get_asset(missing_id)
-            except httpx.HTTPStatusError:
-                pass  # id doesn't exist on this server: drop it, as before
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code != 404:
+                    raise
+                # id doesn't exist on this server: drop it, as before
         return [by_id[i] for i in ids if i in by_id]
 
     async def fetch_tile(self, z: int, x: int, y: int) -> bytes:

@@ -881,6 +881,11 @@ async def _video_plan(ctx: Context, asset_id: str, count: int, size: str,
         planned = video_frames.plan_timestamps(duration, count, interval, start, end)
     except video_frames.TooManyFrames as exc:
         return None, {"error": str(exc), "duration": duration}
+    if not planned:
+        return None, {
+            "error": "could not determine the video duration; try count instead of interval",
+            "duration": duration,
+        }
     if len(planned) > video_frames.CONFIRM_ABOVE and not confirm:
         seg_start, seg_end = video_frames.segment_bounds(duration, start, end)
         return None, {
@@ -984,11 +989,11 @@ def _summary(raw: dict) -> dict:
 
 
 async def _collect_assets(client, album_id: str, asset_ids: list[str], limit: int):
-    """(title, raw assets, warnings). Exactly one of album_id / asset_ids."""
+    """(title, raw assets, notes). Exactly one of album_id / asset_ids."""
     if bool(album_id) == bool(asset_ids):
         raise ValueError("Pass exactly one of album_id or asset_ids.")
     limit = max(1, min(int(limit or 100), EXPORT_MAX))
-    warnings: list[str] = []
+    notes: list[str] = []
     if album_id:
         album = await client.get_album(album_id)
         title = album.get("albumName") or "Immich export"
@@ -998,10 +1003,10 @@ async def _collect_assets(client, album_id: str, asset_ids: list[str], limit: in
         raw = await client.get_assets_by_ids(asset_ids[: limit + 1], with_exif=True)
     if len(raw) > limit:
         raw = raw[:limit]
-        warnings.append(f"limit {limit} reached: only the first {limit} assets are included")
+        notes.append(f"limit {limit} reached: only the first {limit} assets are included")
     if not raw:
         raise ValueError("No assets found for that album/ids.")
-    return title, raw, warnings
+    return title, raw, notes
 
 
 @mcp.tool()
@@ -1025,7 +1030,7 @@ async def get_export_preview(ctx: Context, album_id: str = "", asset_ids: list[s
 
 
 async def _asset_entry(client, raw: dict, image_size: str, frames: int, interval: float,
-                       warnings: list[str], captions: dict) -> AssetEntry:
+                       notes: list[str], captions: dict) -> AssetEntry:
     exif = raw.get("exifInfo") or {}
     s = _summary(raw)
     entry = AssetEntry(
@@ -1039,18 +1044,18 @@ async def _asset_entry(client, raw: dict, image_size: str, frames: int, interval
             data = await client.get_video_playback(entry.id)
             r = await asyncio.to_thread(video_frames.extract_frames, data, frames, "thumbnail", None, 0.0, 0.0, interval)
             if not r["frames"]:
-                warnings.append(f"{entry.filename}: no frames decoded; poster used")
+                notes.append(f"{entry.filename}: no frames decoded; poster used")
             else:
                 entry.images = [base64.b64decode(f["data"]) for f in r["frames"]]
                 entry.timestamps = [f["timestamp"] for f in r["frames"]]
                 return entry
         except video_frames.TooManyFrames as exc:
-            warnings.append(f"{entry.filename}: {exc}; poster used")
+            notes.append(f"{entry.filename}: {exc}; poster used")
         except video_frames.NoVideoBackend as exc:
-            if not any("poster" in w for w in warnings):
-                warnings.append(f"video frames unavailable ({exc}): posters used")
+            if not any("poster" in w for w in notes):
+                notes.append(f"video frames unavailable ({exc}): posters used")
         except Exception as exc:  # decode failure on one file must not kill the export
-            warnings.append(f"{entry.filename}: frames failed ({exc}); poster used")
+            notes.append(f"{entry.filename}: frames failed ({exc}); poster used")
     thumb = await client.get_asset_thumbnail(entry.id, image_size)
     entry.images = [base64.b64decode(thumb["data"])]
     return entry
@@ -1081,13 +1086,14 @@ async def export_pdf(
         image_size: 'preview' (default) or 'thumbnail' for photos.
         map: Add an OpenStreetMap map to the Places page (fetches tiles from tile.openstreetmap.org).
         limit: Max assets (1-500, default 100).
-        return_base64: Also return the PDF bytes (skipped above 20 MB).
+        return_base64: Also return the PDF bytes (skipped above 2 MB; every MB is
+            roughly 350k tokens in the conversation).
 
     Returns: JSON {path, pages, bytes, assets_included, assets_skipped:[{id, reason}], warnings:[...]}.
     """
     client = _client(ctx)
     try:
-        album_title, raw, warnings = await _collect_assets(client, album_id, asset_ids, limit)
+        album_title, raw, notes = await _collect_assets(client, album_id, asset_ids, limit)
     except ValueError as exc:
         return json.dumps({"error": str(exc)})
     if not pdf_export._fpdf_available():
@@ -1103,7 +1109,7 @@ async def export_pdf(
     skipped: list[dict] = []
     for a in raw:
         try:
-            entries.append(await _asset_entry(client, a, image_size, frames, float(frame_interval or 0), warnings, captions or {}))
+            entries.append(await _asset_entry(client, a, image_size, frames, float(frame_interval or 0), notes, captions or {}))
         except Exception as exc:
             skipped.append({"id": a.get("id"), "reason": str(exc)[:200]})
     if not entries:
@@ -1124,9 +1130,9 @@ async def export_pdf(
 
             map_png = await asyncio.to_thread(pdf_export.render_map, points, fetch)
             if map_png is None:
-                warnings.append("map could not be drawn (tiles unavailable); Places table only")
+                notes.append("map could not be drawn (tiles unavailable); Places table only")
         else:
-            warnings.append("map requested but no asset has GPS data")
+            notes.append("map requested but no asset has GPS data")
 
     photos = sum(1 for e in entries if e.kind == "IMAGE")
     doc = Document(
@@ -1139,7 +1145,14 @@ async def export_pdf(
     except pdf_export.NoPdfBackend as exc:
         return json.dumps({"error": str(exc)})
 
-    path = os.path.expanduser(output_path) if output_path else os.path.expanduser(f"~/Desktop/{pdf_export.slugify(title)}.pdf")
+    if output_path:
+        path = os.path.expanduser(output_path)
+        if os.path.isdir(path):
+            path = os.path.join(path, f"{pdf_export.slugify(title)}.pdf")
+        elif not path.lower().endswith(".pdf"):
+            path = f"{path}.pdf"
+    else:
+        path = os.path.expanduser(f"~/Desktop/{pdf_export.slugify(title)}.pdf")
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     path = pdf_export.unique_path(path)
     with open(path, "wb") as fh:
@@ -1151,13 +1164,13 @@ async def export_pdf(
         pages = pdf.count(b"/Type /Page") - pdf.count(b"/Type /Pages")
     pdf_b64 = None
     if return_base64:
-        if len(pdf) > 20 * 1024 * 1024:
-            warnings.append("PDF larger than 20 MB: base64 not returned")
+        if len(pdf) > 2 * 1024 * 1024:
+            notes.append("PDF larger than 2 MB: base64 not returned (read it from `path`)")
         else:
             pdf_b64 = base64.b64encode(pdf).decode("ascii")
     out = {
         "path": path, "pages": pages, "bytes": len(pdf),
-        "assets_included": len(entries), "assets_skipped": skipped, "warnings": warnings,
+        "assets_included": len(entries), "assets_skipped": skipped, "warnings": notes,
     }
     if pdf_b64 is not None:
         out["pdf_base64"] = pdf_b64

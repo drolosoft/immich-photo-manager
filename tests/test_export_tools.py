@@ -2,6 +2,7 @@
 import base64
 import io
 import json
+import os
 
 import httpx
 import pytest
@@ -57,11 +58,32 @@ async def test_get_assets_by_ids_falls_back_to_get_asset_when_ids_filter_ignored
 
 
 @pytest.mark.asyncio
+async def test_get_assets_by_ids_fallback_reraises_non_404(env_credentials, isolated_cache):
+    """A 500 (or any non-404) from the per-id fallback must propagate, not be dropped
+    silently like a genuinely missing asset."""
+    with respx.mock(base_url=BASE) as mock:
+        mock.post("/api/search/metadata").mock(
+            return_value=httpx.Response(200, json={"assets": {"items": [], "nextPage": None}}))
+        mock.get("/api/assets/a1").mock(return_value=httpx.Response(500, json={"message": "boom"}))
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+            await ImmichClient().get_assets_by_ids(["a1"])
+    assert exc_info.value.response.status_code == 500
+
+
+@pytest.mark.asyncio
 async def test_fetch_tile_sets_user_agent(env_credentials, isolated_cache):
     with respx.mock() as mock:
         route = mock.get("https://tile.openstreetmap.org/3/4/2.png").mock(return_value=httpx.Response(200, content=b"PNG"))
         assert await ImmichClient().fetch_tile(3, 4, 2) == b"PNG"
     assert route.calls[0].request.headers["user-agent"].startswith("immich-photo-manager/")
+
+
+@pytest.mark.asyncio
+async def test_fetch_tile_raises_on_server_error(env_credentials, isolated_cache):
+    with respx.mock() as mock:
+        mock.get("https://tile.openstreetmap.org/3/4/2.png").mock(return_value=httpx.Response(500))
+        with pytest.raises(httpx.HTTPStatusError):
+            await ImmichClient().fetch_tile(3, 4, 2)
 
 
 class StubClient:
@@ -154,6 +176,26 @@ async def test_export_pdf_never_overwrites(fake_ctx, tmp_path, monkeypatch):
     out.write_bytes(b"old")
     d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(out)))
     assert d["path"] == str(tmp_path / "out-2.pdf") and out.read_bytes() == b"old"
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_output_path_directory_gets_slugged_filename(fake_ctx, tmp_path, monkeypatch):
+    """Passing a directory as output_path must write <slug(title)>.pdf inside it."""
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path)))
+    assert d["path"] == str(tmp_path / "hypercars.pdf")
+    assert os.path.exists(d["path"])
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_output_path_without_extension_gets_pdf_suffix(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb",
+                                           output_path=str(tmp_path / "report")))
+    assert d["path"] == str(tmp_path / "report.pdf")
+    assert os.path.exists(d["path"])
 
 
 @pytest.mark.asyncio

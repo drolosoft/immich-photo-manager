@@ -34,11 +34,11 @@ video = [
   "av>=12",
 ]
 pdf = [
-  "fpdf2>=2.7",
+  "fpdf2>=2.7,<3",
 ]
 all = [
   "av>=12",
-  "fpdf2>=2.7",
+  "fpdf2>=2.7,<3",
 ]
 dev = [
   "pytest>=8",
@@ -46,6 +46,7 @@ dev = [
   "respx>=0.21",
   "ruff>=0.6",
   "pypdf>=4",
+  "fpdf2>=2.7,<3",
 ]
 
 [project.urls]

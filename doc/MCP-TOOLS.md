@@ -247,7 +247,7 @@ Turn an album or a selection into a PDF (cover, index, places, one section per a
 **`get_export_preview` returns:** JSON `{title, count, assets: [{id, type, filename, taken_at, place, people, duration}], warnings: []}` — nothing here costs tokens on images, it is metadata only.
 
 **`export_pdf` parameters:**
-- `output_path` (string, optional): where to write the file. Default `~/Desktop/<title>.pdf`. An existing file is never overwritten — `report.pdf` becomes `report-2.pdf`, `report-3.pdf`, ...
+- `output_path` (string, optional): where to write the file, on the machine running the server. Default `~/Desktop/<title>.pdf`. A directory is accepted (the file is placed inside it as `<title>.pdf`); a path with no `.pdf` extension gets one appended. An existing file is never overwritten — `report.pdf` becomes `report-2.pdf`, `report-3.pdf`, ...
 - `title` (string, optional): cover title. Default: the album's name, or `"Immich export <date>"`.
 - `captions` (dict, optional): `{asset_id: text}` — Claude's own description of each photo/video after looking at it. Immich's own metadata (date, place, camera, people, tags) is always included regardless of captions.
 - `layout` (string, optional): `"detail"` (one asset per page, default) or `"grid"` (six per page, smaller images, shorter captions)
@@ -255,7 +255,7 @@ Turn an album or a selection into a PDF (cover, index, places, one section per a
 - `frame_interval` (float, optional): one frame every N seconds instead of `frames_per_video` (same 120 cap)
 - `image_size` (string, optional): `"preview"` (default) or `"thumbnail"` for photos
 - `map` (bool, optional): add an OpenStreetMap map to the Places page (fetches tiles from `tile.openstreetmap.org`)
-- `return_base64` (bool, optional): also return the PDF bytes in the JSON response (skipped above 20 MB)
+- `return_base64` (bool, optional): also return the PDF bytes in the JSON response (skipped above 2 MB; every MB is roughly 350k tokens in the conversation)
 
 **`export_pdf` returns:** JSON `{path, pages, bytes, assets_included, assets_skipped: [{id, reason}], warnings: []}`, or `{"pdf_base64": "..."}` in addition when `return_base64=true`.
 
@@ -265,7 +265,7 @@ Turn an album or a selection into a PDF (cover, index, places, one section per a
 
 **What leaves the network:** Immich → your machine (metadata and images, same as any other tool). The PDF itself stays on disk and is not sent anywhere unless `return_base64=true`, in which case it goes back over MCP like any other tool result. `map=true` is the only call that reaches outside your Immich: it fetches tiles from `tile.openstreetmap.org`.
 
-**Requirements:** `pip install immich-photo-manager[pdf]` for `fpdf2`; video frames additionally need `[video]` (PyAV) or `ffmpeg` on PATH; `[all]` installs both extras.
+**Requirements:** `pip install immich-photo-manager[pdf]` for `fpdf2`; video frames additionally need `[video]` (PyAV) or `ffmpeg` on PATH; `[all]` installs both extras. Plugin route: `pip3 install av fpdf2`.
 
 **Example:**
 ```

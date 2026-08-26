@@ -197,7 +197,12 @@ def _places(p: _Pdf):
         p.pdf.cell(20, 6, str(n), align="R", new_x="LMARGIN", new_y="NEXT")
     if p.doc.map_png:
         y = p.pdf.get_y() + 6
-        p.image(p.doc.map_png, MARGIN, y, CONTENT_W, A4_H - y - 20)
+        max_h = A4_H - y - 20
+        if max_h < 60:
+            p.pdf.add_page()
+            y = MARGIN
+            max_h = A4_H - y - 20
+        p.image(p.doc.map_png, MARGIN, y, CONTENT_W, max_h)
 
 
 def _meta_lines(a: AssetEntry) -> list[str]:

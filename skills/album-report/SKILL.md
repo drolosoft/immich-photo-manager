@@ -45,7 +45,7 @@ Every frame you look at is one image in the context (~1.6k tokens as thumbnail).
 
 ## Requirements
 
-`pip install immich-photo-manager[pdf]` for the PDF, `[video]` (or ffmpeg) for frames. The tools say so when missing.
+`pip install immich-photo-manager[pdf]` for the PDF, `[video]` (or ffmpeg) for frames. The tools say so when missing. Plugin route: `pip3 install av fpdf2`.
 
 ## Example prompts
 

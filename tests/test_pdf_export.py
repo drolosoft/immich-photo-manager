@@ -96,6 +96,32 @@ def test_build_with_map_adds_image_on_places_page():
     assert len(r.pages[2].images) >= 1
 
 
+def _many_places_doc(with_map: bool) -> Document:
+    """60 distinct places push the Places table past one page via fpdf2's auto
+    page break, leaving little or no room for the map on whichever page the
+    table ends up on."""
+    assets = [
+        AssetEntry(
+            id=f"a{i}", kind="IMAGE", filename=f"{i}.jpg", taken_at="2026-01-01",
+            place=f"City{i}, Country{i}", camera="", people=[], tags=[], caption="",
+            images=[], timestamps=[], lat=None, lon=None,
+        )
+        for i in range(60)
+    ]
+    return Document(
+        title="Many places", subtitle="60 assets", source_url="http://immich", version="1.7.0",
+        layout="detail", assets=assets, places=pdf_export.places_table(assets),
+        map_png=_png("green") if with_map else None,
+    )
+
+
+def test_places_map_with_many_rows_still_lands_on_a_page():
+    pages_without_map = len(PdfReader(io.BytesIO(pdf_export.build(_many_places_doc(False)))).pages)
+    r_with_map = PdfReader(io.BytesIO(pdf_export.build(_many_places_doc(True))))
+    pages_with_map = len(r_with_map.pages)
+    assert pages_with_map >= pages_without_map + 1 or any(p.images for p in r_with_map.pages)
+
+
 def test_unique_path(tmp_path):
     p = tmp_path / "x.pdf"
     p.write_bytes(b"1")

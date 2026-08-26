@@ -184,6 +184,17 @@ async def test_get_video_frames_over_cap_is_error_json(fake_ctx, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_get_video_frames_zero_duration_with_interval_is_error_json(fake_ctx, monkeypatch):
+    """A duration probe that returns 0 (unreadable container, etc.) combined with
+    `interval` must not silently plan zero frames; it must surface a clear error."""
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 0.0)
+    raw = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1", interval=1.0)
+    d = json.loads(raw)
+    assert "error" in d and "duration" in d["error"]
+    assert d["duration"] == 0.0
+
+
+@pytest.mark.asyncio
 async def test_get_video_frames_returns_image_blocks(fake_ctx, monkeypatch):
     monkeypatch.setattr(video_frames, "probe_duration", lambda data: 10.0)
     monkeypatch.setattr(video_frames, "extract_frames", _fake_extract)

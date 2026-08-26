@@ -40,6 +40,9 @@ claude plugin marketplace add ./
 claude plugin install immich-photo-manager
 ```
 
+The plugin runs on the system python3, so optional features are installed the same
+way: `pip3 install av fpdf2` (`av` for video frames, `fpdf2` for PDF export).
+
 Open Claude Code (restart it if it was open) and connect it to your Immich, guided:
 
 ```
