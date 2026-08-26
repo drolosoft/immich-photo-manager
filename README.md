@@ -142,6 +142,8 @@ Use the package entry point directly with `uvx`:
 
 `immich-photo-manager` defaults to MCP stdio transport. Set `MCP_TRANSPORT=http` when you want to run the server as a Streamable HTTP service.
 
+**Claude Desktop on macOS:** the app does not see your shell's PATH, so write the full path to `uvx` in `"command"` (run `which uvx` in a terminal; typically `/Users/<you>/.local/bin/uvx` or `/opt/homebrew/bin/uvx`). Run `uvx immich-photo-manager --help` once in a terminal so the first download is done, then quit Claude Desktop with Cmd+Q and reopen it. If it still does not show up, the reason is in `~/Library/Logs/Claude/mcp-server-immich.log`.
+
 ```
 ============================================================
 IMMICH-PHOTO-MANAGER × GEMMA 4 (LM STUDIO)
