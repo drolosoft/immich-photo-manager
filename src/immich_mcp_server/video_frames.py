@@ -58,28 +58,23 @@ def frame_timestamps(duration: float, count: int, start: float = 0.0, end: float
 
 
 def interval_timestamps(duration: float, interval: float, start: float = 0.0, end: float = 0.0) -> list[float]:
-    """One frame every `interval` seconds over [start, end], each at the centre of its slot."""
+    """One frame every `interval` seconds over [start, end]: the centres of n = max(1, span // interval) equal bins."""
     if duration <= 0 or interval <= 0:
         return []
     s, e = _segment(duration, start, end)
-    times = []
+    span = e - s
+    n = max(1, int(span // interval))
+    if n > 10 * MAX_FRAMES:
+        raise TooManyFrames(_too_many(n))
+    return [round(s + span * (i + 0.5) / n, 3) for i in range(n)]
 
-    # Try placing frames at centers of bins aligned globally
-    t = (int(s / interval) * interval) + interval / 2
-    while t <= e:
-        if t >= s:
-            times.append(round(t, 3))
-        t += interval
 
-    # Fallback: if no centered frames fit, place at multiples of interval within [s, e]
-    if not times:
-        t = 0.0
-        while t <= e:
-            if t >= s:
-                times.append(round(t, 3))
-            t += interval
-
-    return times
+def _too_many(n: int) -> str:
+    """Error message for exceeding frame cap."""
+    return (
+        f"{n} frames requested; the cap is {MAX_FRAMES} per call. "
+        f"Narrow the segment with start/end or use a larger interval."
+    )
 
 
 def plan_timestamps(duration: float, count: int, interval: float, start: float, end: float) -> list[float]:
@@ -89,10 +84,7 @@ def plan_timestamps(duration: float, count: int, interval: float, start: float, 
     else:
         ts = frame_timestamps(duration, clamp_count(count), start, end)
     if len(ts) > MAX_FRAMES:
-        raise TooManyFrames(
-            f"{len(ts)} frames requested; the cap is {MAX_FRAMES} per call. "
-            f"Narrow the segment with start/end or use a larger interval."
-        )
+        raise TooManyFrames(_too_many(len(ts)))
     return ts
 
 

@@ -59,6 +59,9 @@ def test_segment_timestamps_are_centered_inside_segment():
 def test_interval_timestamps_one_per_second():
     assert video_frames.interval_timestamps(3.0, 1.0) == [0.5, 1.5, 2.5]
     assert video_frames.interval_timestamps(24.0, 10.0, start=8.0, end=12.0) == [10.0]
+    # Segment-relative formula: n = max(1, span // interval), frames at centers of n equal bins
+    assert video_frames.interval_timestamps(100.0, 10.0, start=25.0, end=35.0) == [30.0]
+    assert video_frames.interval_timestamps(100.0, 10.0, start=8.0, end=9.0) == [8.5]
 
 
 def test_plan_timestamps_caps_at_120():
@@ -67,6 +70,10 @@ def test_plan_timestamps_caps_at_120():
     assert "120" in str(exc.value) and "start" in str(exc.value)
     assert len(video_frames.plan_timestamps(300.0, count=0, interval=5.0, start=0.0, end=0.0)) == 60
     assert video_frames.plan_timestamps(3.0, count=2, interval=0.0, start=0.0, end=0.0) == [0.75, 2.25]
+    # Early bailout: interval_timestamps raises before building millions of floats
+    with pytest.raises(video_frames.TooManyFrames) as exc:
+        video_frames.plan_timestamps(3600.0, count=0, interval=0.001, start=0.0, end=0.0)
+    assert "frames requested" in str(exc.value) and int(str(exc.value).split()[0]) > 1000000
 
 
 def test_estimate_tokens():
