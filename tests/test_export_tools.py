@@ -83,6 +83,7 @@ async def test_get_export_preview_album(fake_ctx):
     assert d["title"] == "Hypercars" and d["count"] == 3
     assert d["assets"][2] == {"id": "a3", "type": "VIDEO", "filename": "3.jpg", "taken_at": "2026-01-03T10:00:00Z",
                               "place": "Barcelona, Spain", "people": ["Curie"], "duration": 3.0}
+    assert d["assets"][0]["duration"] is None
 
 
 @pytest.mark.asyncio
@@ -95,3 +96,10 @@ async def test_get_export_preview_requires_exactly_one_source(fake_ctx):
 async def test_get_export_preview_limit_warns(fake_ctx):
     d = json.loads(await server.get_export_preview(fake_ctx(StubClient()), asset_ids=["a1", "a2", "a3"], limit=2))
     assert d["count"] == 2 and any("limit" in w for w in d["warnings"])
+
+
+def test_duration_seconds_numeric_is_milliseconds():
+    assert server._duration_seconds({"duration": 900}) == 0.9
+    assert server._duration_seconds({"duration": 23567}) == 23.567
+    assert server._duration_seconds({"duration": "0:00:03.000"}) == 3.0
+    assert server._duration_seconds({"duration": None}) == 0.0

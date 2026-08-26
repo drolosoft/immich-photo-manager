@@ -959,7 +959,7 @@ EXPORT_MAX = 500
 def _duration_seconds(raw: dict) -> float:
     d = raw.get("duration")
     if isinstance(d, (int, float)):
-        return float(d) / 1000.0 if d > 1000 else float(d)
+        return round(float(d) / 1000.0, 3)
     if isinstance(d, str) and ":" in d:
         h, m, s = d.split(":")
         return round(int(h) * 3600 + int(m) * 60 + float(s), 3)
