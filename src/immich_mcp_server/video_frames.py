@@ -38,7 +38,8 @@ def clamp_count(count: int) -> int:
     return max(1, min(int(count or 1), MAX_FRAMES))
 
 
-def _segment(duration: float, start: float, end: float) -> tuple[float, float]:
+def segment_bounds(duration: float, start: float, end: float) -> tuple[float, float]:
+    """Clamp segment bounds to valid range [0, duration]."""
     start = max(0.0, float(start or 0.0))
     end = float(end or 0.0)
     if end <= 0 or end > duration:
@@ -52,7 +53,7 @@ def frame_timestamps(duration: float, count: int, start: float = 0.0, end: float
     """Centres of `count` equal bins over [start, end] (skips the black first frame)."""
     if duration <= 0:
         return [0.0] * count
-    s, e = _segment(duration, start, end)
+    s, e = segment_bounds(duration, start, end)
     span = e - s
     return [round(s + span * (i + 0.5) / count, 3) for i in range(count)]
 
@@ -61,7 +62,7 @@ def interval_timestamps(duration: float, interval: float, start: float = 0.0, en
     """One frame every `interval` seconds over [start, end]: the centres of n = max(1, span // interval) equal bins."""
     if duration <= 0 or interval <= 0:
         return []
-    s, e = _segment(duration, start, end)
+    s, e = segment_bounds(duration, start, end)
     span = e - s
     n = max(1, int(span // interval))
     if n > 10 * MAX_FRAMES:

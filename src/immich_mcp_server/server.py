@@ -879,8 +879,7 @@ async def _video_plan(ctx: Context, asset_id: str, count: int, size: str,
     except video_frames.TooManyFrames as exc:
         return None, {"error": str(exc), "duration": duration}
     if len(planned) > video_frames.CONFIRM_ABOVE and not confirm:
-        seg_start = max(0.0, float(start or 0.0))
-        seg_end = float(end) if end and end > 0 else duration
+        seg_start, seg_end = video_frames.segment_bounds(duration, start, end)
         return None, {
             "confirm_required": True, "asset_id": asset_id, "duration": duration,
             "segment": [round(seg_start, 3), round(seg_end, 3)], "frames_planned": len(planned),
@@ -920,7 +919,10 @@ async def get_video_frames(
     """ + _VIDEO_ARGS + """
     Returns: JPEG image blocks in time order, or JSON (confirmation plan / error).
     """
-    result, gate = await _video_plan(ctx, asset_id, count, size, start, end, interval, confirm)
+    try:
+        result, gate = await _video_plan(ctx, asset_id, count, size, start, end, interval, confirm)
+    except video_frames.NoVideoBackend as exc:
+        return json.dumps({"error": str(exc)})
     if gate is not None:
         return json.dumps(gate)
     return [_entry_to_image(f) for f in result["frames"]]

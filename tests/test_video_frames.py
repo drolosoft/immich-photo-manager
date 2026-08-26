@@ -222,3 +222,23 @@ async def test_get_video_frames_json_reports_missing_backend(fake_ctx, monkeypat
     monkeypatch.setattr(video_frames, "extract_frames", boom)
     d = json.loads(await server.get_video_frames_json(fake_ctx(StubClient()), asset_id="vid1"))
     assert "immich-photo-manager[video]" in d["error"]
+
+
+@pytest.mark.asyncio
+async def test_get_video_frames_gate_segment_clamps_end(fake_ctx, monkeypatch):
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 24.0)
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_extract)
+    raw = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1", count=20, end=1000.0)
+    d = json.loads(raw)
+    assert d["segment"] == [0.0, 24.0]
+
+
+@pytest.mark.asyncio
+async def test_get_video_frames_reports_missing_backend(fake_ctx, monkeypatch):
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 10.0)
+    def boom(*a, **k):
+        raise video_frames.NoVideoBackend("no decoder")
+    monkeypatch.setattr(video_frames, "extract_frames", boom)
+    raw = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1")
+    d = json.loads(raw)
+    assert "no decoder" in d["error"]
