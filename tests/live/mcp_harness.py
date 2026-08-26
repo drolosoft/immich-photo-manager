@@ -5,6 +5,7 @@ import os
 import json
 import asyncio
 import base64
+import shutil
 import tempfile
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -42,7 +43,7 @@ async def main():
             await s.initialize()
             tools = await s.list_tools()
             names = sorted(t.name for t in tools.tools)
-            rec("list_tools", len(names) == 55, f"{len(names)} tools")
+            rec("list_tools", len(names) == 57, f"{len(names)} tools")
 
             async def call(tool, **kw):
                 res = await s.call_tool(tool, kw)
@@ -255,7 +256,11 @@ async def main():
                 f"{len(imgs)} jpeg frames bytes={[len(base64.b64decode(i.data)) for i in imgs]}",
             )
             d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=50, size="preview")
-            rec("get_video_frames(cap)", (not e) and len(imgs) == 12, f"{len(imgs)} frames for count=50")
+            rec(
+                "get_video_frames(cap)",
+                isinstance(d, dict) and d.get("confirm_required") and d.get("frames_planned") == 50,
+                f"plan={d if isinstance(d, dict) else d}",
+            )
             d, _, e, _ = await call("get_video_frames_json", asset_id=VIDEO, count=4)
             ts = [f["timestamp"] for f in d.get("frames", [])] if isinstance(d, dict) else []
             rec(
@@ -264,6 +269,34 @@ async def main():
                 and ts == sorted(ts) and all(f["type"] == "image/jpeg" for f in d["frames"]),
                 f"duration={d.get('duration') if isinstance(d, dict) else d} backend={d.get('backend') if isinstance(d, dict) else None} ts={ts}",
             )
+
+            # ── video granularity
+            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=20)
+            rec("get_video_frames(gate)", isinstance(d, dict) and d.get("confirm_required") and d.get("frames_planned") == 20,
+                f"plan={d if isinstance(d, dict) else d}")
+            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=20, confirm=True)
+            rec("get_video_frames(confirm)", (not e) and len(imgs) == 20, f"{len(imgs)} frames")
+            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, interval=1.0)
+            rec("get_video_frames(interval)", (not e) and len(imgs) == 3, f"{len(imgs)} frames at 1 s")
+            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=2, start=1.0, end=2.0)
+            rec("get_video_frames(segment)", (not e) and len(imgs) == 2, f"{len(imgs)} frames in 1-2 s")
+
+            # ── PDF export
+            d, _, e, _ = await call("get_export_preview", album_id=ALB)
+            rec("get_export_preview", okj(d, e) and d.get("count") == 5, f"count={d.get('count') if isinstance(d, dict) else d}")
+            out = os.path.join(cache, f"lab-{TAG}.pdf")
+            d, _, e, _ = await call("export_pdf", album_id=ALB, output_path=out, frames_per_video=3,
+                                    captions={P1: "harness caption"})
+            pages = 0
+            if isinstance(d, dict) and d.get("path") and os.path.exists(d["path"]):
+                import subprocess
+                info = subprocess.run(["pdfinfo", d["path"]], capture_output=True, text=True).stdout if shutil.which("pdfinfo") else ""
+                pages = int(next((ln.split()[-1] for ln in info.splitlines() if ln.startswith("Pages:")), d.get("pages", 0)))
+            rec("export_pdf", okj(d, e) and pages >= 8 and d.get("assets_included") == 5,
+                f"path={d.get('path') if isinstance(d, dict) else d} pages={pages} bytes={d.get('bytes') if isinstance(d, dict) else 0}")
+            d, _, e, _ = await call("export_pdf", asset_ids=[P1, VIDEO], output_path=out, layout="grid", return_base64=True)
+            rec("export_pdf(ids,grid,b64)", okj(d, e) and d["path"].endswith("-2.pdf") and base64.b64decode(d["pdf_base64"])[:4] == b"%PDF",
+                f"path={d.get('path') if isinstance(d, dict) else d}")
 
             # ── shared links
             d, _, e, _ = await call(

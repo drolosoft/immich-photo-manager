@@ -320,7 +320,13 @@ class ImmichClient:
             page += 1
 
     async def get_assets_by_ids(self, ids: list[str], with_exif: bool = True) -> list[dict]:
-        """Assets for explicit ids via POST /search/metadata {ids}, in the order given; unknown ids are dropped."""
+        """Assets for explicit ids via POST /search/metadata {ids}, in the order given; unknown ids are dropped.
+
+        Some Immich versions (e.g. 2.7.5) silently ignore the `ids` filter on
+        /search/metadata and return unrelated assets instead. Any id not found in
+        the response is fetched individually via GET /assets/{id} as a fallback;
+        ids that genuinely don't exist (404) are dropped, same as before.
+        """
         if not ids:
             return []
         body: dict[str, Any] = {"ids": ids, "size": min(len(ids), 1000), "withPeople": True}
@@ -328,7 +334,12 @@ class ImmichClient:
             body["withExif"] = True
         result = await self._request("POST", "/search/metadata", json=body)
         items = (result.get("assets", {}) if isinstance(result, dict) else {}).get("items", [])
-        by_id = {a["id"]: a for a in items}
+        by_id = {a["id"]: a for a in items if a.get("id") in ids}
+        for missing_id in [i for i in ids if i not in by_id]:
+            try:
+                by_id[missing_id] = await self.get_asset(missing_id)
+            except httpx.HTTPStatusError:
+                pass  # id doesn't exist on this server: drop it, as before
         return [by_id[i] for i in ids if i in by_id]
 
     async def fetch_tile(self, z: int, x: int, y: int) -> bytes:

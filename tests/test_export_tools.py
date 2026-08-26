@@ -36,9 +36,23 @@ async def test_get_assets_by_ids_keeps_order_and_drops_missing(env_credentials, 
     with respx.mock(base_url=BASE) as mock:
         route = mock.post("/api/search/metadata").mock(
             return_value=httpx.Response(200, json={"assets": {"items": [_asset(2), _asset(1)], "nextPage": None}}))
+        mock.get("/api/assets/zz").mock(return_value=httpx.Response(404, json={"message": "not found"}))
         got = await ImmichClient().get_assets_by_ids(["a1", "a2", "zz"])
     body = json.loads(route.calls[0].request.content)
     assert body["ids"] == ["a1", "a2", "zz"] and body["withExif"] is True and body["withPeople"] is True
+    assert [a["id"] for a in got] == ["a1", "a2"]
+
+
+@pytest.mark.asyncio
+async def test_get_assets_by_ids_falls_back_to_get_asset_when_ids_filter_ignored(env_credentials, isolated_cache):
+    """Immich 2.7.5 ignores `ids` on /search/metadata and returns unrelated assets instead;
+    any requested id missing from the response must be fetched via GET /assets/{id}."""
+    with respx.mock(base_url=BASE) as mock:
+        mock.post("/api/search/metadata").mock(
+            return_value=httpx.Response(200, json={"assets": {"items": [_asset(9)], "nextPage": None}}))
+        mock.get("/api/assets/a1").mock(return_value=httpx.Response(200, json=_asset(1)))
+        mock.get("/api/assets/a2").mock(return_value=httpx.Response(200, json=_asset(2)))
+        got = await ImmichClient().get_assets_by_ids(["a1", "a2"])
     assert [a["id"] for a in got] == ["a1", "a2"]
 
 
