@@ -291,7 +291,7 @@ class ImmichClient:
         """Get album details. Immich < 3.0 also inlines `assets`; 3.0+ does not."""
         return await self._request("GET", f"/albums/{album_id}")
 
-    async def get_album_assets(self, album_id: str, limit: int | None = None) -> list[dict]:
+    async def get_album_assets(self, album_id: str, limit: int | None = None, with_exif: bool = False) -> list[dict]:
         """List the assets of an album via POST /search/metadata (albumIds).
 
         Works on Immich 2.x and 3.x. Immich 3.0 removed the `assets` list from
@@ -302,10 +302,13 @@ class ImmichClient:
         assets: list[dict] = []
         page = 1
         while True:
+            body: dict[str, Any] = {"albumIds": [album_id], "page": page, "size": page_size, "withPeople": True}
+            if with_exif:
+                body["withExif"] = True
             result = await self._request(
                 "POST",
                 "/search/metadata",
-                json={"albumIds": [album_id], "page": page, "size": page_size, "withPeople": True},
+                json=body,
             )
             block = result.get("assets", {}) if isinstance(result, dict) else {}
             items = block.get("items", [])
@@ -315,6 +318,27 @@ class ImmichClient:
             if not items or not block.get("nextPage"):
                 return assets
             page += 1
+
+    async def get_assets_by_ids(self, ids: list[str], with_exif: bool = True) -> list[dict]:
+        """Assets for explicit ids via POST /search/metadata {ids}, in the order given; unknown ids are dropped."""
+        if not ids:
+            return []
+        body: dict[str, Any] = {"ids": ids, "size": min(len(ids), 1000), "withPeople": True}
+        if with_exif:
+            body["withExif"] = True
+        result = await self._request("POST", "/search/metadata", json=body)
+        items = (result.get("assets", {}) if isinstance(result, dict) else {}).get("items", [])
+        by_id = {a["id"]: a for a in items}
+        return [by_id[i] for i in ids if i in by_id]
+
+    async def fetch_tile(self, z: int, x: int, y: int) -> bytes:
+        """One OpenStreetMap tile (only used by export_pdf with map=True)."""
+        from . import __version__
+        url = f"https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(url, headers={"User-Agent": f"immich-photo-manager/{__version__}"})
+            r.raise_for_status()
+            return r.content
 
     async def create_album(
         self, name: str, description: str = "", asset_ids: list[str] | None = None
