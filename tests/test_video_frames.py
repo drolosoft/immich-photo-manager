@@ -44,10 +44,45 @@ def test_frame_timestamps_are_centered_bins():
     assert video_frames.frame_timestamps(0.0, 4) == [0.0, 0.0, 0.0, 0.0]
 
 
-def test_count_is_clamped_to_1_12():
+def test_count_is_clamped_to_1_120():
     assert video_frames.clamp_count(0) == 1
     assert video_frames.clamp_count(6) == 6
-    assert video_frames.clamp_count(99) == video_frames.MAX_FRAMES == 12
+    assert video_frames.clamp_count(99) == 99
+    assert video_frames.clamp_count(999) == video_frames.MAX_FRAMES == 120
+
+
+def test_segment_timestamps_are_centered_inside_segment():
+    assert video_frames.frame_timestamps(24.0, 2, start=8.0, end=12.0) == [9.0, 11.0]
+    assert video_frames.frame_timestamps(24.0, 2, start=20.0) == [21.0, 23.0]  # end=0 → to the end
+
+
+def test_interval_timestamps_one_per_second():
+    assert video_frames.interval_timestamps(3.0, 1.0) == [0.5, 1.5, 2.5]
+    assert video_frames.interval_timestamps(24.0, 10.0, start=8.0, end=12.0) == [10.0]
+
+
+def test_plan_timestamps_caps_at_120():
+    with pytest.raises(video_frames.TooManyFrames) as exc:
+        video_frames.plan_timestamps(300.0, count=0, interval=1.0, start=0.0, end=0.0)
+    assert "120" in str(exc.value) and "start" in str(exc.value)
+    assert len(video_frames.plan_timestamps(300.0, count=0, interval=5.0, start=0.0, end=0.0)) == 60
+    assert video_frames.plan_timestamps(3.0, count=2, interval=0.0, start=0.0, end=0.0) == [0.75, 2.25]
+
+
+def test_estimate_tokens():
+    assert video_frames.estimate_tokens(12, "thumbnail") == 19200
+    assert video_frames.estimate_tokens(2, "preview") == 12800
+
+
+def test_extract_frames_segment_and_interval(clip):
+    seg = video_frames.extract_frames(clip, count=2, size="thumbnail", start=1.0, end=2.0)
+    assert [f["timestamp"] for f in seg["frames"]] == [1.25, 1.75]
+    every = video_frames.extract_frames(clip, count=0, size="thumbnail", interval=1.0)
+    assert [f["timestamp"] for f in every["frames"]] == [0.5, 1.5]  # 2 s clip
+
+
+def test_probe_duration(clip):
+    assert 1.9 <= video_frames.probe_duration(clip) <= 2.1
 
 
 # ── backends: a real 2-second clip, decoded by whatever is installed ──
@@ -107,7 +142,7 @@ class StubClient:
         return b"MP4"
 
 
-def _fake_extract(data, count, size, backend=None):
+def _fake_extract(data, count, size, backend=None, start=0.0, end=0.0, interval=0.0):
     return {
         "duration": 3.0,
         "backend": "stub",
@@ -129,7 +164,7 @@ async def test_get_video_frames_returns_image_blocks(fake_ctx, monkeypatch):
 async def test_get_video_frames_caps_count(fake_ctx, monkeypatch):
     monkeypatch.setattr(video_frames, "extract_frames", _fake_extract)
     result = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1", count=50)
-    assert len(result) == 12
+    assert len(result) == 50
 
 
 @pytest.mark.asyncio

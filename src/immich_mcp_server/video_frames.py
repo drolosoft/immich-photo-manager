@@ -20,7 +20,9 @@ import subprocess
 import tempfile
 from fractions import Fraction
 
-MAX_FRAMES = 12
+MAX_FRAMES = 120       # hard cap per call (model tools) and per video (PDF)
+CONFIRM_ABOVE = 12     # model tools ask for confirm=True above this
+TOKENS_PER_FRAME = {"thumbnail": 1600, "preview": 6400}  # measured 2026-08-26 / upper-bound guess
 SIZES = {"thumbnail": 250, "preview": 1440}
 
 
@@ -28,15 +30,74 @@ class NoVideoBackend(RuntimeError):
     """Neither PyAV nor ffmpeg is available."""
 
 
+class TooManyFrames(ValueError):
+    """The request would exceed MAX_FRAMES."""
+
+
 def clamp_count(count: int) -> int:
     return max(1, min(int(count or 1), MAX_FRAMES))
 
 
-def frame_timestamps(duration: float, count: int) -> list[float]:
-    """Centres of `count` equal bins over [0, duration] (skips the black first frame)."""
+def _segment(duration: float, start: float, end: float) -> tuple[float, float]:
+    start = max(0.0, float(start or 0.0))
+    end = float(end or 0.0)
+    if end <= 0 or end > duration:
+        end = duration
+    if end <= start:
+        end = duration if duration > start else start
+    return start, end
+
+
+def frame_timestamps(duration: float, count: int, start: float = 0.0, end: float = 0.0) -> list[float]:
+    """Centres of `count` equal bins over [start, end] (skips the black first frame)."""
     if duration <= 0:
         return [0.0] * count
-    return [round(duration * (i + 0.5) / count, 3) for i in range(count)]
+    s, e = _segment(duration, start, end)
+    span = e - s
+    return [round(s + span * (i + 0.5) / count, 3) for i in range(count)]
+
+
+def interval_timestamps(duration: float, interval: float, start: float = 0.0, end: float = 0.0) -> list[float]:
+    """One frame every `interval` seconds over [start, end], each at the centre of its slot."""
+    if duration <= 0 or interval <= 0:
+        return []
+    s, e = _segment(duration, start, end)
+    times = []
+
+    # Try placing frames at centers of bins aligned globally
+    t = (int(s / interval) * interval) + interval / 2
+    while t <= e:
+        if t >= s:
+            times.append(round(t, 3))
+        t += interval
+
+    # Fallback: if no centered frames fit, place at multiples of interval within [s, e]
+    if not times:
+        t = 0.0
+        while t <= e:
+            if t >= s:
+                times.append(round(t, 3))
+            t += interval
+
+    return times
+
+
+def plan_timestamps(duration: float, count: int, interval: float, start: float, end: float) -> list[float]:
+    """Timestamps for a request; `interval` wins over `count`. Raises TooManyFrames above MAX_FRAMES."""
+    if interval and interval > 0:
+        ts = interval_timestamps(duration, interval, start, end)
+    else:
+        ts = frame_timestamps(duration, clamp_count(count), start, end)
+    if len(ts) > MAX_FRAMES:
+        raise TooManyFrames(
+            f"{len(ts)} frames requested; the cap is {MAX_FRAMES} per call. "
+            f"Narrow the segment with start/end or use a larger interval."
+        )
+    return ts
+
+
+def estimate_tokens(n: int, size: str = "thumbnail") -> int:
+    return n * TOKENS_PER_FRAME.get(size, TOKENS_PER_FRAME["thumbnail"])
 
 
 def _pyav_available() -> bool:
@@ -61,7 +122,7 @@ def _scaled(width: int, height: int, target: int) -> tuple[int, int]:
 # ── backend: PyAV ───────────────────────────────────────────
 
 
-def _extract_pyav(path: str, count: int, target: int) -> dict:
+def _extract_pyav(path: str, timestamps: list[float], target: int) -> dict:
     import av
 
     frames = []
@@ -73,7 +134,7 @@ def _extract_pyav(path: str, count: int, target: int) -> dict:
             else float(stream.duration * stream.time_base) if stream.duration else 0.0
         )
         w, h = _scaled(stream.codec_context.width, stream.codec_context.height, target)
-        for ts in frame_timestamps(duration, count):
+        for ts in timestamps:
             container.seek(int(ts / stream.time_base), stream=stream, backward=True)
             picked = None
             for frame in container.decode(stream):
@@ -116,11 +177,11 @@ def _ffmpeg_duration(path: str) -> float:
     return int(hh) * 3600 + int(mm) * 60 + float(ss)
 
 
-def _extract_ffmpeg(path: str, count: int, target: int) -> dict:
+def _extract_ffmpeg(path: str, timestamps: list[float], target: int) -> dict:
     duration = _ffmpeg_duration(path)
     scale = f"scale='if(gt(iw,ih),min({target},iw),-2)':'if(gt(iw,ih),-2,min({target},ih))'"
     frames = []
-    for ts in frame_timestamps(duration, count):
+    for ts in timestamps:
         proc = subprocess.run(
             ["ffmpeg", "-loglevel", "error", "-ss", f"{ts:.3f}", "-i", path,
              "-frames:v", "1", "-vf", scale, "-f", "image2", "-c:v", "mjpeg", "pipe:1"],
@@ -138,13 +199,39 @@ def _entry(ts: float, jpeg: bytes) -> dict:
     return {"timestamp": ts, "data": base64.b64encode(jpeg).decode("ascii"), "type": "image/jpeg"}
 
 
-def extract_frames(data: bytes, count: int, size: str = "thumbnail", backend: str | None = None) -> dict:
-    """Decode `count` JPEG frames from video bytes.
+def _duration(path: str) -> float:
+    if _pyav_available():
+        import av
+        with av.open(path) as c:
+            s = c.streams.video[0]
+            return float(c.duration / av.time_base) if c.duration else float(s.duration * s.time_base) if s.duration else 0.0
+    return _ffmpeg_duration(path)
+
+
+def _to_tempfile(data: bytes) -> str:
+    fd, path = tempfile.mkstemp(suffix=".mp4", prefix="immich-video-")
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(data)
+    return path
+
+
+def probe_duration(data: bytes) -> float:
+    path = _to_tempfile(data)
+    try:
+        return round(_duration(path), 3)
+    finally:
+        os.unlink(path)
+
+
+def extract_frames(
+    data: bytes, count: int = 6, size: str = "thumbnail", backend: str | None = None,
+    start: float = 0.0, end: float = 0.0, interval: float = 0.0,
+) -> dict:
+    """Decode frames from video bytes; `interval` (seconds) wins over `count`.
 
     Returns {"duration": s, "backend": name, "frames": [{timestamp, data(b64), type}]}.
-    Raises NoVideoBackend when neither PyAV nor ffmpeg can be used.
+    Raises NoVideoBackend when neither PyAV nor ffmpeg can be used, TooManyFrames above MAX_FRAMES.
     """
-    count = clamp_count(count)
     target = SIZES.get(size, SIZES["thumbnail"])
     if backend is None:
         backend = "pyav" if _pyav_available() else "ffmpeg" if shutil.which("ffmpeg") else None
@@ -153,13 +240,13 @@ def extract_frames(data: bytes, count: int, size: str = "thumbnail", backend: st
             "Video frame extraction needs a decoder: install the optional extra "
             "`pip install immich-photo-manager[video]` (PyAV) or put `ffmpeg` on PATH."
         )
-    fd, path = tempfile.mkstemp(suffix=".mp4", prefix="immich-video-")
+    path = _to_tempfile(data)
     try:
-        with os.fdopen(fd, "wb") as fh:
-            fh.write(data)
+        duration = _duration(path)
+        timestamps = plan_timestamps(duration, count, interval, start, end)
         if backend == "pyav":
-            return _extract_pyav(path, count, target)
-        return _extract_ffmpeg(path, count, target)
+            return _extract_pyav(path, timestamps, target)
+        return _extract_ffmpeg(path, timestamps, target)
     finally:
         try:
             os.unlink(path)
