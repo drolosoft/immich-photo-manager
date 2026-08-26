@@ -1,7 +1,7 @@
 {
   "name": "immich-photo-manager",
-  "version": "1.5.3",
-  "description": "MCP server for intelligent photo management with Immich — interactive HTML galleries with Cowork Actions Panel, geographic album curation, library cleanup, duplicate detection, people & face management, tags, uploads, shared links, trash management, metadata repair, and 53 MCP tools. The first MCP server for self-hosted photo management.",
+  "version": "1.6.0",
+  "description": "MCP server for intelligent photo management with Immich — interactive HTML galleries with Cowork Actions Panel, geographic album curation, library cleanup, duplicate detection, people & face management, tags, uploads, shared links, trash management, metadata repair, and 55 MCP tools. The first MCP server for self-hosted photo management.",
   "mcpServers": "./.claude-plugin/mcp.json",
   "author": {
     "name": "Drolosoft",

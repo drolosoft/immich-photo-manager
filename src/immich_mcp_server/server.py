@@ -5,6 +5,7 @@ Part of the immich-photo-manager plugin.
 License: MIT
 """
 
+import asyncio
 import base64
 import json
 import os
@@ -17,6 +18,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP, Context, Image
 from mcp.server.transport_security import TransportSecuritySettings
 
+from . import video_frames
 from .immich_client import ImmichClient
 
 # FastMCP's Settings model declares `lifespan` using a forward reference to the
@@ -862,6 +864,64 @@ async def get_images_batch(
     """
     result = await _client(ctx).get_thumbnails_batch(asset_ids, size, min(limit, 50))
     return [_entry_to_image(t) for t in result.get("thumbnails", [])]
+
+
+# ── Video frames ────────────────────────────────────────────
+
+
+async def _video_frames(ctx: Context, asset_id: str, count: int, size: str) -> dict:
+    data = await _client(ctx).get_video_playback(asset_id)
+    return await asyncio.to_thread(
+        video_frames.extract_frames, data, video_frames.clamp_count(count), size
+    )
+
+
+@mcp.tool(structured_output=False)
+async def get_video_frames(
+    ctx: Context, asset_id: str, count: int = 6, size: str = "thumbnail"
+) -> list[Image]:
+    """Get evenly spaced frames of a video as image blocks, to "watch" a clip
+    frame by frame. Immich only keeps one poster thumbnail per video; this tool
+    downloads the video and cuts the frames locally (PyAV via
+    `pip install immich-photo-manager[video]`, or ffmpeg on PATH). Each frame is
+    one image for the model: keep count small. For base64 JSON with timestamps
+    (gallery skills), use get_video_frames_json. Read-only.
+
+    Args:
+        asset_id: The video asset's UUID.
+        count: Frames to extract, evenly spaced over the duration (1-12, default 6).
+        size: 'thumbnail' (250px) or 'preview' (1440px, many more tokens). Default: 'thumbnail'.
+
+    Returns: A list of JPEG image blocks, first to last in time order.
+    """
+    result = await _video_frames(ctx, asset_id, count, size)
+    return [_entry_to_image(f) for f in result["frames"]]
+
+
+@mcp.tool()
+async def get_video_frames_json(
+    ctx: Context, asset_id: str, count: int = 6, size: str = "thumbnail"
+) -> str:
+    """Get evenly spaced frames of a video as base64 JPEG with timestamps, for
+    HTML galleries and skills (data: URIs). Same extraction as get_video_frames
+    (PyAV or ffmpeg needed, count capped at 12). Read-only.
+
+    Args:
+        asset_id: The video asset's UUID.
+        count: Frames to extract, evenly spaced over the duration (1-12, default 6).
+        size: 'thumbnail' (250px) or 'preview' (1440px). Default: 'thumbnail'.
+
+    Returns: JSON with asset_id, duration (seconds), backend, count and frames
+    (timestamp, data base64, type image/jpeg); or {"error": ...} when no decoder is available.
+    """
+    try:
+        result = await _video_frames(ctx, asset_id, count, size)
+    except video_frames.NoVideoBackend as exc:
+        return json.dumps({"error": str(exc)})
+    return json.dumps(
+        {"asset_id": asset_id, "duration": result["duration"], "backend": result["backend"],
+         "count": len(result["frames"]), "frames": result["frames"]}
+    )
 
 
 # ── Shared Links ────────────────────────────────────────────

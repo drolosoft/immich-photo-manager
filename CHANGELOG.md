@@ -6,6 +6,13 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.6.0] — 2026-08-26
+
+### Added
+- **`get_video_frames(asset_id, count=6, size)`** returns evenly spaced frames of a video as image blocks, so a model can look at a clip frame by frame (issue #15). Immich only keeps one poster thumbnail per video; the plugin downloads the file through `GET /assets/{id}/video/playback` and decodes the frames locally with PyAV (optional extra `pip install immich-photo-manager[video]`) or `ffmpeg` on PATH, and says which to install when neither is present. `count` is capped at 12; every frame is one image for the model.
+- **`get_video_frames_json`**, the base64 + timestamps twin for HTML galleries and skills.
+- Live harness checks for both tools against `clip.mp4` on Immich 2.7.5 and 3.1.0. 55 tools.
+
 ## [v1.5.3] — 2026-08-25
 
 ### Added
@@ -114,6 +121,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.6.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.6.0
 [v1.5.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.3
 [v1.5.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.2
 [v1.5.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.1

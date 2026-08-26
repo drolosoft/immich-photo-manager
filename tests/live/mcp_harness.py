@@ -42,7 +42,7 @@ async def main():
             await s.initialize()
             tools = await s.list_tools()
             names = sorted(t.name for t in tools.tools)
-            rec("list_tools", len(names) == 53, f"{len(names)} tools")
+            rec("list_tools", len(names) == 55, f"{len(names)} tools")
 
             async def call(tool, **kw):
                 res = await s.call_tool(tool, kw)
@@ -245,6 +245,25 @@ async def main():
                 "get_images_batch", asset_ids=[P1, P2, VIDEO], size="thumbnail"
             )
             rec("get_images_batch", (not e) and len(imgs) == 3, f"{len(imgs)} image blocks")
+
+            # ── video frames (clip.mp4 is 3 s; frames land at 0.5/1.5/2.5 s)
+            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=3)
+            rec(
+                "get_video_frames",
+                (not e) and len(imgs) == 3
+                and all(base64.b64decode(i.data)[:2] == b"\xff\xd8" for i in imgs),
+                f"{len(imgs)} jpeg frames bytes={[len(base64.b64decode(i.data)) for i in imgs]}",
+            )
+            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=50, size="preview")
+            rec("get_video_frames(cap)", (not e) and len(imgs) == 12, f"{len(imgs)} frames for count=50")
+            d, _, e, _ = await call("get_video_frames_json", asset_id=VIDEO, count=4)
+            ts = [f["timestamp"] for f in d.get("frames", [])] if isinstance(d, dict) else []
+            rec(
+                "get_video_frames_json",
+                okj(d, e) and d.get("count") == 4 and 2.5 <= d.get("duration", 0) <= 3.5
+                and ts == sorted(ts) and all(f["type"] == "image/jpeg" for f in d["frames"]),
+                f"duration={d.get('duration') if isinstance(d, dict) else d} backend={d.get('backend') if isinstance(d, dict) else None} ts={ts}",
+            )
 
             # ── shared links
             d, _, e, _ = await call(
@@ -504,9 +523,11 @@ async def main():
                 others = [p["id"] for p in ppl if p["id"] != PID]
                 for fn in (
                     "einstein.jpg",
-                    "obama.jpg",
+                    "roosevelt.jpg",
                     "curie.jpg",
                 ):  # Immich 3.x hides 1-face people from /people; find them via faces
+                    if fn not in X:
+                        continue
                     fz, _, _, _ = await call("get_asset_faces", asset_id=X[fn])
                     fz = fz if isinstance(fz, list) else fz.get("faces", [])
                     for f in fz:

@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-The Immich Photo Manager MCP server exposes 53 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
+The Immich Photo Manager MCP server exposes 55 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
 
 ---
 
@@ -102,6 +102,15 @@ Image-block variants of the thumbnail tools — return MCP `ImageContent` for cl
 | `get_album_images` | Get an album's thumbnails as image blocks | List of images |
 | `get_images_batch` | Get thumbnails for arbitrary asset IDs as image blocks | List of images |
 
+### Video (2)
+
+Immich keeps one poster thumbnail per video and no per-frame previews. These tools download the video (`GET /assets/{id}/video/playback`) and cut frames locally, so a model can "watch" a clip. They need a decoder: PyAV (`pip install immich-photo-manager[video]`) or `ffmpeg` on PATH; without one they return a clear error naming both.
+
+| Tool | Description | Returns |
+|------|-------------|---------|
+| `get_video_frames` | Evenly spaced frames of a video as image blocks (1-12, default 6) | List of images |
+| `get_video_frames_json` | Same frames as base64 JPEG with timestamps, for galleries | JSON |
+
 ### Configuration (2)
 
 | Tool | Description | Modifies? |
@@ -192,6 +201,25 @@ Like `get_album_thumbnails` but works with arbitrary asset IDs — no album need
 ### `get_asset_image` / `get_album_images` / `get_images_batch`
 
 Image-block variants of `get_asset_thumbnail`, `get_album_thumbnails`, and `get_thumbnails_batch`. Same parameters, but they return MCP `ImageContent` blocks instead of base64 JSON, so clients that render images inline (Open WebUI, Claude Desktop) show the photos directly. They carry no filenames/dates — for HTML gallery generation (which needs the metadata and embeds base64 as `data:` URIs), keep using the JSON `get_*_thumbnail(s)` tools. These are additive; the JSON tools remain the default.
+
+### `get_video_frames` / `get_video_frames_json`
+
+**Parameters:**
+- `asset_id` (string, required): The video asset's UUID
+- `count` (int, optional): Frames to extract, evenly spaced over the duration. 1-12, default 6 (capped at 12)
+- `size` (string, optional): `"thumbnail"` (250px, default) or `"preview"` (1440px)
+
+Frames are taken at the centre of `count` equal time bins, so a 3 s clip with `count=3` yields 0.5 s, 1.5 s, 2.5 s (never the black first frame). `get_video_frames` returns JPEG image blocks in time order; `get_video_frames_json` returns `{asset_id, duration, backend, count, frames: [{timestamp, data, type}]}` for HTML galleries.
+
+**Cost:** every frame is one image for the model. Six thumbnail frames are cheap; twelve preview frames are not. Start with the default and raise `count` only for the clips that need it.
+
+**Decoder:** PyAV is tried first (in-process, `pip install immich-photo-manager[video]`), then the `ffmpeg` binary. Neither is installed by default; the error message tells you which to add. The whole video file is downloaded to a temp file and deleted after extraction.
+
+**Example:**
+```
+"Show me 6 frames of that hypercar clip"
+"What happens in this video? Cut 8 frames"
+```
 
 ### `update_asset_metadata`
 
