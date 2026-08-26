@@ -18,7 +18,7 @@ For each photo, Claude reads the `people` and `unassignedFaces` fields:
 
 ```
 get_asset_info(asset_id="...")
-→ people: [{ name: "Juan", id: "..." }]
+→ people: [{ name: "Sam", id: "..." }]
    unassignedFaces: [{ id: "face-uuid-1" }, { id: "face-uuid-2" }]
 ```
 
@@ -29,7 +29,7 @@ PEOPLE REPORT
 ═════════════
 
 👤 NAMED PEOPLE (faces you've tagged in Immich)
-   Juan:          4,521 photos  (most frequent)
+   Sam:          4,521 photos  (most frequent)
    María:         2,103 photos
    Carlos:          891 photos
    Ana:             634 photos
@@ -49,9 +49,9 @@ PEOPLE REPORT
    → Open Immich → People → assign names to these clusters
 
 📅 PEOPLE OVER TIME
-   2024: Juan (892), María (445), Carlos (201)
-   2025: Juan (1,834), María (923), Ana (412)
-   2026: Juan (1,795), María (735), Carlos (690)
+   2024: Sam (892), María (445), Carlos (201)
+   2025: Sam (1,834), María (923), Ana (412)
+   2026: Sam (1,795), María (735), Carlos (690)
 ```
 
 ## Step 3: Actionable next steps
@@ -66,7 +66,7 @@ RECOMMENDATIONS
 2. Review 2,456 group photos — potential album candidates
    → "Create a 'Group Photos' album?" [Yes / No]
 
-3. Juan appears in 4,521 photos — consider a dedicated album
+3. Sam appears in 4,521 photos — consider a dedicated album
    → "Create albums per person?" [Yes / No]
 ```
 

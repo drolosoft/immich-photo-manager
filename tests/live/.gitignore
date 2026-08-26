@@ -1,0 +1,6 @@
+library-*/
+postgres-*/
+model-cache/
+creds-*.json
+media/*
+!media/.gitkeep

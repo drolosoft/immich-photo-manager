@@ -27,39 +27,47 @@ Step-by-step guide to installing, configuring, and running the Immich Photo Mana
 
 ## Installation
 
-### 1. Clone the repository
+Two routes, for two different things. Route A installs the Claude Code plugin (tools, skills and slash commands). Route B registers only the MCP server (the tools) for Claude Desktop, Cowork or any other MCP client. Do not do both on the same machine for Claude Code, or it will see two servers.
+
+### Route A: Claude Code plugin
 
 ```bash
 git clone https://github.com/drolosoft/immich-photo-manager.git
 cd immich-photo-manager
-```
+pip3 install -r src/requirements.txt      # the plugin runs on your system python3
 
-### 2. Run the interactive setup
-
-```bash
-./scripts/setup-mcp.sh
-```
-
-This will:
-- Install Python dependencies (`mcp`, `httpx`)
-- Ask for your Immich server URL and API key
-- Generate `.mcp.json` with the correct configuration
-- Optionally configure global access for Cowork mode
-
-### 3. Install the Claude plugin
-
-```bash
-claude plugin marketplace add ~/immich-photo-manager
+claude plugin marketplace add ./
 claude plugin install immich-photo-manager
 ```
 
-### 4. Verify
+Open Claude Code (restart it if it was open) and connect it to your Immich, guided:
 
-**Restart Claude Code** or start a new Cowork session (MCP connections are established at startup), then:
+```
+/setup-immich-photo-manager
+```
+
+It asks for your server URL and API key, checks them against the server and saves them. Or in one line, same thing underneath:
+
+```
+Update my Immich credentials to http://immich.local:2283 with API key <your API key>
+```
+
+The key is checked against the server before it is saved, then kept in the plugin's cache for every session. Repeat either to change server or key. Confirm with:
+
+```
+What Immich version am I connected to?
+```
+> Immich 3.1.0 at http://immich.local:2283
+
+### Route B: script (Claude Desktop, Cowork, other MCP clients)
 
 ```bash
-claude -p "use the immich ping tool"
+git clone https://github.com/drolosoft/immich-photo-manager.git
+cd immich-photo-manager
+./scripts/setup-mcp.sh
 ```
+
+The script installs the Python dependencies (`mcp`, `httpx`), asks for your Immich URL and API key, checks the key against the server, and writes a server entry named `immich` (with `IMMICH_BASE_URL` and `IMMICH_API_KEY`) into `.mcp.json` in this folder. If you answer yes to "install globally", it also registers it in Claude Code for every folder (`claude mcp add-json immich ... -s user`) and in Claude Desktop's config. Restart the app afterwards, then ask "What Immich version am I connected to?".
 
 ### Install with uvx
 
@@ -106,10 +114,11 @@ After installation, verify everything works:
 ### Check connection
 
 ```
-/immich-status
+What Immich version am I connected to?
 ```
+> Immich 3.1.0 at http://immich.local:2283
 
-You should see your library statistics: photo count, video count, storage used.
+Or `/immich-status` for the library numbers: photos, videos, storage used.
 
 ### Explore your library
 
@@ -119,13 +128,19 @@ You should see your library statistics: photo count, video count, storage used.
 
 This discovers all geotagged locations in your library and shows countries and cities.
 
-### Run a health check
+### Ask for something you actually want
 
 ```
-"How healthy is my library?"
+Which of my photos have no location?
+```
+```
+Go through my 'Lisbon 2024' album and tell me what's in each photo
+```
+```
+Do I have duplicates? Show me the biggest groups first
 ```
 
-This triggers the `library-health-report` skill and gives you a comprehensive overview with recommendations for what to do next.
+Use your own album names. The first one reads metadata only; the second one sends thumbnails to the model so it can look at the pictures; the third one uses Immich's own duplicate detection. Step by step versions with the real output: [demos](demos/README.md), and [Demo 11](demos/11-album-walkthrough.md) for the album one.
 
 ---
 

@@ -5,15 +5,24 @@
 <h1 align="center">immich-photo-manager</h1>
 
 <p align="center">
+  <a href="https://github.com/drolosoft/immich-photo-manager/actions/workflows/ci.yml"><img src="https://github.com/drolosoft/immich-photo-manager/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://glama.ai/mcp/servers/drolosoft/immich-photo-manager"><img src="https://glama.ai/mcp/servers/drolosoft/immich-photo-manager/badges/score.svg" alt="immich-photo-manager MCP server"></a>
   <a href="https://github.com/drolosoft/immich-photo-manager/releases/latest"><img src="https://img.shields.io/github/v/release/drolosoft/immich-photo-manager" alt="GitHub Release"></a>
   <a href="https://immich.app"><img src="https://img.shields.io/badge/Immich-ecosystem-blueviolet.svg" alt="Immich"></a>
+  <a href="https://pypi.org/project/immich-photo-manager/"><img src="https://img.shields.io/pypi/v/immich-photo-manager" alt="PyPI"></a>
+</p>
+<p align="center">
+  <a href="tests/live/"><img src="https://img.shields.io/badge/tested_live_on_Immich-2.7.5_%7C_3.1.0-2ea44f" alt="Tested live on Immich 2.7.5 and 3.1.0"></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/unit_tests-44_on_every_push-2ea44f" alt="44 unit tests on every push"></a>
+  <a href="doc/demos/"><img src="https://img.shields.io/badge/demos-11_real_sessions-blue" alt="11 demos from real sessions"></a>
 </p>
 
 > **MCP server for intelligent photo management with [Immich](https://immich.app) — your self-hosted library, understood.**
 
-If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance — search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally — your photos never leave your server.
+If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance — search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally and talks only to your Immich; your originals stay on your server (see [what leaves your network](#what-leaves-your-network)).
+
+> **Tested, not assumed.** Every push runs 44 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 53 tools over the MCP protocol, state re-read after each write) before it is tagged. The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt. Details: [How it's tested](#how-its-tested).
 
 <p align="center"><img src="./assets/demo.gif" alt="immich-photo-manager demo" width="800"></p>
 
@@ -37,22 +46,70 @@ GPS coordinates, CLIP visual search, and temporal matching — combined in one r
 - An Immich API key ([how to create one](https://immich.app/docs/features/command-line-interface#obtain-the-api-key))
 - **Python 3.10+** with `pip` ([download](https://www.python.org/downloads/))
 
-### Install as Claude Plugin (recommended)
+### Install (Claude Code plugin)
 
 ```sh
 git clone https://github.com/drolosoft/immich-photo-manager.git
 cd immich-photo-manager
+pip3 install -r src/requirements.txt      # the plugin runs on your system python3
 
 claude plugin marketplace add ./
 claude plugin install immich-photo-manager
-./scripts/setup-mcp.sh
 ```
 
-That's it. Ask Claude: **"how healthy is my photo library?"**
+Open Claude Code (restart it if it was already open) and connect it to your Immich. Guided:
 
-<p align="center"><img src="./assets/screenshot-01-setup.png" alt="Setup complete" width="700"></p>
+```
+/setup-immich-photo-manager
+```
 
-> For manual MCP server setup, see **[Getting Started](doc/GETTING-STARTED.md)**.
+It asks for your server URL and API key, checks them against the server, saves them, and shows your library numbers:
+
+<p align="center"><img src="./assets/screenshot-01-setup.png" alt="/setup-immich-photo-manager: connected, Immich version and library size" width="700"></p>
+
+Or skip the guide and say it in one line (same thing underneath):
+
+```
+Update my Immich credentials to http://immich.local:2283 with API key <your API key>
+```
+
+Either way the credentials are saved for every session from then on; repeat to change server or key. Confirm any time with:
+
+```
+What Immich version am I connected to?
+```
+
+That's the whole install. Claude Desktop, Cowork or another MCP client instead of Claude Code? That is the plain MCP server without the skills: see [Getting Started, route B](doc/GETTING-STARTED.md#route-b-script-claude-desktop-cowork-other-mcp-clients).
+
+### Update the plugin
+
+One line, no reinstall:
+
+```sh
+cd immich-photo-manager && git pull      # the clone you installed from
+claude plugin marketplace update drolosoft-marketplace
+claude plugin update immich-photo-manager@drolosoft-marketplace
+```
+
+Then restart Claude Code. `drolosoft-marketplace` is the name the marketplace gets when you add it from the clone (`claude plugin marketplace list` shows it). Your saved credentials carry over.
+
+### What leaves your network
+
+The plugin process runs on your machine and only talks to your Immich. But everything the assistant *reads* through it goes to the model you use: filenames, dates, EXIF, album lists, and, when you ask it to look at pictures, thumbnails (250px by default, 1440px previews on request). Originals are never fetched. With Claude that means those thumbnails leave your network; with a local model over MCP (LM Studio, Ollama) nothing does. Nothing is sent unless you ask for it: listing albums or fixing dates moves text only, "tell me what's in these photos" moves images.
+
+### Connect, check, switch — all by talking
+
+You never edit config files after setup. The connection is managed in conversation:
+
+| You say | What happens |
+|---|---|
+| **"What Immich version am I connected to?"** | Reports the server version and the URL it's talking to |
+| **"Update my Immich credentials to `https://photos.example.com` with API key `…`"** | Validates the key against that server, hot-swaps the live connection, persists it — no restart |
+| **"Show my Immich connection"** | URL + masked API key |
+
+One connection at a time: to work with a second Immich (a test instance, a friend's server), say the *update* sentence again; say it once more to go back. Wrong URL or key? It tells you, and keeps the previous connection.
+
+> Try the full walkthrough: **[Demo 11 — Album Walkthrough](doc/demos/11-album-walkthrough.md)** — read an album item by item, find who repeats, create a sub-album, tag and describe every photo.
 
 ### Works in Claude Code
 
@@ -165,6 +222,16 @@ Immich is excellent at storing and viewing your photos. But managing a large lib
 | 🛡️ | Manual review of every action | **Safety first** — shows findings, asks before acting |
 
 ---
+
+## How it's tested
+
+- **Unit suite, every push**: 44 pytest cases on Python 3.10 and 3.13 (HTTP mocked), plus ruff. Releases are tagged only when this gate is green.
+- **Live, every tool, two Immich versions**: [`tests/live/`](tests/live/) starts real Immich **2.7.5** and **3.1.0** in Docker, fills them with a small library, and drives all 53 tools over the MCP protocol, re-reading state after each write. Run before every release; last full run 2026-08-25, 69/69 checks on both.
+- **In use**: [PyPI](https://pypi.org/project/immich-photo-manager/) downloads, merged PRs from four outside contributors, and the demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions.
+
+## Built with Claude
+
+This is a Claude plugin, and Claude is a collaborator on the code: the design, the API compatibility decisions, and what to test are the author's; a good part of the implementation and the test harness were written with Claude Code. Every change ships through the same gate either way: tests on CI, and for anything touching Immich's API, the live run above.
 
 ## Documentation
 

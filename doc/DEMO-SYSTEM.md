@@ -51,7 +51,7 @@ A single self-contained HTML file (~470 KB) with:
 - `function smoothScroll()` — Pixel-precise scrolling between scenes
 
 **Photos in the gallery** (thumb-0 through thumb-7):
-- These are real photos from Juan's Immich library, fetched via the Immich MCP API
+- These are real photos from the author's Immich library, fetched via the Immich MCP API
 - To replace a photo: use `mcp__immich__get_asset_thumbnail` to get the image, convert to 200×200 square JPEG, base64 encode, and replace the `background-image:url(data:image/jpeg;base64,...)` in the corresponding `<div class="gallery-thumb" id="thumb-N">` element
 - Use Python/Pillow for image conversion: WebP → crop square → resize 200×200 → JPEG quality 70 → base64
 

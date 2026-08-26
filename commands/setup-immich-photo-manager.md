@@ -46,7 +46,7 @@ update_credentials(base_url="https://photos.example.com", api_key=<user-provided
 ```
 
 This tool will:
-1. Validate the new credentials by pinging Immich
+1. Validate the new credentials against Immich (an authenticated call, a wrong key is rejected)
 2. Persist them to `.mcpb-cache/config.json` (survives session restarts)
 3. Hot-swap the live connection (no restart required)
 
@@ -71,10 +71,11 @@ Photos: XX,XXX | Videos: X,XXX | Storage: XXX GB
 Server: https://photos.example.com
 
 You're all set! Try these to get started:
-  - "How healthy is my photo library?" — full library health report
-  - "Show me my albums" — browse your albums with interactive galleries
-  - "Find photos of sunsets" — AI-powered visual search
-  - /my-travels — discover all your travel destinations
+  - "Which of my photos have no location?" — metadata gaps, with fixes
+  - "Go through my '<album>' album and tell me what's in each photo" — per-photo analysis
+  - "Do I have duplicates?" — Immich's duplicate groups, ready to resolve
+  - "Find photos of sunsets" — visual search
+  - /my-travels — every place you have photos from
 ```
 
 ## Credential Rotation (Key Change)

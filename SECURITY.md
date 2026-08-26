@@ -26,6 +26,6 @@ We will acknowledge receipt within 48 hours and provide a timeline for a fix.
 ## Security Considerations
 
 - **API keys**: The plugin stores Immich API keys in environment variables or MCP configuration. Never commit real API keys to version control.
-- **Network access**: The MCP server communicates only with the configured Immich instance. No data is sent to third parties.
+- **Network access**: The MCP server communicates only with the configured Immich instance. Whatever the assistant reads through it (metadata, and thumbnails when you ask it to look at pictures) is sent to the model you use; with a hosted model such as Claude that data leaves your network, with a local model it does not. Originals are never fetched.
 - **Gallery files**: Generated HTML galleries embed thumbnails as base64. They contain no executable code beyond the gallery viewer UI.
 - **No auto-delete**: The plugin never deletes photos without explicit user confirmation.

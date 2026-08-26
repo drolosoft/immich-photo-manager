@@ -431,7 +431,7 @@ Immich's face detection and recognition must be enabled (ML container running) a
 - **Top people**: Ranked by photo count with date ranges
 - **Unnamed clusters**: Largest unnamed face clusters likely representing real people worth naming
 - **Coverage improvement**: "Naming these 15 clusters would increase coverage from 58% to 82%"
-- **Co-occurrence**: Who appears together most often (e.g., "María & Juan: 1,204 photos together")
+- **Co-occurrence**: Who appears together most often (e.g., "María & Sam: 1,204 photos together")
 - **Timeline per person**: When each person first and last appears
 
 ### Privacy Note
