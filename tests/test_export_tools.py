@@ -9,7 +9,7 @@ import pytest
 import respx
 
 from immich_mcp_server import pdf_export, server
-from immich_mcp_server.export_tools import _duration_seconds
+from immich_mcp_server.tools.export import _duration_seconds
 from immich_mcp_server.immich_client import ImmichClient
 
 BASE = "https://env.example.com"
