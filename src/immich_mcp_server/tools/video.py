@@ -41,16 +41,6 @@ async def _video_plan(ctx: Context, asset_id: str, count: int, size: str,
     return result, None
 
 
-_VIDEO_ARGS = """
-    Args:
-        asset_id: The video asset's UUID.
-        count: Frames evenly spaced over the segment (default 6). Ignored when interval > 0.
-        size: 'thumbnail' (250px, ~1.6k tokens per frame) or 'preview' (1440px, ~6.4k). Default 'thumbnail'.
-        start: Segment start in seconds (default 0). end: Segment end in seconds (0 = to the end).
-        interval: One frame every N seconds instead of count (1 = one per second, the maximum granularity).
-        confirm: Required (true) when more than 12 frames would be produced; ask the user first.
-"""
-
 @mcp.tool(structured_output=False)
 async def get_video_frames(
     ctx: Context, asset_id: str, count: int = 6, size: str = "thumbnail",
@@ -64,7 +54,16 @@ async def get_video_frames(
     plan with frames_planned and estimated_tokens instead of images: show it to the
     user and call again with confirm=true only if they agree. Hard cap 120 per call.
     For base64 JSON with timestamps use get_video_frames_json. Read-only.
-    """ + _VIDEO_ARGS + """
+
+    Args:
+        asset_id: The video asset's UUID.
+        count: Frames evenly spaced over the segment (default 6). Ignored when interval > 0.
+        size: 'thumbnail' (250px, ~1.6k tokens per frame) or 'preview' (1440px, ~6.4k). Default 'thumbnail'.
+        start: Segment start in seconds (default 0).
+        end: Segment end in seconds (0 = to the end).
+        interval: One frame every N seconds instead of count (1 = one per second, the maximum granularity).
+        confirm: Required (true) when more than 12 frames would be produced; ask the user first.
+
     Returns: JPEG image blocks in time order, or JSON (confirmation plan / error).
     """
     try:
@@ -83,7 +82,16 @@ async def get_video_frames_json(
 ) -> str:
     """Frames of a video as base64 JPEG with timestamps, for HTML galleries and
     skills. Same parameters, gate (confirm above 12) and cap (120) as get_video_frames. Read-only.
-    """ + _VIDEO_ARGS + """
+
+    Args:
+        asset_id: The video asset's UUID.
+        count: Frames evenly spaced over the segment (default 6). Ignored when interval > 0.
+        size: 'thumbnail' (250px, ~1.6k tokens per frame) or 'preview' (1440px, ~6.4k). Default 'thumbnail'.
+        start: Segment start in seconds (default 0).
+        end: Segment end in seconds (0 = to the end).
+        interval: One frame every N seconds instead of count (1 = one per second, the maximum granularity).
+        confirm: Required (true) when more than 12 frames would be produced; ask the user first.
+
     Returns: JSON {asset_id, duration, backend, count, frames:[{timestamp, data, type}]},
     a confirmation plan {confirm_required, frames_planned, estimated_tokens, ...}, or {"error": ...}.
     """
