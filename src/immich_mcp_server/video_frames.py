@@ -53,21 +53,21 @@ def frame_timestamps(duration: float, count: int, start: float = 0.0, end: float
     """Centres of `count` equal bins over [start, end] (skips the black first frame)."""
     if duration <= 0:
         return [0.0] * count
-    s, e = segment_bounds(duration, start, end)
-    span = e - s
-    return [round(s + span * (i + 0.5) / count, 3) for i in range(count)]
+    segment_start, segment_end = segment_bounds(duration, start, end)
+    span = segment_end - segment_start
+    return [round(segment_start + span * (i + 0.5) / count, 3) for i in range(count)]
 
 
 def interval_timestamps(duration: float, interval: float, start: float = 0.0, end: float = 0.0) -> list[float]:
     """One frame every `interval` seconds over [start, end]: the centres of n = max(1, span // interval) equal bins."""
     if duration <= 0 or interval <= 0:
         return []
-    s, e = segment_bounds(duration, start, end)
-    span = e - s
+    segment_start, segment_end = segment_bounds(duration, start, end)
+    span = segment_end - segment_start
     n = max(1, int(span // interval))
     if n > 10 * MAX_FRAMES:
         raise TooManyFrames(_too_many(n))
-    return [round(s + span * (i + 0.5) / n, 3) for i in range(n)]
+    return [round(segment_start + span * (i + 0.5) / n, 3) for i in range(n)]
 
 
 def _too_many(n: int) -> str:
@@ -126,23 +126,23 @@ def _extract_pyav(path: str, timestamps: list[float], target: int) -> dict:
             float(container.duration / av.time_base) if container.duration
             else float(stream.duration * stream.time_base) if stream.duration else 0.0
         )
-        w, h = _scaled(stream.codec_context.width, stream.codec_context.height, target)
-        for ts in timestamps:
-            container.seek(int(ts / stream.time_base), stream=stream, backward=True)
+        width, height = _scaled(stream.codec_context.width, stream.codec_context.height, target)
+        for timestamp in timestamps:
+            container.seek(int(timestamp / stream.time_base), stream=stream, backward=True)
             picked = None
             for frame in container.decode(stream):
                 picked = frame
-                if frame.time is not None and frame.time >= ts:
+                if frame.time is not None and frame.time >= timestamp:
                     break
             if picked is None:
                 continue
             codec = av.CodecContext.create("mjpeg", "w")
-            codec.width, codec.height = w, h
+            codec.width, codec.height = width, height
             codec.pix_fmt = "yuvj420p"
             codec.time_base = Fraction(1, 25)
-            out = picked.reformat(width=w, height=h, format="yuvj420p")
+            out = picked.reformat(width=width, height=height, format="yuvj420p")
             packets = codec.encode(out) + codec.encode(None)
-            frames.append(_entry(ts, b"".join(bytes(p) for p in packets)))
+            frames.append(_entry(timestamp, b"".join(bytes(packet) for packet in packets)))
     return {"duration": round(duration, 3), "backend": "pyav", "frames": frames}
 
 
@@ -174,14 +174,14 @@ def _extract_ffmpeg(path: str, timestamps: list[float], target: int) -> dict:
     duration = _ffmpeg_duration(path)
     scale = f"scale='if(gt(iw,ih),min({target},iw),-2)':'if(gt(iw,ih),-2,min({target},ih))'"
     frames = []
-    for ts in timestamps:
+    for timestamp in timestamps:
         proc = subprocess.run(
-            ["ffmpeg", "-loglevel", "error", "-ss", f"{ts:.3f}", "-i", path,
+            ["ffmpeg", "-loglevel", "error", "-ss", f"{timestamp:.3f}", "-i", path,
              "-frames:v", "1", "-vf", scale, "-f", "image2", "-c:v", "mjpeg", "pipe:1"],
             capture_output=True,
         )
         if proc.returncode == 0 and proc.stdout:
-            frames.append(_entry(ts, proc.stdout))
+            frames.append(_entry(timestamp, proc.stdout))
     return {"duration": round(duration, 3), "backend": "ffmpeg", "frames": frames}
 
 
@@ -195,16 +195,20 @@ def _entry(ts: float, jpeg: bytes) -> dict:
 def _duration(path: str) -> float:
     if _pyav_available():
         import av
-        with av.open(path) as c:
-            s = c.streams.video[0]
-            return float(c.duration / av.time_base) if c.duration else float(s.duration * s.time_base) if s.duration else 0.0
+        with av.open(path) as container:
+            stream = container.streams.video[0]
+            if container.duration:
+                return float(container.duration / av.time_base)
+            if stream.duration:
+                return float(stream.duration * stream.time_base)
+            return 0.0
     return _ffmpeg_duration(path)
 
 
 def _to_tempfile(data: bytes) -> str:
     fd, path = tempfile.mkstemp(suffix=".mp4", prefix="immich-video-")
-    with os.fdopen(fd, "wb") as fh:
-        fh.write(data)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(data)
     return path
 
 

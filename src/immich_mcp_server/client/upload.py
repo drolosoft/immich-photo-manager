@@ -22,8 +22,8 @@ class UploadApi:
         modified = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
 
         url = f"{self.base_url}/api/assets"
-        with open(file_path, "rb") as f:
-            files = {"assetData": (filename, f, "application/octet-stream")}
+        with open(file_path, "rb") as handle:
+            files = {"assetData": (filename, handle, "application/octet-stream")}
             data = {
                 "deviceAssetId": f"{filename}-{stat.st_size}-{int(stat.st_mtime)}",
                 "deviceId": "MCP Upload",

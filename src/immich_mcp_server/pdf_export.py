@@ -89,10 +89,10 @@ def unique_path(path: str) -> str:
 
 def places_table(assets: list[AssetEntry]) -> list[tuple[str, str, int]]:
     counts: dict[tuple[str, str], int] = {}
-    for a in assets:
-        if not a.place:
+    for asset in assets:
+        if not asset.place:
             continue
-        parts = [p.strip() for p in a.place.split(",")]
+        parts = [part.strip() for part in asset.place.split(",")]
         city, country = (parts[0], parts[-1]) if len(parts) > 1 else ("", parts[0])
         counts[(country, city)] = counts.get((country, city), 0) + 1
     return sorted(((c, ci, n) for (c, ci), n in counts.items()), key=lambda t: (-t[2], t[0], t[1]))
@@ -131,12 +131,12 @@ class _Pdf:
         """Draw `data` fitting in max_w × max_h at (x, y); returns the drawn height."""
         from PIL import Image as PILImage
 
-        with PILImage.open(io.BytesIO(data)) as im:
-            w, h = im.size
-        scale = min(max_w / w, max_h / h)
-        dw, dh = w * scale, h * scale
-        self.pdf.image(io.BytesIO(data), x=x + (max_w - dw) / 2, y=y, w=dw, h=dh)
-        return dh
+        with PILImage.open(io.BytesIO(data)) as image:
+            width, height = image.size
+        scale = min(max_w / width, max_h / height)
+        drawn_w, drawn_h = width * scale, height * scale
+        self.pdf.image(io.BytesIO(data), x=x + (max_w - drawn_w) / 2, y=y, w=drawn_w, h=drawn_h)
+        return drawn_h
 
     def footer_all(self):
         # y = A4_H - 10 sits below the auto-page-break trigger (A4_H - MARGIN), so
@@ -145,131 +145,131 @@ class _Pdf:
         # page). Disable it for this final, content-free pass.
         total = self.pdf.pages_count
         self.pdf.set_auto_page_break(False)
-        for n in range(1, total + 1):
-            self.pdf.page = n
+        for page_number in range(1, total + 1):
+            self.pdf.page = page_number
             self.font(8)
             self.pdf.set_xy(MARGIN, A4_H - 10)
             self.pdf.cell(
                 CONTENT_W,
                 5,
-                self.text(f"immich-photo-manager v{self.doc.version} · {self.doc.source_url} · page {n}/{total}"),
+                self.text(f"immich-photo-manager v{self.doc.version} · {self.doc.source_url} · page {page_number}/{total}"),
                 align="C",
             )
 
 
-def _cover(p: _Pdf):
-    d = p.doc
-    p.pdf.add_page()
-    p.font(26, bold=True)
-    p.pdf.set_xy(MARGIN, 40)
-    p.pdf.multi_cell(CONTENT_W, 12, p.text(d.title), align="C")
-    p.font(12)
-    p.pdf.multi_cell(CONTENT_W, 7, p.text(d.subtitle), align="C")
-    first = next((a.images[0] for a in d.assets if a.images), None)
+def _cover(writer: _Pdf):
+    doc = writer.doc
+    writer.pdf.add_page()
+    writer.font(26, bold=True)
+    writer.pdf.set_xy(MARGIN, 40)
+    writer.pdf.multi_cell(CONTENT_W, 12, writer.text(doc.title), align="C")
+    writer.font(12)
+    writer.pdf.multi_cell(CONTENT_W, 7, writer.text(doc.subtitle), align="C")
+    first = next((entry.images[0] for entry in doc.assets if entry.images), None)
     if first:
-        p.image(first, MARGIN, 80, CONTENT_W, 150)
+        writer.image(first, MARGIN, 80, CONTENT_W, 150)
 
 
-def _index(p: _Pdf) -> list:
-    p.pdf.add_page()
-    p.font(16, bold=True)
-    p.pdf.cell(CONTENT_W, 10, p.text("Index"), new_x="LMARGIN", new_y="NEXT")
-    p.font(9)
+def _index(writer: _Pdf) -> list:
+    writer.pdf.add_page()
+    writer.font(16, bold=True)
+    writer.pdf.cell(CONTENT_W, 10, writer.text("Index"), new_x="LMARGIN", new_y="NEXT")
+    writer.font(9)
     links = []
-    for i, a in enumerate(p.doc.assets, 1):
-        link = p.pdf.add_link()
+    for i, asset in enumerate(writer.doc.assets, 1):
+        link = writer.pdf.add_link()
         links.append(link)
-        line = f"{i:>3}. {a.filename}  {a.taken_at[:10]}  {a.place}".rstrip()
-        p.pdf.cell(CONTENT_W, 5, p.text(line), link=link, new_x="LMARGIN", new_y="NEXT")
+        line = f"{i:>3}. {asset.filename}  {asset.taken_at[:10]}  {asset.place}".rstrip()
+        writer.pdf.cell(CONTENT_W, 5, writer.text(line), link=link, new_x="LMARGIN", new_y="NEXT")
     return links
 
 
-def _places(p: _Pdf):
-    p.pdf.add_page()
-    p.font(16, bold=True)
-    p.pdf.cell(CONTENT_W, 10, p.text("Places"), new_x="LMARGIN", new_y="NEXT")
-    p.font(10)
-    if not p.doc.places:
-        p.pdf.cell(CONTENT_W, 6, p.text("No location data in these assets."), new_x="LMARGIN", new_y="NEXT")
-    for country, city, n in p.doc.places:
-        p.pdf.cell(60, 6, p.text(country))
-        p.pdf.cell(80, 6, p.text(city))
-        p.pdf.cell(20, 6, str(n), align="R", new_x="LMARGIN", new_y="NEXT")
-    if p.doc.map_png:
-        y = p.pdf.get_y() + 6
+def _places(writer: _Pdf):
+    writer.pdf.add_page()
+    writer.font(16, bold=True)
+    writer.pdf.cell(CONTENT_W, 10, writer.text("Places"), new_x="LMARGIN", new_y="NEXT")
+    writer.font(10)
+    if not writer.doc.places:
+        writer.pdf.cell(CONTENT_W, 6, writer.text("No location data in these assets."), new_x="LMARGIN", new_y="NEXT")
+    for country, city, n in writer.doc.places:
+        writer.pdf.cell(60, 6, writer.text(country))
+        writer.pdf.cell(80, 6, writer.text(city))
+        writer.pdf.cell(20, 6, str(n), align="R", new_x="LMARGIN", new_y="NEXT")
+    if writer.doc.map_png:
+        y = writer.pdf.get_y() + 6
         max_h = A4_H - y - 20
         if max_h < 60:
-            p.pdf.add_page()
+            writer.pdf.add_page()
             y = MARGIN
             max_h = A4_H - y - 20
-        p.image(p.doc.map_png, MARGIN, y, CONTENT_W, max_h)
+        writer.image(writer.doc.map_png, MARGIN, y, CONTENT_W, max_h)
 
 
-def _meta_lines(a: AssetEntry) -> list[str]:
-    lines = [a.filename, f"Taken: {a.taken_at}" if a.taken_at else ""]
-    if a.place:
-        lines.append(f"Place: {a.place}")
-    if a.camera:
-        lines.append(f"Camera: {a.camera}")
-    if a.people:
-        lines.append("People: " + ", ".join(a.people))
-    if a.tags:
-        lines.append("Tags: " + ", ".join(a.tags))
+def _meta_lines(asset: AssetEntry) -> list[str]:
+    lines = [asset.filename, f"Taken: {asset.taken_at}" if asset.taken_at else ""]
+    if asset.place:
+        lines.append(f"Place: {asset.place}")
+    if asset.camera:
+        lines.append(f"Camera: {asset.camera}")
+    if asset.people:
+        lines.append("People: " + ", ".join(asset.people))
+    if asset.tags:
+        lines.append("Tags: " + ", ".join(asset.tags))
     return [line for line in lines if line]
 
 
-def _detail(p: _Pdf, a: AssetEntry, link):
-    p.pdf.add_page()
-    p.pdf.set_link(link, page=p.pdf.page)
+def _detail(writer: _Pdf, asset: AssetEntry, link):
+    writer.pdf.add_page()
+    writer.pdf.set_link(link, page=writer.pdf.page)
     y = MARGIN
-    if a.kind == "VIDEO" and len(a.images) > 1:
+    if asset.kind == "VIDEO" and len(asset.images) > 1:
         cols, gap = 4, 3
         w = (CONTENT_W - gap * (cols - 1)) / cols
-        for i, img in enumerate(a.images):
+        for i, img in enumerate(asset.images):
             col = i % cols
             if col == 0 and i > 0:
                 y += w * 0.6 + 8
                 if y + w * 0.6 + 40 > A4_H - MARGIN:
-                    p.pdf.add_page()
+                    writer.pdf.add_page()
                     y = MARGIN
             x = MARGIN + col * (w + gap)
-            p.image(img, x, y, w, w * 0.6)
-            p.font(7)
-            ts = a.timestamps[i] if i < len(a.timestamps) else 0.0
-            p.pdf.set_xy(x, y + w * 0.6 + 1)
-            p.pdf.cell(w, 4, f"{ts:.1f} s", align="C")
+            writer.image(img, x, y, w, w * 0.6)
+            writer.font(7)
+            ts = asset.timestamps[i] if i < len(asset.timestamps) else 0.0
+            writer.pdf.set_xy(x, y + w * 0.6 + 1)
+            writer.pdf.cell(w, 4, f"{ts:.1f} s", align="C")
         y += w * 0.6 + 10
-    elif a.images:
-        y += p.image(a.images[0], MARGIN, y, CONTENT_W, 150) + 4
-    p.pdf.set_xy(MARGIN, y)
-    p.font(10)
-    for line in _meta_lines(a):
-        p.pdf.cell(CONTENT_W, 5.5, p.text(line), new_x="LMARGIN", new_y="NEXT")
-    if a.caption:
-        p.pdf.ln(2)
-        p.font(11)
-        p.pdf.multi_cell(CONTENT_W, 6, p.text(a.caption))
+    elif asset.images:
+        y += writer.image(asset.images[0], MARGIN, y, CONTENT_W, 150) + 4
+    writer.pdf.set_xy(MARGIN, y)
+    writer.font(10)
+    for line in _meta_lines(asset):
+        writer.pdf.cell(CONTENT_W, 5.5, writer.text(line), new_x="LMARGIN", new_y="NEXT")
+    if asset.caption:
+        writer.pdf.ln(2)
+        writer.font(11)
+        writer.pdf.multi_cell(CONTENT_W, 6, writer.text(asset.caption))
 
 
-def _grid(p: _Pdf, assets: list[AssetEntry], links: list):
+def _grid(writer: _Pdf, assets: list[AssetEntry], links: list):
     cols, rows, gap = 2, 3, 6
     cell_w = (CONTENT_W - gap) / cols
     cell_h = (A4_H - 2 * MARGIN - 10 - gap * (rows - 1)) / rows
-    for i, a in enumerate(assets):
+    for i, asset in enumerate(assets):
         slot = i % (cols * rows)
         if slot == 0:
-            p.pdf.add_page()
-        p.pdf.set_link(links[i], page=p.pdf.page)
+            writer.pdf.add_page()
+        writer.pdf.set_link(links[i], page=writer.pdf.page)
         x = MARGIN + (slot % cols) * (cell_w + gap)
         y = MARGIN + (slot // cols) * (cell_h + gap)
-        if a.images:
-            p.image(a.images[0], x, y, cell_w, cell_h - 14)
-        p.font(8)
-        p.pdf.set_xy(x, y + cell_h - 13)
-        note = f" · {len(a.images)} frames" if a.kind == "VIDEO" else ""
-        p.pdf.cell(cell_w, 4, p.text(f"{a.filename}  {a.taken_at[:10]}{note}"), new_x="LEFT", new_y="NEXT")
-        p.pdf.set_x(x)
-        p.pdf.cell(cell_w, 4, p.text(a.caption[:90]))
+        if asset.images:
+            writer.image(asset.images[0], x, y, cell_w, cell_h - 14)
+        writer.font(8)
+        writer.pdf.set_xy(x, y + cell_h - 13)
+        note = f" · {len(asset.images)} frames" if asset.kind == "VIDEO" else ""
+        writer.pdf.cell(cell_w, 4, writer.text(f"{asset.filename}  {asset.taken_at[:10]}{note}"), new_x="LEFT", new_y="NEXT")
+        writer.pdf.set_x(x)
+        writer.pdf.cell(cell_w, 4, writer.text(asset.caption[:90]))
 
 
 def build(doc: Document) -> bytes:
@@ -278,17 +278,17 @@ def build(doc: Document) -> bytes:
         raise NoPdfBackend(
             "PDF export needs fpdf2: install the optional extra `pip install immich-photo-manager[pdf]`."
         )
-    p = _Pdf(doc)
-    _cover(p)
-    links = _index(p)
-    _places(p)
+    writer = _Pdf(doc)
+    _cover(writer)
+    links = _index(writer)
+    _places(writer)
     if doc.layout == "grid":
-        _grid(p, doc.assets, links)
+        _grid(writer, doc.assets, links)
     else:
-        for a, link in zip(doc.assets, links):
-            _detail(p, a, link)
-    p.footer_all()
-    return bytes(p.pdf.output())
+        for asset, link in zip(doc.assets, links):
+            _detail(writer, asset, link)
+    writer.footer_all()
+    return bytes(writer.pdf.output())
 
 
 MAX_TILES = 16
@@ -309,11 +309,11 @@ def render_map(points: list[tuple[float, float]], fetch_tile) -> bytes | None:
     try:
         from PIL import Image as PILImage, ImageDraw
 
-        lats = [p[0] for p in points]
-        lons = [p[1] for p in points]
-        for z in range(12, 0, -1):
-            x0, y1 = _tile_xy(min(lats), min(lons), z)
-            x1, y0 = _tile_xy(max(lats), max(lons), z)
+        lats = [lat for lat, _lon in points]
+        lons = [lon for _lat, lon in points]
+        for zoom in range(12, 0, -1):
+            x0, y1 = _tile_xy(min(lats), min(lons), zoom)
+            x1, y0 = _tile_xy(max(lats), max(lons), zoom)
             tx0, tx1 = int(math.floor(x0)), int(math.floor(x1))
             ty0, ty1 = int(math.floor(y0)), int(math.floor(y1))
             tx0, tx1 = sorted((tx0, tx1))
@@ -324,11 +324,11 @@ def render_map(points: list[tuple[float, float]], fetch_tile) -> bytes | None:
         canvas = PILImage.new("RGB", (cols * TILE, rows * TILE), "white")
         for tx in range(tx0, tx1 + 1):
             for ty in range(ty0, ty1 + 1):
-                tile = PILImage.open(io.BytesIO(fetch_tile(z, tx, ty))).convert("RGB")
+                tile = PILImage.open(io.BytesIO(fetch_tile(zoom, tx, ty))).convert("RGB")
                 canvas.paste(tile, ((tx - tx0) * TILE, (ty - ty0) * TILE))
         draw = ImageDraw.Draw(canvas)
         for lat, lon in points:
-            x, y = _tile_xy(lat, lon, z)
+            x, y = _tile_xy(lat, lon, zoom)
             px, py = (x - tx0) * TILE, (y - ty0) * TILE
             draw.ellipse([px - 6, py - 6, px + 6, py + 6], fill="#d33", outline="white", width=2)
         out = io.BytesIO()

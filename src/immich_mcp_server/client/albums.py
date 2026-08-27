@@ -70,7 +70,7 @@ class AlbumsApi:
             body["withExif"] = True
         result = await self._request("POST", "/search/metadata", json=body)
         items = (result.get("assets", {}) if isinstance(result, dict) else {}).get("items", [])
-        by_id = {a["id"]: a for a in items if a.get("id") in ids}
+        by_id = {asset["id"]: asset for asset in items if asset.get("id") in ids}
         for missing_id in [i for i in ids if i not in by_id]:
             try:
                 by_id[missing_id] = await self.get_asset(missing_id)

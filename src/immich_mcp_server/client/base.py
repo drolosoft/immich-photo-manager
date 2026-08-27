@@ -83,8 +83,8 @@ class ImmichClientBase:
         if not config_path or not os.path.exists(config_path):
             return {}
         try:
-            with open(config_path) as f:
-                return json.load(f)
+            with open(config_path) as handle:
+                return json.load(handle)
         except (json.JSONDecodeError, OSError):
             return {}
 
@@ -105,8 +105,8 @@ class ImmichClientBase:
         cache_dir = os.path.dirname(config_path)
         os.makedirs(cache_dir, exist_ok=True)
         config = {"base_url": base_url, "api_key": api_key}
-        with open(config_path, "w") as f:
-            json.dump(config, f, indent=2)
+        with open(config_path, "w") as handle:
+            json.dump(config, handle, indent=2)
         os.chmod(config_path, 0o600)
         return config_path
 

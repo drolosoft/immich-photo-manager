@@ -73,7 +73,7 @@ async def get_video_frames(
         return json.dumps({"error": str(exc)})
     if gate is not None:
         return json.dumps(gate)
-    return [_entry_to_image(f) for f in result["frames"]]
+    return [_entry_to_image(frame) for frame in result["frames"]]
 
 
 @mcp.tool()

@@ -32,14 +32,14 @@ def _duration_seconds(raw: dict) -> float:
 
 def _place(raw: dict) -> str:
     exif = raw.get("exifInfo") or {}
-    return ", ".join(p for p in (exif.get("city"), exif.get("country")) if p)
+    return ", ".join(part for part in (exif.get("city"), exif.get("country")) if part)
 
 
 def _summary(raw: dict) -> dict:
     return {
         "id": raw["id"], "type": raw.get("type", ""), "filename": raw.get("originalFileName", ""),
         "taken_at": raw.get("fileCreatedAt", ""), "place": _place(raw),
-        "people": [p.get("name", "") for p in (raw.get("people") or []) if p.get("name")],
+        "people": [person.get("name", "") for person in (raw.get("people") or []) if person.get("name")],
         "duration": _duration_seconds(raw) if raw.get("type") == "VIDEO" else None,
     }
 
@@ -68,27 +68,27 @@ async def _collect_assets(client, album_id: str, asset_ids: list[str], limit: in
 async def _asset_entry(client, raw: dict, image_size: str, frames: int, interval: float,
                        notes: list[str], captions: dict) -> AssetEntry:
     exif = raw.get("exifInfo") or {}
-    s = _summary(raw)
+    summary = _summary(raw)
     entry = AssetEntry(
-        id=s["id"], kind=s["type"], filename=s["filename"], taken_at=s["taken_at"][:19].replace("T", " "),
-        place=s["place"], camera=" ".join(p for p in (exif.get("make"), exif.get("model")) if p),
-        people=s["people"], tags=[t.get("name", "") for t in (raw.get("tags") or []) if t.get("name")],
-        caption=str(captions.get(s["id"], "")), lat=exif.get("latitude"), lon=exif.get("longitude"),
+        id=summary["id"], kind=summary["type"], filename=summary["filename"], taken_at=summary["taken_at"][:19].replace("T", " "),
+        place=summary["place"], camera=" ".join(part for part in (exif.get("make"), exif.get("model")) if part),
+        people=summary["people"], tags=[tag.get("name", "") for tag in (raw.get("tags") or []) if tag.get("name")],
+        caption=str(captions.get(summary["id"], "")), lat=exif.get("latitude"), lon=exif.get("longitude"),
     )
     if entry.kind == "VIDEO" and (frames > 0 or interval > 0):
         try:
             data = await client.get_video_playback(entry.id)
-            r = await asyncio.to_thread(video_frames.extract_frames, data, frames, "thumbnail", None, 0.0, 0.0, interval)
-            if not r["frames"]:
+            result = await asyncio.to_thread(video_frames.extract_frames, data, frames, "thumbnail", None, 0.0, 0.0, interval)
+            if not result["frames"]:
                 notes.append(f"{entry.filename}: no frames decoded; poster used")
             else:
-                entry.images = [base64.b64decode(f["data"]) for f in r["frames"]]
-                entry.timestamps = [f["timestamp"] for f in r["frames"]]
+                entry.images = [base64.b64decode(frame["data"]) for frame in result["frames"]]
+                entry.timestamps = [frame["timestamp"] for frame in result["frames"]]
                 return entry
         except video_frames.TooManyFrames as exc:
             notes.append(f"{entry.filename}: {exc}; poster used")
         except video_frames.NoVideoBackend as exc:
-            if not any("poster" in w for w in notes):
+            if not any("poster" in note for note in notes):
                 notes.append(f"video frames unavailable ({exc}): posters used")
         except Exception as exc:  # decode failure on one file must not kill the export
             notes.append(f"{entry.filename}: frames failed ({exc}); poster used")
@@ -114,7 +114,7 @@ async def get_export_preview(ctx: Context, album_id: str = "", asset_ids: list[s
         title, raw, notes = await _collect_assets(_client(ctx), album_id, asset_ids, limit)
     except ValueError as exc:
         return json.dumps({"error": str(exc)})
-    return json.dumps({"title": title, "count": len(raw), "assets": [_summary(a) for a in raw], "warnings": notes})
+    return json.dumps({"title": title, "count": len(raw), "assets": [_summary(asset) for asset in raw], "warnings": notes})
 
 @mcp.tool()
 async def export_pdf(
@@ -162,17 +162,17 @@ async def export_pdf(
 
     entries: list[AssetEntry] = []
     skipped: list[dict] = []
-    for a in raw:
+    for asset in raw:
         try:
-            entries.append(await _asset_entry(client, a, image_size, frames, float(frame_interval or 0), notes, captions or {}))
+            entries.append(await _asset_entry(client, asset, image_size, frames, float(frame_interval or 0), notes, captions or {}))
         except Exception as exc:
-            skipped.append({"id": a.get("id"), "reason": str(exc)[:200]})
+            skipped.append({"id": asset.get("id"), "reason": str(exc)[:200]})
     if not entries:
         return json.dumps({"error": "No asset could be fetched.", "assets_skipped": skipped})
 
     map_png = None
     if map:
-        points = [(e.lat, e.lon) for e in entries if e.lat is not None and e.lon is not None]
+        points = [(entry.lat, entry.lon) for entry in entries if entry.lat is not None and entry.lon is not None]
         if points:
             tiles: dict = {}
             loop = asyncio.get_running_loop()
@@ -189,7 +189,7 @@ async def export_pdf(
         else:
             notes.append("map requested but no asset has GPS data")
 
-    photos = sum(1 for e in entries if e.kind == "IMAGE")
+    photos = sum(1 for entry in entries if entry.kind == "IMAGE")
     doc = Document(
         title=title, subtitle=f"{len(entries)} assets · {photos} photos, {len(entries) - photos} videos · exported {datetime.date.today().isoformat()}",
         source_url=client.base_url, version=__version__, layout=layout, assets=entries,
@@ -210,8 +210,8 @@ async def export_pdf(
         path = os.path.expanduser(f"~/Desktop/{pdf_export.slugify(title)}.pdf")
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     path = pdf_export.unique_path(path)
-    with open(path, "wb") as fh:
-        fh.write(pdf)
+    with open(path, "wb") as handle:
+        handle.write(pdf)
     try:
         from pypdf import PdfReader
         pages = len(PdfReader(io.BytesIO(pdf)).pages)
