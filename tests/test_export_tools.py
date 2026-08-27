@@ -9,6 +9,7 @@ import pytest
 import respx
 
 from immich_mcp_server import pdf_export, server
+from immich_mcp_server.export_tools import _duration_seconds
 from immich_mcp_server.immich_client import ImmichClient
 
 BASE = "https://env.example.com"
@@ -143,10 +144,10 @@ async def test_get_export_preview_limit_warns(fake_ctx):
 
 
 def test_duration_seconds_numeric_is_milliseconds():
-    assert server._duration_seconds({"duration": 900}) == 0.9
-    assert server._duration_seconds({"duration": 23567}) == 23.567
-    assert server._duration_seconds({"duration": "0:00:03.000"}) == 3.0
-    assert server._duration_seconds({"duration": None}) == 0.0
+    assert _duration_seconds({"duration": 900}) == 0.9
+    assert _duration_seconds({"duration": 23567}) == 23.567
+    assert _duration_seconds({"duration": "0:00:03.000"}) == 3.0
+    assert _duration_seconds({"duration": None}) == 0.0
 
 
 def _fake_frames(data, count=6, size="thumbnail", backend=None, start=0.0, end=0.0, interval=0.0):
