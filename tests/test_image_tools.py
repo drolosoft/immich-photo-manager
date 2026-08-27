@@ -38,7 +38,7 @@ class StubClient:
         }
 
     async def get_thumbnails_batch(self, asset_ids, size="thumbnail", limit=50):
-        return {"thumbnails": [{"id": a, "data": PNG_B64, "type": "image/png"} for a in asset_ids]}
+        return {"thumbnails": [{"id": asset_id, "data": PNG_B64, "type": "image/png"} for asset_id in asset_ids]}
 
 
 # ── the new image-block tools ───────────────────────────────
@@ -58,8 +58,8 @@ async def test_get_album_images_returns_list_of_images(fake_ctx):
     result = await server.get_album_images(fake_ctx(StubClient()), album_id="alb1")
 
     assert isinstance(result, list)
-    assert [type(x) for x in result] == [Image, Image]
-    assert all(x.data == PNG for x in result)
+    assert [type(item) for item in result] == [Image, Image]
+    assert all(item.data == PNG for item in result)
 
 
 @pytest.mark.asyncio
@@ -67,7 +67,7 @@ async def test_get_images_batch_returns_one_image_per_id(fake_ctx):
     result = await server.get_images_batch(fake_ctx(StubClient()), asset_ids=["a1", "a2", "a3"])
 
     assert len(result) == 3
-    assert all(isinstance(x, Image) for x in result)
+    assert all(isinstance(item, Image) for item in result)
 
 
 # ── the base64/JSON tools MUST NOT change (regression guard) ─

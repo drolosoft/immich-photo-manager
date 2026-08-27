@@ -17,7 +17,7 @@ def _png(color):
     return buf.getvalue()
 
 
-def _doc(layout="detail", n=3, with_video=True):
+def _doc(layout="detail", photo_count=3, with_video=True):
     assets = [
         AssetEntry(
             id=f"a{i}",
@@ -34,7 +34,7 @@ def _doc(layout="detail", n=3, with_video=True):
             lat=41.4,
             lon=2.2,
         )
-        for i in range(n)
+        for i in range(photo_count)
     ]
     if with_video:
         assets.append(
@@ -69,31 +69,31 @@ def _doc(layout="detail", n=3, with_video=True):
 def test_build_detail_pages_and_text():
     pdf = pdf_export.build(_doc())
     assert pdf[:4] == b"%PDF"
-    r = PdfReader(io.BytesIO(pdf))
-    assert len(r.pages) == 3 + 4  # cover, index, places, 4 assets
-    assert "Lab Album" in r.pages[0].extract_text()
-    assert "clip.mp4" in r.pages[1].extract_text()
-    assert "Barcelona" in r.pages[2].extract_text()
-    assert "Caption 0" in r.pages[3].extract_text()
-    assert "0.5" in r.pages[6].extract_text()  # video timestamps
+    reader = PdfReader(io.BytesIO(pdf))
+    assert len(reader.pages) == 3 + 4  # cover, index, places, 4 assets
+    assert "Lab Album" in reader.pages[0].extract_text()
+    assert "clip.mp4" in reader.pages[1].extract_text()
+    assert "Barcelona" in reader.pages[2].extract_text()
+    assert "Caption 0" in reader.pages[3].extract_text()
+    assert "0.5" in reader.pages[6].extract_text()  # video timestamps
 
 
 def test_index_links_point_to_pages():
-    r = PdfReader(io.BytesIO(pdf_export.build(_doc())))
-    annots = r.pages[1].get("/Annots") or []
+    reader = PdfReader(io.BytesIO(pdf_export.build(_doc())))
+    annots = reader.pages[1].get("/Annots") or []
     assert len(annots) == 4
 
 
 def test_build_grid_six_per_page():
-    r = PdfReader(io.BytesIO(pdf_export.build(_doc(layout="grid", n=13, with_video=False))))
-    assert len(r.pages) == 3 + 3  # 13 assets → 6+6+1
+    reader = PdfReader(io.BytesIO(pdf_export.build(_doc(layout="grid", photo_count=13, with_video=False))))
+    assert len(reader.pages) == 3 + 3  # 13 assets → 6+6+1
 
 
 def test_build_with_map_adds_image_on_places_page():
-    d = _doc()
-    d.map_png = _png("green")
-    r = PdfReader(io.BytesIO(pdf_export.build(d)))
-    assert len(r.pages[2].images) >= 1
+    doc = _doc()
+    doc.map_png = _png("green")
+    reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
+    assert len(reader.pages[2].images) >= 1
 
 
 def _many_places_doc(with_map: bool) -> Document:
@@ -119,15 +119,15 @@ def test_places_map_with_many_rows_still_lands_on_a_page():
     pages_without_map = len(PdfReader(io.BytesIO(pdf_export.build(_many_places_doc(False)))).pages)
     r_with_map = PdfReader(io.BytesIO(pdf_export.build(_many_places_doc(True))))
     pages_with_map = len(r_with_map.pages)
-    assert pages_with_map >= pages_without_map + 1 or any(p.images for p in r_with_map.pages)
+    assert pages_with_map >= pages_without_map + 1 or any(page.images for page in r_with_map.pages)
 
 
 def test_unique_path(tmp_path):
-    p = tmp_path / "x.pdf"
-    p.write_bytes(b"1")
-    assert pdf_export.unique_path(str(p)) == str(tmp_path / "x-2.pdf")
+    path = tmp_path / "x.pdf"
+    path.write_bytes(b"1")
+    assert pdf_export.unique_path(str(path)) == str(tmp_path / "x-2.pdf")
     (tmp_path / "x-2.pdf").write_bytes(b"1")
-    assert pdf_export.unique_path(str(p)) == str(tmp_path / "x-3.pdf")
+    assert pdf_export.unique_path(str(path)) == str(tmp_path / "x-3.pdf")
 
 
 def test_slugify_and_places():
@@ -147,27 +147,27 @@ def test_render_map_uses_at_most_16_tiles_and_draws_points():
     from PIL import Image as PILImage
 
     calls = []
-    def fetch(z, x, y):
-        calls.append((z, x, y))
+    def fetch(zoom, tile_x, tile_y):
+        calls.append((zoom, tile_x, tile_y))
         return _png("white")
     png = pdf_export.render_map([(41.4, 2.2), (40.4, -3.7)], fetch)
     assert png[:8] == b"\x89PNG\r\n\x1a\n" and 1 <= len(calls) <= 16
-    assert len({c[0] for c in calls}) == 1   # single zoom level
+    assert len({call[0] for call in calls}) == 1   # single zoom level
 
     # Verify a dot was drawn at the first point
-    z = calls[0][0]
-    min_tx = min(c[1] for c in calls)
-    min_ty = min(c[2] for c in calls)
+    zoom = calls[0][0]
+    min_tx = min(call[1] for call in calls)
+    min_ty = min(call[2] for call in calls)
     lat, lon = 41.4, 2.2
-    x, y = pdf_export._tile_xy(lat, lon, z)
-    px, py = (x - min_tx) * pdf_export.TILE, (y - min_ty) * pdf_export.TILE
+    tile_x, tile_y = pdf_export._tile_xy(lat, lon, zoom)
+    pixel_x, pixel_y = (tile_x - min_tx) * pdf_export.TILE, (tile_y - min_ty) * pdf_export.TILE
     img = PILImage.open(io.BytesIO(png))
-    pixel = img.getpixel((int(px), int(py)))
+    pixel = img.getpixel((int(pixel_x), int(pixel_y)))
     # "#d33" is (221, 51, 51) or similar red; white is (255, 255, 255)
     assert pixel[0] > 150 and pixel[1] < 120  # red channel high, green low
 
 
 def test_render_map_returns_none_when_tiles_fail():
-    def fetch(z, x, y): raise RuntimeError("offline")
+    def fetch(zoom, tile_x, tile_y): raise RuntimeError("offline")
     assert pdf_export.render_map([(41.4, 2.2)], fetch) is None
     assert pdf_export.render_map([], fetch) is None

@@ -28,29 +28,29 @@ async def update_credentials(ctx: Context, base_url: str, api_key: str) -> str:
     # (explicit args bypass the config.json override and the environment)
     try:
         new_client = ImmichClient(base_url=base_url, api_key=api_key)
-    except Exception as e:
+    except Exception as exc:
         return json.dumps({
             "success": False,
-            "error": f"Invalid credentials: {e}",
+            "error": f"Invalid credentials: {exc}",
         })
 
     # 2. Verify the new credentials actually work. /server/ping is public and
     # would accept any key; verify_access() needs the key to be honoured.
     try:
         await new_client.verify_access()
-    except httpx.HTTPStatusError as e:
+    except httpx.HTTPStatusError as exc:
         return json.dumps({
             "success": False,
             "error": (
                 f"Immich at {base_url} rejected the API key "
-                f"(HTTP {e.response.status_code}). Check the API key is correct."
+                f"(HTTP {exc.response.status_code}). Check the API key is correct."
             ),
         })
-    except Exception as e:
+    except Exception as exc:
         return json.dumps({
             "success": False,
             "error": (
-                f"Could not connect to Immich at {base_url}: {e}. "
+                f"Could not connect to Immich at {base_url}: {exc}. "
                 "Check the URL and API key are correct."
             ),
         })

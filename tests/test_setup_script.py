@@ -52,6 +52,6 @@ def test_setup_script_survives_hostile_api_key(tmp_path):
     # The hostile key must never execute
     assert not pwned.exists(), "API key was executed as code"
     # The generated config must be valid JSON carrying the key verbatim
-    with open(sandbox / ".mcp.json") as f:
-        config = json.load(f)
+    with open(sandbox / ".mcp.json") as handle:
+        config = json.load(handle)
     assert config["mcpServers"]["immich"]["env"]["IMMICH_API_KEY"] == evil_key

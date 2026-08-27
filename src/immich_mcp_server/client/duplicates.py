@@ -23,21 +23,21 @@ class DuplicatesApi:
         """
         normalized = [
             {
-                "duplicateId": g.get("duplicateId"),
-                "keepAssetIds": list(g.get("keepAssetIds") or g.get("assetIds") or []),
-                "trashAssetIds": list(g.get("trashAssetIds") or g.get("trashIds") or []),
+                "duplicateId": group.get("duplicateId"),
+                "keepAssetIds": list(group.get("keepAssetIds") or group.get("assetIds") or []),
+                "trashAssetIds": list(group.get("trashAssetIds") or group.get("trashIds") or []),
             }
-            for g in groups
+            for group in groups
         ]
         try:
             await self._request("POST", "/duplicates/resolve", json={"groups": normalized})
             return
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code != 404:
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code != 404:
                 raise
-        trash_ids = [aid for g in normalized for aid in g["trashAssetIds"]]
+        trash_ids = [aid for group in normalized for aid in group["trashAssetIds"]]
         if trash_ids:
             await self._request("DELETE", "/assets", json={"ids": trash_ids, "force": False})
         await self._request(
-            "DELETE", "/duplicates", json={"ids": [g["duplicateId"] for g in normalized]}
+            "DELETE", "/duplicates", json={"ids": [group["duplicateId"] for group in normalized]}
         )

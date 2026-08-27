@@ -64,16 +64,16 @@ def interval_timestamps(duration: float, interval: float, start: float = 0.0, en
         return []
     segment_start, segment_end = segment_bounds(duration, start, end)
     span = segment_end - segment_start
-    n = max(1, int(span // interval))
-    if n > 10 * MAX_FRAMES:
-        raise TooManyFrames(_too_many(n))
-    return [round(segment_start + span * (i + 0.5) / n, 3) for i in range(n)]
+    slots = max(1, int(span // interval))
+    if slots > 10 * MAX_FRAMES:
+        raise TooManyFrames(_too_many(slots))
+    return [round(segment_start + span * (i + 0.5) / slots, 3) for i in range(slots)]
 
 
-def _too_many(n: int) -> str:
+def _too_many(slots: int) -> str:
     """Error message for exceeding frame cap."""
     return (
-        f"{n} frames requested; the cap is {MAX_FRAMES} per call. "
+        f"{slots} frames requested; the cap is {MAX_FRAMES} per call. "
         f"Narrow the segment with start/end or use a larger interval."
     )
 
@@ -81,16 +81,16 @@ def _too_many(n: int) -> str:
 def plan_timestamps(duration: float, count: int, interval: float, start: float, end: float) -> list[float]:
     """Timestamps for a request; `interval` wins over `count`. Raises TooManyFrames above MAX_FRAMES."""
     if interval and interval > 0:
-        ts = interval_timestamps(duration, interval, start, end)
+        timestamp = interval_timestamps(duration, interval, start, end)
     else:
-        ts = frame_timestamps(duration, clamp_count(count), start, end)
-    if len(ts) > MAX_FRAMES:
-        raise TooManyFrames(_too_many(len(ts)))
-    return ts
+        timestamp = frame_timestamps(duration, clamp_count(count), start, end)
+    if len(timestamp) > MAX_FRAMES:
+        raise TooManyFrames(_too_many(len(timestamp)))
+    return timestamp
 
 
-def estimate_tokens(n: int, size: str = "thumbnail") -> int:
-    return n * TOKENS_PER_FRAME.get(size, TOKENS_PER_FRAME["thumbnail"])
+def estimate_tokens(slots: int, size: str = "thumbnail") -> int:
+    return slots * TOKENS_PER_FRAME.get(size, TOKENS_PER_FRAME["thumbnail"])
 
 
 def _pyav_available() -> bool:
@@ -105,11 +105,11 @@ def _scaled(width: int, height: int, target: int) -> tuple[int, int]:
     """Scale so the longer side is `target` (never upscale), even dimensions."""
     longest = max(width, height)
     if longest <= target:
-        w, h = width, height
+        width, height = width, height
     else:
         ratio = target / longest
-        w, h = round(width * ratio), round(height * ratio)
-    return max(2, w - w % 2), max(2, h - h % 2)
+        width, height = round(width * ratio), round(height * ratio)
+    return max(2, width - width % 2), max(2, height - height % 2)
 
 
 # ── backend: PyAV ───────────────────────────────────────────
@@ -163,11 +163,11 @@ def _ffmpeg_duration(path: str) -> float:
         except ValueError:
             pass
     err = subprocess.run(["ffmpeg", "-i", path], capture_output=True, text=True).stderr
-    m = _DURATION_RE.search(err)
-    if not m:
+    match = _DURATION_RE.search(err)
+    if not match:
         return 0.0
-    hh, mm, ss = m.groups()
-    return int(hh) * 3600 + int(mm) * 60 + float(ss)
+    hours, minutes, seconds = match.groups()
+    return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
 
 def _extract_ffmpeg(path: str, timestamps: list[float], target: int) -> dict:
@@ -188,8 +188,8 @@ def _extract_ffmpeg(path: str, timestamps: list[float], target: int) -> dict:
 # ── public entry point ──────────────────────────────────────
 
 
-def _entry(ts: float, jpeg: bytes) -> dict:
-    return {"timestamp": ts, "data": base64.b64encode(jpeg).decode("ascii"), "type": "image/jpeg"}
+def _entry(timestamp: float, jpeg: bytes) -> dict:
+    return {"timestamp": timestamp, "data": base64.b64encode(jpeg).decode("ascii"), "type": "image/jpeg"}
 
 
 def _duration(path: str) -> float:
@@ -206,8 +206,8 @@ def _duration(path: str) -> float:
 
 
 def _to_tempfile(data: bytes) -> str:
-    fd, path = tempfile.mkstemp(suffix=".mp4", prefix="immich-video-")
-    with os.fdopen(fd, "wb") as handle:
+    descriptor, path = tempfile.mkstemp(suffix=".mp4", prefix="immich-video-")
+    with os.fdopen(descriptor, "wb") as handle:
         handle.write(data)
     return path
 

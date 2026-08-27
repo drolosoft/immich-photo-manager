@@ -29,13 +29,13 @@ async def get_duplicates(ctx: Context, album_id: str = "") -> str:
     if not album_id:
         return json.dumps(groups, default=str)
     album = await client.get_album(album_id)
-    in_album = {a["id"] for a in await _album_assets(client, album_id, album)}
+    in_album = {asset["id"] for asset in await _album_assets(client, album_id, album)}
     out = []
-    for g in groups:
-        ids = [a["id"] for a in g.get("assets", [])]
+    for group in groups:
+        ids = [asset["id"] for asset in group.get("assets", [])]
         inside = [i for i in ids if i in in_album]
         if inside:
-            out.append({**g, "inAlbum": inside, "outsideAlbum": [i for i in ids if i not in in_album]})
+            out.append({**group, "inAlbum": inside, "outsideAlbum": [i for i in ids if i not in in_album]})
     return json.dumps(
         {"albumId": album_id, "albumName": album.get("albumName", ""), "groups": out,
          "note": "Groups fully inside the album have an empty outsideAlbum list."},

@@ -37,9 +37,9 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[dict]:
     # stdio transport stdout carries JSON-RPC and must stay pristine.
     try:
         await client.ping()
-    except Exception as e:
+    except Exception as exc:
         print(
-            f"Warning: Could not connect to Immich at {client.base_url}: {e}",
+            f"Warning: Could not connect to Immich at {client.base_url}: {exc}",
             file=sys.stderr,
         )
     yield {"immich": client}
@@ -51,7 +51,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[dict]:
 # 421 Misdirected Request otherwise. MCP_ALLOWED_HOSTS is a comma-separated
 # list of additional allowed Host values; localhost stays allowed and
 # protection stays ON. Unset = SDK default behavior, unchanged.
-_extra_hosts = [h.strip() for h in os.environ.get("MCP_ALLOWED_HOSTS", "").split(",") if h.strip()]
+_extra_hosts = [host.strip() for host in os.environ.get("MCP_ALLOWED_HOSTS", "").split(",") if host.strip()]
 _transport_security = None
 if _extra_hosts:
     # A configured host may be a bare host/IP (allow any port via the SDK's
@@ -60,11 +60,11 @@ if _extra_hosts:
     # "192.168.1.10:8626" — append a ":*" variant for portless entries.
     _allowed_hosts = ["127.0.0.1:*", "localhost:*", "[::1]:*"]
     _allowed_origins = ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"]
-    for h in _extra_hosts:
-        _allowed_hosts.append(h)
-        if ":" not in h:
-            _allowed_hosts.append(f"{h}:*")
-        _allowed_origins.extend((f"http://{h}", f"https://{h}"))
+    for host in _extra_hosts:
+        _allowed_hosts.append(host)
+        if ":" not in host:
+            _allowed_hosts.append(f"{host}:*")
+        _allowed_origins.extend((f"http://{host}", f"https://{host}"))
     _transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=_allowed_hosts,

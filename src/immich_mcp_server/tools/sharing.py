@@ -83,8 +83,8 @@ async def get_shared_link(ctx: Context, link_id: str) -> str:
     try:
         result = await _client(ctx).get_shared_link(link_id)
         return json.dumps(result, default=str)
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
 
 
 @mcp.tool()
@@ -126,8 +126,8 @@ async def update_shared_link(
     try:
         result = await _client(ctx).update_shared_link(link_id, **fields)
         return json.dumps(result, default=str)
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
 
 
 @mcp.tool()
@@ -143,8 +143,8 @@ async def delete_shared_link(ctx: Context, link_id: str) -> str:
     try:
         await _client(ctx).delete_shared_link(link_id)
         return json.dumps({"deleted": True, "link_id": link_id})
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
 
 
 @mcp.tool()

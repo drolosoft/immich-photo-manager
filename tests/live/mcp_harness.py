@@ -16,9 +16,9 @@ BIN = sys.argv[3]
 MEDIA = sys.argv[4]
 ALB = creds["album_id"]
 IDS = creds["asset_ids"]
-X = creds["extra"]
+EXTRA = creds["extra"]
 VIDEO = IDS[0]
-P1, P2, P3, P4 = IDS[1:5]
+PHOTO1, PHOTO2, PHOTO3, PHOTO4 = IDS[1:5]
 cache = tempfile.mkdtemp(prefix=f"immich-cache-{TAG}-")
 env = {
     **os.environ,
@@ -38,17 +38,17 @@ def rec(tool, ok, note=""):
 async def main():
     async with stdio_client(
         StdioServerParameters(command=BIN, args=["--transport", "stdio"], env=env)
-    ) as (r, w):
-        async with ClientSession(r, w) as s:
-            await s.initialize()
-            tools = await s.list_tools()
-            names = sorted(t.name for t in tools.tools)
+    ) as (reader, writer):
+        async with ClientSession(reader, writer) as session:
+            await session.initialize()
+            tools = await session.list_tools()
+            names = sorted(tag.name for tag in tools.tools)
             rec("list_tools", len(names) == 57, f"{len(names)} tools")
 
-            async def call(tool, **kw):
-                res = await s.call_tool(tool, kw)
-                txt = "".join(c.text for c in res.content if getattr(c, "type", "") == "text")
-                imgs = [c for c in res.content if getattr(c, "type", "") == "image"]
+            async def call(tool, **kwargs):
+                res = await session.call_tool(tool, kwargs)
+                txt = "".join(content.text for content in res.content if getattr(content, "type", "") == "text")
+                imgs = [content for content in res.content if getattr(content, "type", "") == "image"]
                 data = None
                 try:
                     data = json.loads(txt) if txt else None
@@ -57,71 +57,71 @@ async def main():
                 err = res.isError or (isinstance(data, dict) and "error" in data)
                 return data, imgs, err, txt
 
-            def okj(d, e):
-                return (not e) and d is not None
+            def okj(data, failed):
+                return (not failed) and data is not None
 
             # ── health
-            d, _, e, _ = await call("ping")
-            rec("ping", okj(d, e), d)
-            d, _, e, _ = await call("get_server_version")
-            rec("get_server_version", okj(d, e), d)
-            d, _, e, _ = await call("get_statistics")
-            STATS = d or {}
+            data, _, failed, _ = await call("ping")
+            rec("ping", okj(data, failed), data)
+            data, _, failed, _ = await call("get_server_version")
+            rec("get_server_version", okj(data, failed), data)
+            data, _, failed, _ = await call("get_statistics")
+            STATS = data or {}
             rec(
                 "get_statistics",
-                okj(d, e) and STATS.get("photos") is not None,
-                {k: v for k, v in STATS.items() if isinstance(v, (int, float))},
+                okj(data, failed) and STATS.get("photos") is not None,
+                {key: value for key, value in STATS.items() if isinstance(value, (int, float))},
             )
-            d, _, e, _ = await call("get_connection_info")
-            rec("get_connection_info", okj(d, e), d)
+            data, _, failed, _ = await call("get_connection_info")
+            rec("get_connection_info", okj(data, failed), data)
 
             # ── assets read
-            d, _, e, _ = await call("get_asset_info", asset_id=P2)
-            city = ((d or {}).get("exifInfo") or {}).get("city") or (d or {}).get("city")
+            data, _, failed, _ = await call("get_asset_info", asset_id=PHOTO2)
+            city = ((data or {}).get("exifInfo") or {}).get("city") or (data or {}).get("city")
             rec(
                 "get_asset_info",
-                okj(d, e) and d.get("id") == P2,
-                f"file={d.get('originalFileName')} city={city}",
+                okj(data, failed) and data.get("id") == PHOTO2,
+                f"file={data.get('originalFileName')} city={city}",
             )
-            d, _, e, _ = await call("list_assets", asset_type="VIDEO")
-            n = d.get("total") if isinstance(d, dict) else None
-            rec("list_assets(type=VIDEO)", okj(d, e) and n == 1, f"total={n}")
-            d, _, e, _ = await call("list_assets", page=1, size=100)
+            data, _, failed, _ = await call("list_assets", asset_type="VIDEO")
+            total = data.get("total") if isinstance(data, dict) else None
+            rec("list_assets(type=VIDEO)", okj(data, failed) and total == 1, f"total={total}")
+            data, _, failed, _ = await call("list_assets", page=1, size=100)
             rec(
                 "list_assets(all)",
-                okj(d, e) and d.get("total") == STATS.get("photos", 0) + STATS.get("videos", 0),
-                f"total={d.get('total')} (statistics say {STATS.get('photos', 0) + STATS.get('videos', 0)})",
+                okj(data, failed) and data.get("total") == STATS.get("photos", 0) + STATS.get("videos", 0),
+                f"total={data.get('total')} (statistics say {STATS.get('photos', 0) + STATS.get('videos', 0)})",
             )
-            d, _, e, _ = await call("search_metadata", make="LabCam")
+            data, _, failed, _ = await call("search_metadata", make="LabCam")
             rec(
                 "search_metadata(make)",
-                okj(d, e) and d.get("total") == 4,
-                f"total={d.get('total')} (expected 4)",
+                okj(data, failed) and data.get("total") == 4,
+                f"total={data.get('total')} (expected 4)",
             )
-            d, _, e, _ = await call("search_metadata", city="Lisbon")
+            data, _, failed, _ = await call("search_metadata", city="Lisbon")
             rec(
                 "search_metadata(city)",
-                okj(d, e) and d.get("total") == 2,
-                f"total={d.get('total')} (expected 2)",
+                okj(data, failed) and data.get("total") == 2,
+                f"total={data.get('total')} (expected 2)",
             )
-            d, _, e, _ = await call(
+            data, _, failed, _ = await call(
                 "search_metadata",
                 taken_after="2026-03-02T00:00:00Z",
                 taken_before="2026-03-03T23:59:59Z",
             )
             rec(
                 "search_metadata(dates)",
-                okj(d, e) and d.get("total") == 2,
-                f"total={d.get('total')} (expected 2: 03-02, 03-03)",
+                okj(data, failed) and data.get("total") == 2,
+                f"total={data.get('total')} (expected 2: 03-02, 03-03)",
             )
-            d, _, e, _ = await call("get_map_markers")
-            n = len(d) if isinstance(d, list) else (d or {}).get("count", d)
-            rec("get_map_markers", okj(d, e), f"{n}")
+            data, _, failed, _ = await call("get_map_markers")
+            total = len(data) if isinstance(data, list) else (data or {}).get("count", data)
+            rec("get_map_markers", okj(data, failed), f"{total}")
 
             # ── metadata write + verify
-            d, _, e, _ = await call(
+            data, _, failed, _ = await call(
                 "update_asset_metadata",
-                asset_id=P3,
+                asset_id=PHOTO3,
                 description="Tree in Sintra",
                 is_favorite=True,
                 rating=4,
@@ -129,187 +129,187 @@ async def main():
                 longitude=-9.39,
                 date_time_original="2026-03-03T15:00:00.000Z",
             )
-            a, _, _, _ = await call("get_asset_info", asset_id=P3)
-            ex = a.get("exifInfo") or {}
+            asset, _, _, _ = await call("get_asset_info", asset_id=PHOTO3)
+            exif = asset.get("exifInfo") or {}
             rec(
                 "update_asset_metadata",
-                (not e)
-                and ex.get("description") == "Tree in Sintra"
-                and a.get("isFavorite") is True
-                and ex.get("rating") == 4
-                and abs((ex.get("latitude") or 0) - 38.8) < 0.01
-                and str(ex.get("dateTimeOriginal", "")).startswith("2026-03-03T15:00"),
-                f"desc={ex.get('description')!r} fav={a.get('isFavorite')} rating={ex.get('rating')} lat={ex.get('latitude')} dto={ex.get('dateTimeOriginal')}",
+                (not failed)
+                and exif.get("description") == "Tree in Sintra"
+                and asset.get("isFavorite") is True
+                and exif.get("rating") == 4
+                and abs((exif.get("latitude") or 0) - 38.8) < 0.01
+                and str(exif.get("dateTimeOriginal", "")).startswith("2026-03-03T15:00"),
+                f"desc={exif.get('description')!r} fav={asset.get('isFavorite')} rating={exif.get('rating')} lat={exif.get('latitude')} dto={exif.get('dateTimeOriginal')}",
             )
-            d, _, e, _ = await call("list_assets", is_favorite=True)
+            data, _, failed, _ = await call("list_assets", is_favorite=True)
             rec(
                 "list_assets(favorite)",
-                okj(d, e) and d.get("total") == 1,
-                f"total={d.get('total')}",
+                okj(data, failed) and data.get("total") == 1,
+                f"total={data.get('total')}",
             )
 
             # ── albums
-            d, _, e, _ = await call("list_albums")
+            data, _, failed, _ = await call("list_albums")
             rec(
                 "list_albums",
-                okj(d, e)
+                okj(data, failed)
                 and any(
-                    a.get("albumName") == "Lab Album"
-                    for a in (d if isinstance(d, list) else d.get("albums", []))
+                    asset.get("albumName") == "Lab Album"
+                    for asset in (data if isinstance(data, list) else data.get("albums", []))
                 ),
-                f"{len(d) if isinstance(d, list) else d.get('count', d.get('total'))} albums",
+                f"{len(data) if isinstance(data, list) else data.get('count', data.get('total'))} albums",
             )
-            d, _, e, _ = await call("get_album", album_id=ALB)
+            data, _, failed, _ = await call("get_album", album_id=ALB)
             rec(
                 "get_album",
-                okj(d, e) and sorted(d.get("asset_ids", [])) == sorted(IDS),
-                f"{len(d.get('asset_ids', []))} asset_ids, assetCount={d.get('assetCount')}",
+                okj(data, failed) and sorted(data.get("asset_ids", [])) == sorted(IDS),
+                f"{len(data.get('asset_ids', []))} asset_ids, assetCount={data.get('assetCount')}",
             )
-            d, _, e, _ = await call(
-                "create_album", name="Harness Album", description="tmp", asset_ids=[P1]
+            data, _, failed, _ = await call(
+                "create_album", name="Harness Album", description="tmp", asset_ids=[PHOTO1]
             )
-            NEW = (d or {}).get("id")
-            rec("create_album", okj(d, e) and NEW, f"id={NEW}")
-            d, _, e, _ = await call(
+            NEW = (data or {}).get("id")
+            rec("create_album", okj(data, failed) and NEW, f"id={NEW}")
+            data, _, failed, _ = await call(
                 "update_album", album_id=NEW, name="Harness Album 2", description="updated"
             )
-            g, _, _, _ = await call("get_album", album_id=NEW)
+            album, _, _, _ = await call("get_album", album_id=NEW)
             rec(
                 "update_album",
-                (not e)
-                and g.get("albumName") == "Harness Album 2"
-                and g.get("description") == "updated",
-                f"name={g.get('albumName')} desc={g.get('description')}",
+                (not failed)
+                and album.get("albumName") == "Harness Album 2"
+                and album.get("description") == "updated",
+                f"name={album.get('albumName')} desc={album.get('description')}",
             )
-            d, _, e, _ = await call("add_assets_to_album", album_id=NEW, asset_ids=[P2, P3])
-            g, _, _, _ = await call("get_album", album_id=NEW)
+            data, _, failed, _ = await call("add_assets_to_album", album_id=NEW, asset_ids=[PHOTO2, PHOTO3])
+            album, _, _, _ = await call("get_album", album_id=NEW)
             rec(
                 "add_assets_to_album",
-                (not e) and sorted(g["asset_ids"]) == sorted([P1, P2, P3]),
-                f"{len(g['asset_ids'])} assets",
+                (not failed) and sorted(album["asset_ids"]) == sorted([PHOTO1, PHOTO2, PHOTO3]),
+                f"{len(album['asset_ids'])} assets",
             )
-            d, _, e, _ = await call("remove_assets_from_album", album_id=NEW, asset_ids=[P2])
-            g, _, _, _ = await call("get_album", album_id=NEW)
+            data, _, failed, _ = await call("remove_assets_from_album", album_id=NEW, asset_ids=[PHOTO2])
+            album, _, _, _ = await call("get_album", album_id=NEW)
             rec(
                 "remove_assets_from_album",
-                (not e) and sorted(g["asset_ids"]) == sorted([P1, P3]),
-                f"{len(g['asset_ids'])} assets",
+                (not failed) and sorted(album["asset_ids"]) == sorted([PHOTO1, PHOTO3]),
+                f"{len(album['asset_ids'])} assets",
             )
 
             # ── thumbnails JSON
-            d, _, e, _ = await call("get_asset_thumbnail", asset_id=P1, size="thumbnail")
-            b = d.get("data") or d.get("thumbnail", {}).get("data") if isinstance(d, dict) else None
+            data, _, failed, _ = await call("get_asset_thumbnail", asset_id=PHOTO1, size="thumbnail")
+            thumb_b64 = data.get("data") or data.get("thumbnail", {}).get("data") if isinstance(data, dict) else None
             rec(
                 "get_asset_thumbnail",
-                okj(d, e) and b and base64.b64decode(b)[:4] == b"RIFF",
-                f"type={d.get('type')} b64={len(b or '')}",
+                okj(data, failed) and thumb_b64 and base64.b64decode(thumb_b64)[:4] == b"RIFF",
+                f"type={data.get('type')} b64={len(thumb_b64 or '')}",
             )
-            d, _, e, _ = await call("get_asset_thumbnail", asset_id=VIDEO, size="preview")
-            b = d.get("data") if isinstance(d, dict) else None
+            data, _, failed, _ = await call("get_asset_thumbnail", asset_id=VIDEO, size="preview")
+            thumb_b64 = data.get("data") if isinstance(data, dict) else None
             rec(
                 "get_asset_thumbnail(video,preview)",
-                okj(d, e) and b and base64.b64decode(b)[:2] == b"\xff\xd8",
-                f"type={d.get('type')} b64={len(b or '')}",
+                okj(data, failed) and thumb_b64 and base64.b64decode(thumb_b64)[:2] == b"\xff\xd8",
+                f"type={data.get('type')} b64={len(thumb_b64 or '')}",
             )
-            d, _, e, _ = await call(
+            data, _, failed, _ = await call(
                 "get_album_thumbnails", album_id=ALB, size="thumbnail", limit=50
             )
             rec(
                 "get_album_thumbnails",
-                okj(d, e) and d.get("fetchedCount") == 5,
-                f"fetched={d.get('fetchedCount')}/{d.get('totalAssets')}",
+                okj(data, failed) and data.get("fetchedCount") == 5,
+                f"fetched={data.get('fetchedCount')}/{data.get('totalAssets')}",
             )
-            d, _, e, _ = await call(
-                "get_thumbnails_batch", asset_ids=[P1, VIDEO, X["einstein.jpg"]], size="thumbnail"
+            data, _, failed, _ = await call(
+                "get_thumbnails_batch", asset_ids=[PHOTO1, VIDEO, EXTRA["einstein.jpg"]], size="thumbnail"
             )
             rec(
                 "get_thumbnails_batch",
-                okj(d, e)
-                and d.get("fetchedCount") == 3
-                and d["thumbnails"][0].get("originalFileName"),
-                f"fetched={d.get('fetchedCount')} names={[t.get('originalFileName') for t in d.get('thumbnails', [])]}",
+                okj(data, failed)
+                and data.get("fetchedCount") == 3
+                and data["thumbnails"][0].get("originalFileName"),
+                f"fetched={data.get('fetchedCount')} names={[tag.get('originalFileName') for tag in data.get('thumbnails', [])]}",
             )
             # ── image blocks
-            d, imgs, e, _ = await call("get_asset_image", asset_id=P1, size="thumbnail")
+            data, imgs, failed, _ = await call("get_asset_image", asset_id=PHOTO1, size="thumbnail")
             rec(
                 "get_asset_image",
-                (not e) and len(imgs) == 1 and imgs[0].mimeType.startswith("image/"),
+                (not failed) and len(imgs) == 1 and imgs[0].mimeType.startswith("image/"),
                 f"{len(imgs)} image block mime={imgs[0].mimeType if imgs else None} bytes={len(base64.b64decode(imgs[0].data)) if imgs else 0}",
             )
-            d, imgs, e, _ = await call("get_album_images", album_id=ALB, size="preview", limit=50)
+            data, imgs, failed, _ = await call("get_album_images", album_id=ALB, size="preview", limit=50)
             rec(
                 "get_album_images",
-                (not e) and len(imgs) == 5,
+                (not failed) and len(imgs) == 5,
                 f"{len(imgs)} image blocks mimes={sorted(set(i.mimeType for i in imgs))}",
             )
-            d, imgs, e, _ = await call(
-                "get_images_batch", asset_ids=[P1, P2, VIDEO], size="thumbnail"
+            data, imgs, failed, _ = await call(
+                "get_images_batch", asset_ids=[PHOTO1, PHOTO2, VIDEO], size="thumbnail"
             )
-            rec("get_images_batch", (not e) and len(imgs) == 3, f"{len(imgs)} image blocks")
+            rec("get_images_batch", (not failed) and len(imgs) == 3, f"{len(imgs)} image blocks")
 
             # ── video frames (clip.mp4 is 3 s; frames land at 0.5/1.5/2.5 s)
-            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=3)
+            data, imgs, failed, _ = await call("get_video_frames", asset_id=VIDEO, count=3)
             rec(
                 "get_video_frames",
-                (not e) and len(imgs) == 3
+                (not failed) and len(imgs) == 3
                 and all(base64.b64decode(i.data)[:2] == b"\xff\xd8" for i in imgs),
                 f"{len(imgs)} jpeg frames bytes={[len(base64.b64decode(i.data)) for i in imgs]}",
             )
-            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=50, size="preview")
+            data, imgs, failed, _ = await call("get_video_frames", asset_id=VIDEO, count=50, size="preview")
             rec(
                 "get_video_frames(cap)",
-                isinstance(d, dict) and d.get("confirm_required") and d.get("frames_planned") == 50,
-                f"plan={d if isinstance(d, dict) else d}",
+                isinstance(data, dict) and data.get("confirm_required") and data.get("frames_planned") == 50,
+                f"plan={data if isinstance(data, dict) else data}",
             )
-            d, _, e, _ = await call("get_video_frames_json", asset_id=VIDEO, count=4)
-            ts = [f["timestamp"] for f in d.get("frames", [])] if isinstance(d, dict) else []
+            data, _, failed, _ = await call("get_video_frames_json", asset_id=VIDEO, count=4)
+            timestamps = [face["timestamp"] for face in data.get("frames", [])] if isinstance(data, dict) else []
             rec(
                 "get_video_frames_json",
-                okj(d, e) and d.get("count") == 4 and 2.5 <= d.get("duration", 0) <= 3.5
-                and ts == sorted(ts) and all(f["type"] == "image/jpeg" for f in d["frames"]),
-                f"duration={d.get('duration') if isinstance(d, dict) else d} backend={d.get('backend') if isinstance(d, dict) else None} ts={ts}",
+                okj(data, failed) and data.get("count") == 4 and 2.5 <= data.get("duration", 0) <= 3.5
+                and timestamps == sorted(timestamps) and all(face["type"] == "image/jpeg" for face in data["frames"]),
+                f"duration={data.get('duration') if isinstance(data, dict) else data} backend={data.get('backend') if isinstance(data, dict) else None} ts={timestamps}",
             )
 
             # ── video granularity
-            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=20)
-            rec("get_video_frames(gate)", isinstance(d, dict) and d.get("confirm_required") and d.get("frames_planned") == 20,
-                f"plan={d if isinstance(d, dict) else d}")
-            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=20, confirm=True)
-            rec("get_video_frames(confirm)", (not e) and len(imgs) == 20, f"{len(imgs)} frames")
-            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, interval=1.0)
-            rec("get_video_frames(interval)", (not e) and len(imgs) == 3, f"{len(imgs)} frames at 1 s")
-            d, imgs, e, _ = await call("get_video_frames", asset_id=VIDEO, count=2, start=1.0, end=2.0)
-            rec("get_video_frames(segment)", (not e) and len(imgs) == 2, f"{len(imgs)} frames in 1-2 s")
+            data, imgs, failed, _ = await call("get_video_frames", asset_id=VIDEO, count=20)
+            rec("get_video_frames(gate)", isinstance(data, dict) and data.get("confirm_required") and data.get("frames_planned") == 20,
+                f"plan={data if isinstance(data, dict) else data}")
+            data, imgs, failed, _ = await call("get_video_frames", asset_id=VIDEO, count=20, confirm=True)
+            rec("get_video_frames(confirm)", (not failed) and len(imgs) == 20, f"{len(imgs)} frames")
+            data, imgs, failed, _ = await call("get_video_frames", asset_id=VIDEO, interval=1.0)
+            rec("get_video_frames(interval)", (not failed) and len(imgs) == 3, f"{len(imgs)} frames at 1 s")
+            data, imgs, failed, _ = await call("get_video_frames", asset_id=VIDEO, count=2, start=1.0, end=2.0)
+            rec("get_video_frames(segment)", (not failed) and len(imgs) == 2, f"{len(imgs)} frames in 1-2 s")
 
             # ── PDF export
-            d, _, e, _ = await call("get_export_preview", album_id=ALB)
-            rec("get_export_preview", okj(d, e) and d.get("count") == 5, f"count={d.get('count') if isinstance(d, dict) else d}")
+            data, _, failed, _ = await call("get_export_preview", album_id=ALB)
+            rec("get_export_preview", okj(data, failed) and data.get("count") == 5, f"count={data.get('count') if isinstance(data, dict) else data}")
             out = os.path.join(cache, f"lab-{TAG}.pdf")
-            d, _, e, _ = await call("export_pdf", album_id=ALB, output_path=out, frames_per_video=3,
-                                    captions={P1: "harness caption"})
+            data, _, failed, _ = await call("export_pdf", album_id=ALB, output_path=out, frames_per_video=3,
+                                    captions={PHOTO1: "harness caption"})
             pages = 0
-            if isinstance(d, dict) and d.get("path") and os.path.exists(d["path"]):
+            if isinstance(data, dict) and data.get("path") and os.path.exists(data["path"]):
                 import subprocess
-                info = subprocess.run(["pdfinfo", d["path"]], capture_output=True, text=True).stdout if shutil.which("pdfinfo") else ""
-                pages = int(next((ln.split()[-1] for ln in info.splitlines() if ln.startswith("Pages:")), d.get("pages", 0)))
-            rec("export_pdf", okj(d, e) and pages >= 8 and d.get("assets_included") == 5,
-                f"path={d.get('path') if isinstance(d, dict) else d} pages={pages} bytes={d.get('bytes') if isinstance(d, dict) else 0}")
-            d, _, e, _ = await call("export_pdf", asset_ids=[P1, VIDEO], output_path=out, layout="grid", return_base64=True)
-            rec("export_pdf(ids,grid,b64)", okj(d, e) and d["path"].endswith("-2.pdf") and base64.b64decode(d["pdf_base64"])[:4] == b"%PDF",
-                f"path={d.get('path') if isinstance(d, dict) else d}")
+                info = subprocess.run(["pdfinfo", data["path"]], capture_output=True, text=True).stdout if shutil.which("pdfinfo") else ""
+                pages = int(next((line.split()[-1] for line in info.splitlines() if line.startswith("Pages:")), data.get("pages", 0)))
+            rec("export_pdf", okj(data, failed) and pages >= 8 and data.get("assets_included") == 5,
+                f"path={data.get('path') if isinstance(data, dict) else data} pages={pages} bytes={data.get('bytes') if isinstance(data, dict) else 0}")
+            data, _, failed, _ = await call("export_pdf", asset_ids=[PHOTO1, VIDEO], output_path=out, layout="grid", return_base64=True)
+            rec("export_pdf(ids,grid,b64)", okj(data, failed) and data["path"].endswith("-2.pdf") and base64.b64decode(data["pdf_base64"])[:4] == b"%PDF",
+                f"path={data.get('path') if isinstance(data, dict) else data}")
 
             # ── shared links
-            d, _, e, _ = await call(
+            data, _, failed, _ = await call(
                 "create_shared_link",
                 album_id=ALB,
                 allow_download=True,
                 show_metadata=True,
                 description="lab share",
             )
-            LINK = (d or {}).get("id")
-            KEY = (d or {}).get("key")
-            URL = (d or {}).get("url")
-            rec("create_shared_link", okj(d, e) and LINK and KEY, f"url={URL}")
+            LINK = (data or {}).get("id")
+            KEY = (data or {}).get("key")
+            URL = (data or {}).get("url")
+            rec("create_shared_link", okj(data, failed) and LINK and KEY, f"url={URL}")
             import httpx
 
             try:
@@ -322,263 +322,263 @@ async def main():
                     and pub.json().get("album", {}).get("albumName") == "Lab Album",
                     f"HTTP {pub.status_code} album={pub.json().get('album', {}).get('albumName') if pub.status_code == 200 else pub.text[:80]}",
                 )
-            except Exception as ex:
-                rec("  shared link public GET", False, repr(ex)[:100])
-            d, _, e, _ = await call("list_shared_links")
+            except Exception as exif:
+                rec("  shared link public GET", False, repr(exif)[:100])
+            data, _, failed, _ = await call("list_shared_links")
             rec(
                 "list_shared_links",
-                okj(d, e)
+                okj(data, failed)
                 and any(
                     lnk.get("id") == LINK
                     for lnk in (
-                        d if isinstance(d, list) else d.get("links", d.get("shared_links", []))
+                        data if isinstance(data, list) else data.get("links", data.get("shared_links", []))
                     )
                 ),
-                f"{len(d) if isinstance(d, list) else d}",
+                f"{len(data) if isinstance(data, list) else data}",
             )
-            d, _, e, _ = await call("get_shared_link", link_id=LINK)
+            data, _, failed, _ = await call("get_shared_link", link_id=LINK)
             rec(
-                "get_shared_link", okj(d, e) and d.get("id") == LINK, f"desc={d.get('description')}"
+                "get_shared_link", okj(data, failed) and data.get("id") == LINK, f"desc={data.get('description')}"
             )
-            d, _, e, _ = await call(
+            data, _, failed, _ = await call(
                 "update_shared_link",
                 link_id=LINK,
                 allow_download=False,
                 description="lab share 2",
                 expiry_at="2027-01-01T00:00:00.000Z",
             )
-            g, _, _, _ = await call("get_shared_link", link_id=LINK)
+            album, _, _, _ = await call("get_shared_link", link_id=LINK)
             rec(
                 "update_shared_link",
-                (not e)
-                and g.get("allowDownload") is False
-                and g.get("description") == "lab share 2"
-                and str(g.get("expiresAt", "")).startswith("2027"),
-                f"allowDownload={g.get('allowDownload')} desc={g.get('description')} expires={g.get('expiresAt')}",
+                (not failed)
+                and album.get("allowDownload") is False
+                and album.get("description") == "lab share 2"
+                and str(album.get("expiresAt", "")).startswith("2027"),
+                f"allowDownload={album.get('allowDownload')} desc={album.get('description')} expires={album.get('expiresAt')}",
             )
-            d, _, e, _ = await call("delete_shared_link", link_id=LINK)
-            g, _, e2, _ = await call("get_shared_link", link_id=LINK)
-            rec("delete_shared_link", (not e) and e2, f"after delete: get -> error={e2}")
+            data, _, failed, _ = await call("delete_shared_link", link_id=LINK)
+            album, _, failed_again, _ = await call("get_shared_link", link_id=LINK)
+            rec("delete_shared_link", (not failed) and failed_again, f"after delete: get -> error={failed_again}")
 
             # ── tags (clean leftovers from earlier runs first)
-            lt, _, _, _ = await call("list_tags")
-            for t in lt if isinstance(lt, list) else lt.get("tags", []):
-                if t.get("name") == "harness-tag":
-                    await call("delete_tag", tag_id=t["id"])
-            d, _, e, _ = await call("create_tag", name="harness-tag", color="#ff0000")
-            TID = (d or {}).get("id")
-            rec("create_tag", okj(d, e) and TID, f"id={TID} {str(d)[:100] if not TID else ''}")
+            tag_list, _, _, _ = await call("list_tags")
+            for tag in tag_list if isinstance(tag_list, list) else tag_list.get("tags", []):
+                if tag.get("name") == "harness-tag":
+                    await call("delete_tag", tag_id=tag["id"])
+            data, _, failed, _ = await call("create_tag", name="harness-tag", color="#ff0000")
+            TID = (data or {}).get("id")
+            rec("create_tag", okj(data, failed) and TID, f"id={TID} {str(data)[:100] if not TID else ''}")
             if not TID:
-                lt, _, _, _ = await call("list_tags")
+                tag_list, _, _, _ = await call("list_tags")
                 TID = next(
                     (
-                        t["id"]
-                        for t in (lt if isinstance(lt, list) else lt.get("tags", []))
-                        if t.get("name") == "harness-tag"
+                        tag["id"]
+                        for tag in (tag_list if isinstance(tag_list, list) else tag_list.get("tags", []))
+                        if tag.get("name") == "harness-tag"
                     ),
                     None,
                 )
-            d, _, e, _ = await call("list_tags")
+            data, _, failed, _ = await call("list_tags")
             rec(
                 "list_tags",
-                okj(d, e)
+                okj(data, failed)
                 and any(
-                    t.get("name") == "harness-tag"
-                    for t in (d if isinstance(d, list) else d.get("tags", []))
+                    tag.get("name") == "harness-tag"
+                    for tag in (data if isinstance(data, list) else data.get("tags", []))
                 ),
-                f"{len(d) if isinstance(d, list) else d.get('count')} tags",
+                f"{len(data) if isinstance(data, list) else data.get('count')} tags",
             )
-            d, _, e, _ = await call("get_tag", tag_id=TID)
-            rec("get_tag", okj(d, e) and d.get("name") == "harness-tag", f"color={d.get('color')}")
-            d, _, e, _ = await call("update_tag", tag_id=TID, name="harness-tag-2")
-            rec("update_tag(name -> clear error)", e and "rename" in str(d).lower(), str(d)[:120])
-            d, _, e, _ = await call("update_tag", tag_id=TID, color="#00ff00")
-            g, _, _, _ = await call("get_tag", tag_id=TID)
+            data, _, failed, _ = await call("get_tag", tag_id=TID)
+            rec("get_tag", okj(data, failed) and data.get("name") == "harness-tag", f"color={data.get('color')}")
+            data, _, failed, _ = await call("update_tag", tag_id=TID, name="harness-tag-2")
+            rec("update_tag(name -> clear error)", failed and "rename" in str(data).lower(), str(data)[:120])
+            data, _, failed, _ = await call("update_tag", tag_id=TID, color="#00ff00")
+            album, _, _, _ = await call("get_tag", tag_id=TID)
             rec(
                 "update_tag(color)",
-                (not e) and str(g.get("color", "")).lower() == "#00ff00",
-                f"color={g.get('color')}",
+                (not failed) and str(album.get("color", "")).lower() == "#00ff00",
+                f"color={album.get('color')}",
             )
-            d, _, e, _ = await call("tag_assets", tag_id=TID, asset_ids=[P1, P2])
-            a, _, _, _ = await call("get_asset_info", asset_id=P1)
-            tn = [t.get("name") for t in a.get("tags", [])]
-            rec("tag_assets", (not e) and "harness-tag" in tn, f"asset tags={tn}")
-            d, _, e, _ = await call("untag_assets", tag_id=TID, asset_ids=[P1])
-            a, _, _, _ = await call("get_asset_info", asset_id=P1)
-            tn = [t.get("name") for t in a.get("tags", [])]
-            rec("untag_assets", (not e) and "harness-tag" not in tn, f"asset tags={tn}")
-            d, _, e, _ = await call("delete_tag", tag_id=TID)
-            g, _, e2, _ = await call("get_tag", tag_id=TID)
-            rec("delete_tag", (not e) and e2, f"after delete: error={e2}")
+            data, _, failed, _ = await call("tag_assets", tag_id=TID, asset_ids=[PHOTO1, PHOTO2])
+            asset, _, _, _ = await call("get_asset_info", asset_id=PHOTO1)
+            tag_names = [tag.get("name") for tag in asset.get("tags", [])]
+            rec("tag_assets", (not failed) and "harness-tag" in tag_names, f"asset tags={tag_names}")
+            data, _, failed, _ = await call("untag_assets", tag_id=TID, asset_ids=[PHOTO1])
+            asset, _, _, _ = await call("get_asset_info", asset_id=PHOTO1)
+            tag_names = [tag.get("name") for tag in asset.get("tags", [])]
+            rec("untag_assets", (not failed) and "harness-tag" not in tag_names, f"asset tags={tag_names}")
+            data, _, failed, _ = await call("delete_tag", tag_id=TID)
+            album, _, failed_again, _ = await call("get_tag", tag_id=TID)
+            rec("delete_tag", (not failed) and failed_again, f"after delete: error={failed_again}")
 
             # ── upload / trash lifecycle
-            d, _, e, _ = await call(
+            data, _, failed, _ = await call(
                 "upload_asset", file_path=os.path.join(MEDIA, "upload_test.jpg"), album_id=NEW
             )
-            UP = (d or {}).get("id") or (d or {}).get("asset_id")
+            UPLOADED = (data or {}).get("id") or (data or {}).get("asset_id")
             rec(
                 "upload_asset",
-                okj(d, e) and UP and (d or {}).get("status") == "created",
-                f"{ {k: v for k, v in (d or {}).items() if k != 'raw'} }",
+                okj(data, failed) and UPLOADED and (data or {}).get("status") == "created",
+                f"{ {key: value for key, value in (data or {}).items() if key != 'raw'} }",
             )
-            g, _, _, _ = await call("get_album", album_id=NEW)
+            album, _, _, _ = await call("get_album", album_id=NEW)
             rec(
                 "  upload landed in album",
-                UP in g.get("asset_ids", []),
-                f"album has {len(g.get('asset_ids', []))}",
+                UPLOADED in album.get("asset_ids", []),
+                f"album has {len(album.get('asset_ids', []))}",
             )
-            d, _, e, _ = await call("delete_assets", asset_ids=[UP])
-            t, _, _, _ = await call("list_assets", is_trashed=True)
-            tr = (
-                [a.get("id") for a in t.get("assets", t.get("items", []))]
-                if isinstance(t, dict)
+            data, _, failed, _ = await call("delete_assets", asset_ids=[UPLOADED])
+            tag, _, _, _ = await call("list_assets", is_trashed=True)
+            trashed = (
+                [asset.get("id") for asset in tag.get("assets", tag.get("items", []))]
+                if isinstance(tag, dict)
                 else []
             )
             rec(
                 "delete_assets(soft) + list_assets(is_trashed)",
-                (not e) and UP in tr and t.get("total") == 1,
-                f"trashed total={t.get('total')} contains={UP in tr}",
+                (not failed) and UPLOADED in trashed and tag.get("total") == 1,
+                f"trashed total={tag.get('total')} contains={UPLOADED in trashed}",
             )
-            d, _, e, _ = await call("restore_assets", asset_ids=[UP])
-            a, _, e2, _ = await call("get_asset_info", asset_id=UP)
+            data, _, failed, _ = await call("restore_assets", asset_ids=[UPLOADED])
+            asset, _, failed_again, _ = await call("get_asset_info", asset_id=UPLOADED)
             rec(
                 "restore_assets",
-                (not e) and (not e2) and not a.get("isTrashed"),
-                f"isTrashed={a.get('isTrashed')}",
+                (not failed) and (not failed_again) and not asset.get("isTrashed"),
+                f"isTrashed={asset.get('isTrashed')}",
             )
-            d, _, e, _ = await call("delete_assets", asset_ids=[UP])
-            d2, _, e2, _ = await call("restore_trash")
-            a, _, _, _ = await call("get_asset_info", asset_id=UP)
+            data, _, failed, _ = await call("delete_assets", asset_ids=[UPLOADED])
+            restored, _, failed_again, _ = await call("restore_trash")
+            asset, _, _, _ = await call("get_asset_info", asset_id=UPLOADED)
             rec(
                 "restore_trash",
-                (not e) and (not e2) and not a.get("isTrashed"),
-                f"isTrashed={a.get('isTrashed')}",
+                (not failed) and (not failed_again) and not asset.get("isTrashed"),
+                f"isTrashed={asset.get('isTrashed')}",
             )
-            d, _, e, _ = await call("delete_assets", asset_ids=[UP])
-            d2, _, e2, _ = await call("empty_trash")
+            data, _, failed, _ = await call("delete_assets", asset_ids=[UPLOADED])
+            restored, _, failed_again, _ = await call("empty_trash")
             await asyncio.sleep(3)
-            a, _, e3, _ = await call("get_asset_info", asset_id=UP)
+            asset, _, failed_third, _ = await call("get_asset_info", asset_id=UPLOADED)
             rec(
                 "empty_trash",
-                (not e) and (not e2) and (e3 or a.get("isTrashed") or not a.get("id")),
-                f"asset after empty_trash: error={e3} isTrashed={a.get('isTrashed') if isinstance(a, dict) else a}",
+                (not failed) and (not failed_again) and (failed_third or asset.get("isTrashed") or not asset.get("id")),
+                f"asset after empty_trash: error={failed_third} isTrashed={asset.get('isTrashed') if isinstance(asset, dict) else asset}",
             )
-            u2, _, _, _ = await call(
+            upload_again, _, _, _ = await call(
                 "upload_asset", file_path=os.path.join(MEDIA, "upload_test2.jpg")
             )
-            U2 = (u2 or {}).get("id")
-            d, _, e, _ = await call("delete_assets", asset_ids=[U2], force=True)
+            UPLOADED_AGAIN = (upload_again or {}).get("id")
+            data, _, failed, _ = await call("delete_assets", asset_ids=[UPLOADED_AGAIN], force=True)
             await asyncio.sleep(2)
-            a, _, e2, _ = await call("get_asset_info", asset_id=U2)
+            asset, _, failed_again, _ = await call("get_asset_info", asset_id=UPLOADED_AGAIN)
             rec(
                 "delete_assets(force)",
-                (not e) and e2,
-                f"uploaded {str(U2)[:8]} then force-deleted: get -> error={e2}",
+                (not failed) and failed_again,
+                f"uploaded {str(UPLOADED_AGAIN)[:8]} then force-deleted: get -> error={failed_again}",
             )
-            d, _, e, _ = await call("delete_album", album_id=NEW)
-            g, _, e2, _ = await call("get_album", album_id=NEW)
-            rec("delete_album", (not e) and e2, f"after delete error={e2}")
+            data, _, failed, _ = await call("delete_album", album_id=NEW)
+            album, _, failed_again, _ = await call("get_album", album_id=NEW)
+            rec("delete_album", (not failed) and failed_again, f"after delete error={failed_again}")
 
             # ── edits
-            d, _, e, _ = await call("rotate_assets", angle=90, asset_ids=[P1])
-            rec("rotate_assets(ids)", okj(d, e) and d.get("rotated") == 1, d)
-            d, _, e, _ = await call("rotate_assets", angle=90, album_id=ALB)
+            data, _, failed, _ = await call("rotate_assets", angle=90, asset_ids=[PHOTO1])
+            rec("rotate_assets(ids)", okj(data, failed) and data.get("rotated") == 1, data)
+            data, _, failed, _ = await call("rotate_assets", angle=90, album_id=ALB)
             rec(
                 "rotate_assets(album)",
-                okj(d, e) and d.get("rotated") == 4 and d.get("failed") == 1,
-                f"rotated={d.get('rotated')} failed={d.get('failed')} (video expected to fail: Immich 'Only images can be edited')",
+                okj(data, failed) and data.get("rotated") == 4 and data.get("failed") == 1,
+                f"rotated={data.get('rotated')} failed={data.get('failed')} (video expected to fail: Immich 'Only images can be edited')",
             )
-            d, _, e, _ = await call("revert_asset_edits", asset_ids=[P1])
-            rec("revert_asset_edits(ids)", okj(d, e), d)
-            d, _, e, _ = await call("revert_asset_edits", album_id=ALB)
-            rec("revert_asset_edits(album)", okj(d, e), d)
+            data, _, failed, _ = await call("revert_asset_edits", asset_ids=[PHOTO1])
+            rec("revert_asset_edits(ids)", okj(data, failed), data)
+            data, _, failed, _ = await call("revert_asset_edits", album_id=ALB)
+            rec("revert_asset_edits(album)", okj(data, failed), data)
 
             # ── ML: smart search, people, duplicates
-            d, _, e, _ = await call("search_smart", query="portrait of a man with a beard", size=5)
-            items = d.get("assets", d.get("results", [])) if isinstance(d, dict) else []
-            top = [a.get("originalFileName") for a in items[:3]]
+            data, _, failed, _ = await call("search_smart", query="portrait of a man with a beard", size=5)
+            items = data.get("assets", data.get("results", [])) if isinstance(data, dict) else []
+            top = [asset.get("originalFileName") for asset in items[:3]]
             rec(
                 "search_smart",
-                okj(d, e) and any("lincoln" in (n or "") or "einstein" in (n or "") for n in top),
+                okj(data, failed) and any("lincoln" in (total or "") or "einstein" in (total or "") for total in top),
                 f"top3={top}",
             )
-            d, _, e, _ = await call("search_smart", query="boat", city="Senhora do Porto", size=5)
+            data, _, failed, _ = await call("search_smart", query="boat", city="Senhora do Porto", size=5)
             rec(
                 "search_smart(+city filter)",
-                okj(d, e),
-                f"total={d.get('total') if isinstance(d, dict) else d}",
+                okj(data, failed),
+                f"total={data.get('total') if isinstance(data, dict) else data}",
             )
-            d, _, e, _ = await call("list_people", with_hidden=True)
-            people = d.get("people", d) if isinstance(d, dict) else d
+            data, _, failed, _ = await call("list_people", with_hidden=True)
+            people = data.get("people", data) if isinstance(data, dict) else data
             ppl = people if isinstance(people, list) else []
             rec(
                 "list_people",
-                okj(d, e) and len(ppl) >= 1,
-                f"{len(ppl)} people total={d.get('total') if isinstance(d, dict) else ''}",
+                okj(data, failed) and len(ppl) >= 1,
+                f"{len(ppl)} people total={data.get('total') if isinstance(data, dict) else ''}",
             )
             PID = ppl[0]["id"] if ppl else None
             if PID:
-                d, _, e, _ = await call("get_person", person_id=PID)
-                rec("get_person", okj(d, e) and d.get("id") == PID, f"name={d.get('name')!r}")
-                d, _, e, _ = await call(
+                data, _, failed, _ = await call("get_person", person_id=PID)
+                rec("get_person", okj(data, failed) and data.get("id") == PID, f"name={data.get('name')!r}")
+                data, _, failed, _ = await call(
                     "update_person",
                     person_id=PID,
                     name="Abe",
                     birth_date="1809-02-12",
                     is_favorite=True,
                 )
-                g, _, _, _ = await call("get_person", person_id=PID)
+                album, _, _, _ = await call("get_person", person_id=PID)
                 rec(
                     "update_person",
-                    (not e)
-                    and g.get("name") == "Abe"
-                    and str(g.get("birthDate", "")).startswith("1809-02-12"),
-                    f"name={g.get('name')} birth={g.get('birthDate')} fav={g.get('isFavorite')}",
+                    (not failed)
+                    and album.get("name") == "Abe"
+                    and str(album.get("birthDate", "")).startswith("1809-02-12"),
+                    f"name={album.get('name')} birth={album.get('birthDate')} fav={album.get('isFavorite')}",
                 )
-                d, _, e, _ = await call("search_people", name="Abe")
-                sp = d if isinstance(d, list) else d.get("people", [])
+                data, _, failed, _ = await call("search_people", name="Abe")
+                people_list = data if isinstance(data, list) else data.get("people", [])
                 rec(
                     "search_people",
-                    okj(d, e) and any(p.get("id") == PID for p in sp),
-                    f"{len(sp)} hits",
+                    okj(data, failed) and any(pong.get("id") == PID for pong in people_list),
+                    f"{len(people_list)} hits",
                 )
-                d, _, e, _ = await call("get_person_thumbnail", person_id=PID)
-                b = d.get("data") if isinstance(d, dict) else None
-                rec("get_person_thumbnail", okj(d, e) and b, f"b64={len(b or '')}")
-                d, _, e, _ = await call("get_asset_faces", asset_id=X["lincoln1.jpg"])
-                faces = d if isinstance(d, list) else d.get("faces", [])
+                data, _, failed, _ = await call("get_person_thumbnail", person_id=PID)
+                thumb_b64 = data.get("data") if isinstance(data, dict) else None
+                rec("get_person_thumbnail", okj(data, failed) and thumb_b64, f"b64={len(thumb_b64 or '')}")
+                data, _, failed, _ = await call("get_asset_faces", asset_id=EXTRA["lincoln1.jpg"])
+                faces = data if isinstance(data, list) else data.get("faces", [])
                 rec(
                     "get_asset_faces",
-                    okj(d, e) and len(faces) >= 1,
+                    okj(data, failed) and len(faces) >= 1,
                     f"{len(faces)} faces on lincoln1, person={faces[0].get('person', {}).get('id') if faces and faces[0].get('person') else None}",
                 )
                 FID = faces[0].get("id") if faces else None
-                others = [p["id"] for p in ppl if p["id"] != PID]
-                for fn in (
+                others = [pong["id"] for pong in ppl if pong["id"] != PID]
+                for filename in (
                     "einstein.jpg",
                     "roosevelt.jpg",
                     "curie.jpg",
                 ):  # Immich 3.x hides 1-face people from /people; find them via faces
-                    if fn not in X:
+                    if filename not in EXTRA:
                         continue
-                    fz, _, _, _ = await call("get_asset_faces", asset_id=X[fn])
-                    fz = fz if isinstance(fz, list) else fz.get("faces", [])
-                    for f in fz:
-                        pid2 = (f.get("person") or {}).get("id")
+                    faces, _, _, _ = await call("get_asset_faces", asset_id=EXTRA[filename])
+                    faces = faces if isinstance(faces, list) else faces.get("faces", [])
+                    for face in faces:
+                        pid2 = (face.get("person") or {}).get("id")
                         if pid2 and pid2 != PID and pid2 not in others:
                             others.append(pid2)
                 if FID and others:
-                    d, _, e, _ = await call("reassign_face", face_id=FID, person_id=others[0])
-                    f2, _, _, _ = await call("get_asset_faces", asset_id=X["lincoln1.jpg"])
-                    f2 = f2 if isinstance(f2, list) else f2.get("faces", [])
-                    now = (f2[0].get("person") or {}).get("id") if f2 else None
+                    data, _, failed, _ = await call("reassign_face", face_id=FID, person_id=others[0])
+                    faces_after, _, _, _ = await call("get_asset_faces", asset_id=EXTRA["lincoln1.jpg"])
+                    faces_after = faces_after if isinstance(faces_after, list) else faces_after.get("faces", [])
+                    now = (faces_after[0].get("person") or {}).get("id") if faces_after else None
                     rec(
                         "reassign_face",
-                        (not e) and now == others[0],
+                        (not failed) and now == others[0],
                         f"face {FID[:8]} -> person {others[0][:8]}; now belongs to {str(now)[:8]}",
                     )
-                    d, _, e, _ = await call("reassign_face", face_id=FID, person_id=PID)
-                    rec("reassign_face(back)", okj(d, e), "restored")
+                    data, _, failed, _ = await call("reassign_face", face_id=FID, person_id=PID)
+                    rec("reassign_face(back)", okj(data, failed), "restored")
                 else:
                     rec(
                         "reassign_face",
@@ -586,17 +586,17 @@ async def main():
                         f"SKIPPED: faces={bool(FID)} other_people={len(others)}",
                     )
                 if len(others) >= 1:
-                    d, _, e, _ = await call("merge_people", person_id=PID, merge_ids=[others[-1]])
-                    g, _, e2, _ = await call("get_person", person_id=others[-1])
+                    data, _, failed, _ = await call("merge_people", person_id=PID, merge_ids=[others[-1]])
+                    album, _, failed_again, _ = await call("get_person", person_id=others[-1])
                     rec(
                         "merge_people",
-                        (not e) and e2,
-                        f"merged {others[-1][:8]} into {PID[:8]}; merged person gone={e2}",
+                        (not failed) and failed_again,
+                        f"merged {others[-1][:8]} into {PID[:8]}; merged person gone={failed_again}",
                     )
                 else:
                     rec("merge_people", False, "SKIPPED: only one person detected")
             else:
-                for t in (
+                for tag in (
                     "get_person",
                     "update_person",
                     "search_people",
@@ -605,54 +605,54 @@ async def main():
                     "merge_people",
                     "reassign_face",
                 ):
-                    rec(t, False, "SKIPPED: no people detected (ML)")
-            d, _, e, _ = await call("get_duplicates")
-            groups = d if isinstance(d, list) else d.get("groups", d.get("duplicates", []))
+                    rec(tag, False, "SKIPPED: no people detected (ML)")
+            data, _, failed, _ = await call("get_duplicates")
+            groups = data if isinstance(data, list) else data.get("groups", data.get("duplicates", []))
             rec(
                 "get_duplicates",
-                okj(d, e) and len(groups) >= 1,
-                f"{len(groups)} groups: {[[a.get('originalFileName') for a in g.get('assets', [])] for g in groups][:2]}",
+                okj(data, failed) and len(groups) >= 1,
+                f"{len(groups)} groups: {[[asset.get('originalFileName') for asset in album.get('assets', [])] for album in groups][:2]}",
             )
             if groups:
-                g0 = groups[0]
-                aids = [a["id"] for a in g0.get("assets", [])]
-                d, _, e, _ = await call(
+                first_group = groups[0]
+                aids = [asset["id"] for asset in first_group.get("assets", [])]
+                data, _, failed, _ = await call(
                     "resolve_duplicates",
                     groups=[
                         {
-                            "duplicateId": g0.get("duplicateId"),
+                            "duplicateId": first_group.get("duplicateId"),
                             "assetIds": aids[:1],
                             "trashIds": aids[1:],
                         }
                     ],
                 )
                 await asyncio.sleep(2)
-                a, _, _, _ = await call("get_asset_info", asset_id=aids[1])
+                asset, _, _, _ = await call("get_asset_info", asset_id=aids[1])
                 rec(
                     "resolve_duplicates",
-                    (not e) and a.get("isTrashed") is True,
-                    f"kept {aids[0][:8]}, trashed {aids[1][:8]} isTrashed={a.get('isTrashed')}",
+                    (not failed) and asset.get("isTrashed") is True,
+                    f"kept {aids[0][:8]}, trashed {aids[1][:8]} isTrashed={asset.get('isTrashed')}",
                 )
             else:
                 rec("resolve_duplicates", False, "SKIPPED: no duplicate groups")
 
             # ── credentials (same creds, must keep working)
-            d, _, e, _ = await call(
+            data, _, failed, _ = await call(
                 "update_credentials", base_url=creds["base"], api_key=creds["key"]
             )
-            p, _, e2, _ = await call("ping")
-            rec("update_credentials", (not e) and (not e2), f"{d} then ping={p}")
-            d, _, e, _ = await call(
+            pong, _, failed_again, _ = await call("ping")
+            rec("update_credentials", (not failed) and (not failed_again), f"{data} then ping={pong}")
+            data, _, failed, _ = await call(
                 "update_credentials", base_url=creds["base"], api_key="bogus-key"
             )
-            rec("update_credentials(bad key rejected)", e, f"bad key -> error={e} {str(d)[:80]}")
-            p, _, e2, _ = await call("ping")
-            rec("  ping still works after rejected creds", not e2, p)
+            rec("update_credentials(bad key rejected)", failed, f"bad key -> error={failed} {str(data)[:80]}")
+            pong, _, failed_again, _ = await call("ping")
+            rec("  ping still works after rejected creds", not failed_again, pong)
 
-    covered = {r["tool"].split("(")[0].strip() for r in results}
+    covered = {reader["tool"].split("(")[0].strip() for reader in results}
     missing = sorted(set(names) - covered)
     print(
-        f"\nSUMMARY {TAG}: {sum(r['ok'] for r in results)}/{len(results)} checks passed; tools not covered: {missing}"
+        f"\nSUMMARY {TAG}: {sum(reader['ok'] for reader in results)}/{len(results)} checks passed; tools not covered: {missing}"
     )
     json.dump(
         {"tag": TAG, "results": results, "missing": missing},

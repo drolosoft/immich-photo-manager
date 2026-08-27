@@ -20,8 +20,8 @@ class HealthApi:
         Raises httpx.HTTPStatusError on 401 and on network errors."""
         try:
             await self._request("GET", "/users/me")
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 403:
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 403:
                 return
             raise
 

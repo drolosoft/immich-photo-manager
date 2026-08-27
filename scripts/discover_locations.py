@@ -37,8 +37,8 @@ def haversine(lat1, lon1, lat2, lon2):
     lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
     dlat = lat2 - lat1
     dlon = lon2 - lon1
-    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
-    return 2 * 6371 * asin(sqrt(a))
+    haversine_a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    return 2 * 6371 * asin(sqrt(haversine_a))
 
 
 def cluster_markers(markers, radius_km=30):
@@ -55,10 +55,10 @@ def cluster_markers(markers, radius_km=30):
             clat, clon = cluster["center"]
             if haversine(lat, lon, clat, clon) < radius_km:
                 cluster["markers"].append(marker)
-                n = len(cluster["markers"])
+                marker_count = len(cluster["markers"])
                 cluster["center"] = (
-                    (clat * (n - 1) + lat) / n,
-                    (clon * (n - 1) + lon) / n,
+                    (clat * (marker_count - 1) + lat) / marker_count,
+                    (clon * (marker_count - 1) + lon) / marker_count,
                 )
                 placed = True
                 break
@@ -79,7 +79,7 @@ def main():
 
     print("Clustering by location (30km radius)...")
     clusters = cluster_markers(markers, radius_km=30)
-    clusters.sort(key=lambda c: len(c["markers"]), reverse=True)
+    clusters.sort(key=lambda cluster: len(cluster["markers"]), reverse=True)
 
     print(f"\nDiscovered {len(clusters)} distinct locations:\n")
     for i, cluster in enumerate(clusters[:50]):
@@ -94,12 +94,12 @@ def main():
             "latitude": round(lat, 4),
             "longitude": round(lon, 4),
             "photo_count": len(cluster["markers"]),
-            "asset_ids": [m.get("id", "") for m in cluster["markers"]],
+            "asset_ids": [marker.get("id", "") for marker in cluster["markers"]],
         })
 
     outfile = "location_inventory.json"
-    with open(outfile, "w") as f:
-        json.dump(output, f, indent=2)
+    with open(outfile, "w") as handle:
+        json.dump(output, handle, indent=2)
     print(f"\nSaved {len(output)} locations to {outfile}")
 
 

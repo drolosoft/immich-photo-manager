@@ -42,7 +42,7 @@ async def test_get_assets_by_ids_keeps_order_and_drops_missing(env_credentials, 
         got = await ImmichClient().get_assets_by_ids(["a1", "a2", "zz"])
     body = json.loads(route.calls[0].request.content)
     assert body["ids"] == ["a1", "a2", "zz"] and body["withExif"] is True and body["withPeople"] is True
-    assert [a["id"] for a in got] == ["a1", "a2"]
+    assert [args["id"] for args in got] == ["a1", "a2"]
 
 
 @pytest.mark.asyncio
@@ -55,7 +55,7 @@ async def test_get_assets_by_ids_falls_back_to_get_asset_when_ids_filter_ignored
         mock.get("/api/assets/a1").mock(return_value=httpx.Response(200, json=_asset(1)))
         mock.get("/api/assets/a2").mock(return_value=httpx.Response(200, json=_asset(2)))
         got = await ImmichClient().get_assets_by_ids(["a1", "a2"])
-    assert [a["id"] for a in got] == ["a1", "a2"]
+    assert [args["id"] for args in got] == ["a1", "a2"]
 
 
 @pytest.mark.asyncio
@@ -99,7 +99,7 @@ class StubClient:
         return self.assets[:limit] if limit else self.assets
 
     async def get_assets_by_ids(self, ids, with_exif=True):
-        return [a for a in self.assets if a["id"] in ids]
+        return [asset for asset in self.assets if asset["id"] in ids]
 
     async def get_asset_thumbnail(self, asset_id, size="thumbnail"):
         return {"data": base64.b64encode(PNG_RED).decode(), "type": "image/png"}
@@ -107,7 +107,7 @@ class StubClient:
     async def get_video_playback(self, asset_id):
         return b"MP4"
 
-    async def fetch_tile(self, z, x, y):
+    async def fetch_tile(self, zoom, tile_x, tile_y):
         return PNG_RED
 
     base_url = "https://env.example.com"
@@ -124,11 +124,11 @@ class FailingThumbClient(StubClient):
 
 @pytest.mark.asyncio
 async def test_get_export_preview_album(fake_ctx):
-    d = json.loads(await server.get_export_preview(fake_ctx(StubClient()), album_id="alb"))
-    assert d["title"] == "Hypercars" and d["count"] == 3
-    assert d["assets"][2] == {"id": "a3", "type": "VIDEO", "filename": "3.jpg", "taken_at": "2026-01-03T10:00:00Z",
+    data = json.loads(await server.get_export_preview(fake_ctx(StubClient()), album_id="alb"))
+    assert data["title"] == "Hypercars" and data["count"] == 3
+    assert data["assets"][2] == {"id": "a3", "type": "VIDEO", "filename": "3.jpg", "taken_at": "2026-01-03T10:00:00Z",
                               "place": "Barcelona, Spain", "people": ["Curie"], "duration": 3.0}
-    assert d["assets"][0]["duration"] is None
+    assert data["assets"][0]["duration"] is None
 
 
 @pytest.mark.asyncio
@@ -139,8 +139,8 @@ async def test_get_export_preview_requires_exactly_one_source(fake_ctx):
 
 @pytest.mark.asyncio
 async def test_get_export_preview_limit_warns(fake_ctx):
-    d = json.loads(await server.get_export_preview(fake_ctx(StubClient()), asset_ids=["a1", "a2", "a3"], limit=2))
-    assert d["count"] == 2 and any("limit" in w for w in d["warnings"])
+    data = json.loads(await server.get_export_preview(fake_ctx(StubClient()), asset_ids=["a1", "a2", "a3"], limit=2))
+    assert data["count"] == 2 and any("limit" in warning for warning in data["warnings"])
 
 
 def test_duration_seconds_numeric_is_milliseconds():
@@ -151,9 +151,9 @@ def test_duration_seconds_numeric_is_milliseconds():
 
 
 def _fake_frames(data, count=6, size="thumbnail", backend=None, start=0.0, end=0.0, interval=0.0):
-    n = count if not interval else 3
+    count = count if not interval else 3
     return {"duration": 3.0, "backend": "stub",
-            "frames": [{"timestamp": float(i), "data": base64.b64encode(PNG_RED).decode(), "type": "image/jpeg"} for i in range(n)]}
+            "frames": [{"timestamp": float(i), "data": base64.b64encode(PNG_RED).decode(), "type": "image/jpeg"} for i in range(count)]}
 
 
 @pytest.mark.asyncio
@@ -161,10 +161,10 @@ async def test_export_pdf_writes_file_and_reports(fake_ctx, tmp_path, monkeypatc
     from immich_mcp_server import video_frames
     monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
     out = tmp_path / "out.pdf"
-    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(out),
+    data = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(out),
                                            captions={"a1": "A red car"}, frames_per_video=3))
-    assert d["path"] == str(out) and out.read_bytes()[:4] == b"%PDF"
-    assert d["pages"] == 3 + 3 and d["assets_included"] == 3 and d["assets_skipped"] == []
+    assert data["path"] == str(out) and out.read_bytes()[:4] == b"%PDF"
+    assert data["pages"] == 3 + 3 and data["assets_included"] == 3 and data["assets_skipped"] == []
     from pypdf import PdfReader
     assert "A red car" in PdfReader(str(out)).pages[3].extract_text()
 
@@ -175,8 +175,8 @@ async def test_export_pdf_never_overwrites(fake_ctx, tmp_path, monkeypatch):
     monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
     out = tmp_path / "out.pdf"
     out.write_bytes(b"old")
-    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(out)))
-    assert d["path"] == str(tmp_path / "out-2.pdf") and out.read_bytes() == b"old"
+    data = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(out)))
+    assert data["path"] == str(tmp_path / "out-2.pdf") and out.read_bytes() == b"old"
 
 
 @pytest.mark.asyncio
@@ -184,62 +184,64 @@ async def test_export_pdf_output_path_directory_gets_slugged_filename(fake_ctx, 
     """Passing a directory as output_path must write <slug(title)>.pdf inside it."""
     from immich_mcp_server import video_frames
     monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
-    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path)))
-    assert d["path"] == str(tmp_path / "hypercars.pdf")
-    assert os.path.exists(d["path"])
+    data = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path)))
+    assert data["path"] == str(tmp_path / "hypercars.pdf")
+    assert os.path.exists(data["path"])
 
 
 @pytest.mark.asyncio
 async def test_export_pdf_output_path_without_extension_gets_pdf_suffix(fake_ctx, tmp_path, monkeypatch):
     from immich_mcp_server import video_frames
     monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
-    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb",
+    data = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb",
                                            output_path=str(tmp_path / "report")))
-    assert d["path"] == str(tmp_path / "report.pdf")
-    assert os.path.exists(d["path"])
+    assert data["path"] == str(tmp_path / "report.pdf")
+    assert os.path.exists(data["path"])
 
 
 @pytest.mark.asyncio
 async def test_export_pdf_video_without_decoder_uses_poster(fake_ctx, tmp_path, monkeypatch):
     from immich_mcp_server import video_frames
-    def boom(*a, **k): raise video_frames.NoVideoBackend("no decoder")
+    def boom(*args, **kwargs):
+        raise video_frames.NoVideoBackend("no decoder")
     monkeypatch.setattr(video_frames, "extract_frames", boom)
-    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "p.pdf")))
-    assert d["assets_included"] == 3 and any("poster" in w for w in d["warnings"])
+    data = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "p.pdf")))
+    assert data["assets_included"] == 3 and any("poster" in warning for warning in data["warnings"])
 
 
 @pytest.mark.asyncio
 async def test_export_pdf_too_many_frames_uses_poster(fake_ctx, tmp_path, monkeypatch):
     from immich_mcp_server import video_frames
-    def boom(*a, **k): raise video_frames.TooManyFrames("999 frames requested; the cap is 120")
+    def boom(*args, **kwargs):
+        raise video_frames.TooManyFrames("999 frames requested; the cap is 120")
     monkeypatch.setattr(video_frames, "extract_frames", boom)
-    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "tmf.pdf")))
-    assert d["assets_included"] == 3
-    assert any("poster used" in w for w in d["warnings"])
+    data = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "tmf.pdf")))
+    assert data["assets_included"] == 3
+    assert any("poster used" in warning for warning in data["warnings"])
 
 
 @pytest.mark.asyncio
 async def test_export_pdf_skips_failing_asset(fake_ctx, tmp_path, monkeypatch):
     from immich_mcp_server import video_frames
     monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
-    d = json.loads(await server.export_pdf(fake_ctx(FailingThumbClient()), album_id="alb", output_path=str(tmp_path / "sk.pdf")))
-    assert d["assets_included"] == 2
-    assert d["assets_skipped"] == [{"id": "a2", "reason": "boom 500"}]
+    data = json.loads(await server.export_pdf(fake_ctx(FailingThumbClient()), album_id="alb", output_path=str(tmp_path / "sk.pdf")))
+    assert data["assets_included"] == 2
+    assert data["assets_skipped"] == [{"id": "a2", "reason": "boom 500"}]
 
 
 @pytest.mark.asyncio
 async def test_export_pdf_base64_and_errors(fake_ctx, tmp_path, monkeypatch):
     from immich_mcp_server import video_frames
     monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
-    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), asset_ids=["a1"], output_path=str(tmp_path / "b.pdf"),
+    data = json.loads(await server.export_pdf(fake_ctx(StubClient()), asset_ids=["a1"], output_path=str(tmp_path / "b.pdf"),
                                            return_base64=True, map=True))
-    assert base64.b64decode(d["pdf_base64"])[:4] == b"%PDF"
-    assert d["warnings"] == []
+    assert base64.b64decode(data["pdf_base64"])[:4] == b"%PDF"
+    assert data["warnings"] == []
     assert "error" in json.loads(await server.export_pdf(fake_ctx(StubClient()), output_path=str(tmp_path / "e.pdf")))
 
 
 @pytest.mark.asyncio
 async def test_export_pdf_no_fpdf(fake_ctx, tmp_path, monkeypatch):
     monkeypatch.setattr(pdf_export, "_fpdf_available", lambda: False)
-    d = json.loads(await server.export_pdf(fake_ctx(StubClient()), asset_ids=["a1"], output_path=str(tmp_path / "n.pdf")))
-    assert "immich-photo-manager[pdf]" in d["error"]
+    data = json.loads(await server.export_pdf(fake_ctx(StubClient()), asset_ids=["a1"], output_path=str(tmp_path / "n.pdf")))
+    assert "immich-photo-manager[pdf]" in data["error"]

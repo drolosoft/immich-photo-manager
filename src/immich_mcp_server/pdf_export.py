@@ -71,9 +71,9 @@ def _fpdf_available() -> bool:
 
 
 def slugify(text: str) -> str:
-    s = text.lower().replace("'", "")
-    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
-    return s or "immich-export"
+    slug = text.lower().replace("'", "")
+    slug = re.sub(r"[^a-z0-9]+", "-", slug).strip("-")
+    return slug or "immich-export"
 
 
 def unique_path(path: str) -> str:
@@ -81,10 +81,10 @@ def unique_path(path: str) -> str:
     if not os.path.exists(path):
         return path
     root, ext = os.path.splitext(path)
-    n = 2
-    while os.path.exists(f"{root}-{n}{ext}"):
-        n += 1
-    return f"{root}-{n}{ext}"
+    suffix = 2
+    while os.path.exists(f"{root}-{suffix}{ext}"):
+        suffix += 1
+    return f"{root}-{suffix}{ext}"
 
 
 def places_table(assets: list[AssetEntry]) -> list[tuple[str, str, int]]:
@@ -95,7 +95,15 @@ def places_table(assets: list[AssetEntry]) -> list[tuple[str, str, int]]:
         parts = [part.strip() for part in asset.place.split(",")]
         city, country = (parts[0], parts[-1]) if len(parts) > 1 else ("", parts[0])
         counts[(country, city)] = counts.get((country, city), 0) + 1
-    return sorted(((c, ci, n) for (c, ci), n in counts.items()), key=lambda t: (-t[2], t[0], t[1]))
+    # Most photographed place first; ties fall back to alphabetical country, then city.
+    rows = [(country, city, total) for (country, city), total in counts.items()]
+    rows.sort(key=_places_sort_key)
+    return rows
+
+
+def _places_sort_key(row: tuple[str, str, int]) -> tuple[int, str, str]:
+    country, city, total = row
+    return (-total, country, city)
 
 
 class _Pdf:
@@ -119,15 +127,15 @@ class _Pdf:
             self.family = "helvetica"
         self.pdf.set_font(self.family, size=11)
 
-    def text(self, s: str) -> str:
-        return s if self.unicode else s.encode("latin-1", "replace").decode("latin-1")
+    def text(self, slug: str) -> str:
+        return slug if self.unicode else slug.encode("latin-1", "replace").decode("latin-1")
 
     def font(self, size: float, bold: bool = False):
         # Bold needs a second TTF; with the unicode font we simulate emphasis by size only.
         style = "B" if (bold and not self.unicode) else ""
         self.pdf.set_font(self.family, style=style, size=size)
 
-    def image(self, data: bytes, x: float, y: float, max_w: float, max_h: float) -> float:
+    def image(self, data: bytes, left: float, top: float, max_w: float, max_h: float) -> float:
         """Draw `data` fitting in max_w × max_h at (x, y); returns the drawn height."""
         from PIL import Image as PILImage
 
@@ -135,7 +143,7 @@ class _Pdf:
             width, height = image.size
         scale = min(max_w / width, max_h / height)
         drawn_w, drawn_h = width * scale, height * scale
-        self.pdf.image(io.BytesIO(data), x=x + (max_w - drawn_w) / 2, y=y, w=drawn_w, h=drawn_h)
+        self.pdf.image(io.BytesIO(data), x=left + (max_w - drawn_w) / 2, y=top, w=drawn_w, h=drawn_h)
         return drawn_h
 
     def footer_all(self):
@@ -191,18 +199,18 @@ def _places(writer: _Pdf):
     writer.font(10)
     if not writer.doc.places:
         writer.pdf.cell(CONTENT_W, 6, writer.text("No location data in these assets."), new_x="LMARGIN", new_y="NEXT")
-    for country, city, n in writer.doc.places:
+    for country, city, total in writer.doc.places:
         writer.pdf.cell(60, 6, writer.text(country))
         writer.pdf.cell(80, 6, writer.text(city))
-        writer.pdf.cell(20, 6, str(n), align="R", new_x="LMARGIN", new_y="NEXT")
+        writer.pdf.cell(20, 6, str(total), align="R", new_x="LMARGIN", new_y="NEXT")
     if writer.doc.map_png:
-        y = writer.pdf.get_y() + 6
-        max_h = A4_H - y - 20
+        top = writer.pdf.get_y() + 6
+        max_h = A4_H - top - 20
         if max_h < 60:
             writer.pdf.add_page()
-            y = MARGIN
-            max_h = A4_H - y - 20
-        writer.image(writer.doc.map_png, MARGIN, y, CONTENT_W, max_h)
+            top = MARGIN
+            max_h = A4_H - top - 20
+        writer.image(writer.doc.map_png, MARGIN, top, CONTENT_W, max_h)
 
 
 def _meta_lines(asset: AssetEntry) -> list[str]:
@@ -221,27 +229,27 @@ def _meta_lines(asset: AssetEntry) -> list[str]:
 def _detail(writer: _Pdf, asset: AssetEntry, link):
     writer.pdf.add_page()
     writer.pdf.set_link(link, page=writer.pdf.page)
-    y = MARGIN
+    top = MARGIN
     if asset.kind == "VIDEO" and len(asset.images) > 1:
         cols, gap = 4, 3
-        w = (CONTENT_W - gap * (cols - 1)) / cols
+        cell_w = (CONTENT_W - gap * (cols - 1)) / cols
         for i, img in enumerate(asset.images):
             col = i % cols
             if col == 0 and i > 0:
-                y += w * 0.6 + 8
-                if y + w * 0.6 + 40 > A4_H - MARGIN:
+                top += cell_w * 0.6 + 8
+                if top + cell_w * 0.6 + 40 > A4_H - MARGIN:
                     writer.pdf.add_page()
-                    y = MARGIN
-            x = MARGIN + col * (w + gap)
-            writer.image(img, x, y, w, w * 0.6)
+                    top = MARGIN
+            left = MARGIN + col * (cell_w + gap)
+            writer.image(img, left, top, cell_w, cell_w * 0.6)
             writer.font(7)
-            ts = asset.timestamps[i] if i < len(asset.timestamps) else 0.0
-            writer.pdf.set_xy(x, y + w * 0.6 + 1)
-            writer.pdf.cell(w, 4, f"{ts:.1f} s", align="C")
-        y += w * 0.6 + 10
+            timestamp = asset.timestamps[i] if i < len(asset.timestamps) else 0.0
+            writer.pdf.set_xy(left, top + cell_w * 0.6 + 1)
+            writer.pdf.cell(cell_w, 4, f"{timestamp:.1f} s", align="C")
+        top += cell_w * 0.6 + 10
     elif asset.images:
-        y += writer.image(asset.images[0], MARGIN, y, CONTENT_W, 150) + 4
-    writer.pdf.set_xy(MARGIN, y)
+        top += writer.image(asset.images[0], MARGIN, top, CONTENT_W, 150) + 4
+    writer.pdf.set_xy(MARGIN, top)
     writer.font(10)
     for line in _meta_lines(asset):
         writer.pdf.cell(CONTENT_W, 5.5, writer.text(line), new_x="LMARGIN", new_y="NEXT")
@@ -260,15 +268,15 @@ def _grid(writer: _Pdf, assets: list[AssetEntry], links: list):
         if slot == 0:
             writer.pdf.add_page()
         writer.pdf.set_link(links[i], page=writer.pdf.page)
-        x = MARGIN + (slot % cols) * (cell_w + gap)
-        y = MARGIN + (slot // cols) * (cell_h + gap)
+        left = MARGIN + (slot % cols) * (cell_w + gap)
+        top = MARGIN + (slot // cols) * (cell_h + gap)
         if asset.images:
-            writer.image(asset.images[0], x, y, cell_w, cell_h - 14)
+            writer.image(asset.images[0], left, top, cell_w, cell_h - 14)
         writer.font(8)
-        writer.pdf.set_xy(x, y + cell_h - 13)
+        writer.pdf.set_xy(left, top + cell_h - 13)
         note = f" · {len(asset.images)} frames" if asset.kind == "VIDEO" else ""
         writer.pdf.cell(cell_w, 4, writer.text(f"{asset.filename}  {asset.taken_at[:10]}{note}"), new_x="LEFT", new_y="NEXT")
-        writer.pdf.set_x(x)
+        writer.pdf.set_x(left)
         writer.pdf.cell(cell_w, 4, writer.text(asset.caption[:90]))
 
 
@@ -295,11 +303,11 @@ MAX_TILES = 16
 TILE = 256
 
 
-def _tile_xy(lat: float, lon: float, z: int) -> tuple[float, float]:
-    n = 2 ** z
-    x = (lon + 180.0) / 360.0 * n
-    y = (1 - math.log(math.tan(math.radians(lat)) + 1 / math.cos(math.radians(lat))) / math.pi) / 2 * n
-    return x, y
+def _tile_xy(lat: float, lon: float, zoom: int) -> tuple[float, float]:
+    tiles_per_side = 2 ** zoom
+    tile_x = (lon + 180.0) / 360.0 * tiles_per_side
+    tile_y = (1 - math.log(math.tan(math.radians(lat)) + 1 / math.cos(math.radians(lat))) / math.pi) / 2 * tiles_per_side
+    return tile_x, tile_y
 
 
 def render_map(points: list[tuple[float, float]], fetch_tile) -> bytes | None:
@@ -312,25 +320,25 @@ def render_map(points: list[tuple[float, float]], fetch_tile) -> bytes | None:
         lats = [lat for lat, _lon in points]
         lons = [lon for _lat, lon in points]
         for zoom in range(12, 0, -1):
-            x0, y1 = _tile_xy(min(lats), min(lons), zoom)
-            x1, y0 = _tile_xy(max(lats), max(lons), zoom)
-            tx0, tx1 = int(math.floor(x0)), int(math.floor(x1))
-            ty0, ty1 = int(math.floor(y0)), int(math.floor(y1))
-            tx0, tx1 = sorted((tx0, tx1))
-            ty0, ty1 = sorted((ty0, ty1))
-            if (tx1 - tx0 + 1) * (ty1 - ty0 + 1) <= MAX_TILES:
+            west_x, south_y = _tile_xy(min(lats), min(lons), zoom)
+            east_x, north_y = _tile_xy(max(lats), max(lons), zoom)
+            first_col, last_col = int(math.floor(west_x)), int(math.floor(east_x))
+            first_row, last_row = int(math.floor(north_y)), int(math.floor(south_y))
+            first_col, last_col = sorted((first_col, last_col))
+            first_row, last_row = sorted((first_row, last_row))
+            if (last_col - first_col + 1) * (last_row - first_row + 1) <= MAX_TILES:
                 break
-        cols, rows = tx1 - tx0 + 1, ty1 - ty0 + 1
+        cols, rows = last_col - first_col + 1, last_row - first_row + 1
         canvas = PILImage.new("RGB", (cols * TILE, rows * TILE), "white")
-        for tx in range(tx0, tx1 + 1):
-            for ty in range(ty0, ty1 + 1):
-                tile = PILImage.open(io.BytesIO(fetch_tile(zoom, tx, ty))).convert("RGB")
-                canvas.paste(tile, ((tx - tx0) * TILE, (ty - ty0) * TILE))
+        for tile_col in range(first_col, last_col + 1):
+            for tile_row in range(first_row, last_row + 1):
+                tile = PILImage.open(io.BytesIO(fetch_tile(zoom, tile_col, tile_row))).convert("RGB")
+                canvas.paste(tile, ((tile_col - first_col) * TILE, (tile_row - first_row) * TILE))
         draw = ImageDraw.Draw(canvas)
         for lat, lon in points:
-            x, y = _tile_xy(lat, lon, zoom)
-            px, py = (x - tx0) * TILE, (y - ty0) * TILE
-            draw.ellipse([px - 6, py - 6, px + 6, py + 6], fill="#d33", outline="white", width=2)
+            tile_x, tile_y = _tile_xy(lat, lon, zoom)
+            pixel_x, pixel_y = (tile_x - first_col) * TILE, (tile_y - first_row) * TILE
+            draw.ellipse([pixel_x - 6, pixel_y - 6, pixel_x + 6, pixel_y + 6], fill="#d33", outline="white", width=2)
         out = io.BytesIO()
         canvas.save(out, format="PNG")
         return out.getvalue()

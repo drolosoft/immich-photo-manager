@@ -19,44 +19,44 @@ LAB = [
 ]  # order matters: harness expects video first
 
 base, media = sys.argv[1], sys.argv[2]
-c = httpx.Client(base_url=base + "/api", timeout=120)
-c.post(
+client = httpx.Client(base_url=base + "/api", timeout=120)
+client.post(
     "/auth/admin-sign-up",
     json={"email": "lab@example.com", "password": "labpassword1", "name": "Lab"},
 )
-tok = c.post("/auth/login", json={"email": "lab@example.com", "password": "labpassword1"}).json()[
+tok = client.post("/auth/login", json={"email": "lab@example.com", "password": "labpassword1"}).json()[
     "accessToken"
 ]
-c.headers["Authorization"] = f"Bearer {tok}"
-key = c.post("/api-keys", json={"name": "lab", "permissions": ["all"]}).json()["secret"]
-c.headers.pop("Authorization")
-c.headers["x-api-key"] = key
-c.put("/users/me/preferences", json={"tags": {"enabled": True, "sidebarWeb": True}})
+client.headers["Authorization"] = f"Bearer {tok}"
+key = client.post("/api-keys", json={"name": "lab", "permissions": ["all"]}).json()["secret"]
+client.headers.pop("Authorization")
+client.headers["x-api-key"] = key
+client.put("/users/me/preferences", json={"tags": {"enabled": True, "sidebarWeb": True}})
 
 
 def upload(path):
-    mt = "2026-03-01T12:00:00.000Z"
-    r = c.post(
+    modified_at = "2026-03-01T12:00:00.000Z"
+    response = client.post(
         "/assets",
         data={
             "deviceAssetId": os.path.basename(path),
             "deviceId": "lab",
-            "fileCreatedAt": mt,
-            "fileModifiedAt": mt,
+            "fileCreatedAt": modified_at,
+            "fileModifiedAt": modified_at,
         },
         files={"assetData": (os.path.basename(path), open(path, "rb"))},
     )
-    r.raise_for_status()
-    return r.json()["id"]
+    response.raise_for_status()
+    return response.json()["id"]
 
 
-ids = [upload(os.path.join(media, f)) for f in LAB]
+ids = [upload(os.path.join(media, filename)) for filename in LAB]
 extra = {
-    os.path.basename(f): upload(f)
-    for f in sorted(glob.glob(os.path.join(media, "*")))
-    if os.path.basename(f) not in LAB and not os.path.basename(f).startswith("upload_test")
+    os.path.basename(filename): upload(filename)
+    for filename in sorted(glob.glob(os.path.join(media, "*")))
+    if os.path.basename(filename) not in LAB and not os.path.basename(filename).startswith("upload_test")
 }
-album = c.post("/albums", json={"albumName": "Lab Album", "assetIds": ids}).json()
+album = client.post("/albums", json={"albumName": "Lab Album", "assetIds": ids}).json()
 print(
     json.dumps(
         {
@@ -65,7 +65,7 @@ print(
             "album_id": album["id"],
             "asset_ids": ids,
             "extra": extra,
-            "version": c.get("/server/version").json(),
+            "version": client.get("/server/version").json(),
         }
     )
 )

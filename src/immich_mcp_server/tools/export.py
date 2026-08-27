@@ -21,12 +21,12 @@ EXPORT_MAX = 500
 
 
 def _duration_seconds(raw: dict) -> float:
-    d = raw.get("duration")
-    if isinstance(d, (int, float)):
-        return round(float(d) / 1000.0, 3)
-    if isinstance(d, str) and ":" in d:
-        h, m, s = d.split(":")
-        return round(int(h) * 3600 + int(m) * 60 + float(s), 3)
+    raw_duration = raw.get("duration")
+    if isinstance(raw_duration, (int, float)):
+        return round(float(raw_duration) / 1000.0, 3)
+    if isinstance(raw_duration, str) and ":" in raw_duration:
+        hours, minutes, seconds = raw_duration.split(":")
+        return round(int(hours) * 3600 + int(minutes) * 60 + float(seconds), 3)
     return 0.0
 
 
@@ -177,10 +177,10 @@ async def export_pdf(
             tiles: dict = {}
             loop = asyncio.get_running_loop()
 
-            def fetch(z, x, y):
-                key = (z, x, y)
+            def fetch(zoom, tile_x, tile_y):
+                key = (zoom, tile_x, tile_y)
                 if key not in tiles:
-                    tiles[key] = asyncio.run_coroutine_threadsafe(client.fetch_tile(z, x, y), loop).result(15)
+                    tiles[key] = asyncio.run_coroutine_threadsafe(client.fetch_tile(zoom, tile_x, tile_y), loop).result(15)
                 return tiles[key]
 
             map_png = await asyncio.to_thread(pdf_export.render_map, points, fetch)

@@ -73,8 +73,8 @@ async def test_update_credentials_swaps_in_the_new_credentials(
     assert live.base_url == NEW_URL
     assert live.api_key == NEW_KEY
     # And the persisted config now carries the new credentials
-    with open(isolated_cache / "config.json") as f:
-        persisted = json.load(f)
+    with open(isolated_cache / "config.json") as handle:
+        persisted = json.load(handle)
     assert persisted == {"base_url": NEW_URL, "api_key": NEW_KEY}
 
 

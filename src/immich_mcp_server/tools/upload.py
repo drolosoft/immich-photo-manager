@@ -50,15 +50,15 @@ async def upload_asset(ctx: Context, file_path: str, album_id: str = "") -> str:
     client = _client(ctx)
     try:
         result = await client.upload_asset(file_path)
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
 
     if album_id and result.get("id"):
         try:
             await client.add_assets_to_album(album_id, [result["id"]])
             result["added_to_album"] = album_id
-        except Exception as e:
-            result["album_error"] = str(e)
+        except Exception as exc:
+            result["album_error"] = str(exc)
 
     result["uploaded_file"] = os.path.basename(file_path)
     result["size_mb"] = round(size / 1024 / 1024, 2)

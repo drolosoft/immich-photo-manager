@@ -102,7 +102,7 @@ async def rotate_assets(
     if album_id:
         album = await client.get_album(album_id)
         album_name = album.get("albumName", "")
-        ids = [a["id"] for a in await _album_assets(client, album_id, album)]
+        ids = [asset["id"] for asset in await _album_assets(client, album_id, album)]
         if not ids:
             return json.dumps({"error": f"Album '{album_name}' is empty."})
     elif asset_ids:
@@ -117,8 +117,8 @@ async def rotate_assets(
             # so anything not carried over (crop, mirror) would be lost.
             try:
                 existing = (await client.get_asset_edits(aid)).get("edits", []) or []
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 404:
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 404:
                     existing = []  # asset simply has no edits yet
                 else:
                     raise  # unreadable edits: fail the asset, never guess the angle
@@ -126,7 +126,7 @@ async def rotate_assets(
             for edit in existing:
                 if edit.get("action") == "rotate":
                     current_angle = edit.get("parameters", {}).get("angle", 0)
-            other_edits = [e for e in existing if e.get("action") != "rotate"]
+            other_edits = [exc for exc in existing if exc.get("action") != "rotate"]
             new_angle = (current_angle + angle) % 360
             new_edits = other_edits + (
                 [{"action": "rotate", "parameters": {"angle": new_angle}}]
@@ -138,9 +138,9 @@ async def rotate_assets(
                 # Nothing left at all — remove the (rotation-only) edit record
                 await client.delete_asset_edits(aid)
             results["rotated"] += 1
-        except Exception as e:
+        except Exception as exc:
             results["failed"] += 1
-            results["errors"].append({"asset_id": aid, "error": str(e)})
+            results["errors"].append({"asset_id": aid, "error": str(exc)})
 
     results["angle"] = angle
     results["total_requested"] = len(ids)
@@ -174,7 +174,7 @@ async def revert_asset_edits(
     if album_id:
         album = await client.get_album(album_id)
         album_name = album.get("albumName", "")
-        ids = [a["id"] for a in await _album_assets(client, album_id, album)]
+        ids = [asset["id"] for asset in await _album_assets(client, album_id, album)]
         if not ids:
             return json.dumps({"error": f"Album '{album_name}' is empty."})
     elif asset_ids:
@@ -187,9 +187,9 @@ async def revert_asset_edits(
         try:
             await client.delete_asset_edits(aid)
             results["reverted"] += 1
-        except Exception as e:
+        except Exception as exc:
             results["failed"] += 1
-            results["errors"].append({"asset_id": aid, "error": str(e)})
+            results["errors"].append({"asset_id": aid, "error": str(exc)})
 
     results["total_requested"] = len(ids)
     if album_name:

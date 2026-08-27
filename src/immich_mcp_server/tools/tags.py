@@ -21,8 +21,8 @@ async def list_tags(ctx: Context) -> str:
     try:
         result = await _client(ctx).list_tags()
         return json.dumps({"total": len(result), "tags": result}, default=str)
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
 
 
 @mcp.tool()
@@ -37,8 +37,8 @@ async def get_tag(ctx: Context, tag_id: str) -> str:
     try:
         result = await _client(ctx).get_tag(tag_id)
         return json.dumps(result, default=str)
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
 
 
 @mcp.tool()
@@ -55,8 +55,8 @@ async def create_tag(ctx: Context, name: str, color: str = "") -> str:
     try:
         result = await _client(ctx).create_tag(name, color=color or None)
         return json.dumps(result, default=str)
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
 
 
 @mcp.tool()
@@ -86,8 +86,8 @@ async def update_tag(ctx: Context, tag_id: str, name: str | None = None, color: 
     try:
         result = await _client(ctx).update_tag(tag_id, **fields)
         return json.dumps(result, default=str)
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
 
 
 @mcp.tool()
@@ -103,8 +103,8 @@ async def delete_tag(ctx: Context, tag_id: str) -> str:
     try:
         await _client(ctx).delete_tag(tag_id)
         return json.dumps({"deleted": True, "tag_id": tag_id})
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
 
 
 @mcp.tool()
@@ -123,8 +123,8 @@ async def tag_assets(ctx: Context, tag_id: str, asset_ids: list[str]) -> str:
     try:
         result = await _client(ctx).tag_assets(tag_id, asset_ids)
         return json.dumps({"tag_id": tag_id, "tagged": len(asset_ids), "result": result}, default=str)
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
 
 
 @mcp.tool()
@@ -143,5 +143,5 @@ async def untag_assets(ctx: Context, tag_id: str, asset_ids: list[str]) -> str:
     try:
         result = await _client(ctx).untag_assets(tag_id, asset_ids)
         return json.dumps({"tag_id": tag_id, "untagged": len(asset_ids), "result": result}, default=str)
-    except httpx.HTTPStatusError as e:
-        return json.dumps({"error": f"Immich API error: {e.response.status_code}", "detail": e.response.text[:200]})
+    except httpx.HTTPStatusError as exc:
+        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})

@@ -41,8 +41,8 @@ async def test_get_album_assets_paginates_search_metadata(client):
 
     respx.post(f"{BASE}/api/search/metadata").mock(side_effect=handler)
     assets = await client.get_album_assets("alb1")
-    assert [a["id"] for a in assets] == ["a1", "a2", "a3"]
-    assert [c["page"] for c in calls] == [1, 2]
+    assert [asset["id"] for asset in assets] == ["a1", "a2", "a3"]
+    assert [call["page"] for call in calls] == [1, 2]
 
 
 @pytest.mark.asyncio
@@ -75,7 +75,7 @@ async def test_get_album_thumbnails_on_immich2_uses_inline_assets(client):
     search = respx.post(f"{BASE}/api/search/metadata")
     respx.get(url__regex=rf"{BASE}/api/assets/a\d/thumbnail.*").mock(return_value=Response(200, content=b"img", headers={"content-type": "image/webp"}))
     result = await client.get_album_thumbnails("alb1")
-    assert [t["id"] for t in result["thumbnails"]] == ["a9"]
+    assert [thumb["id"] for thumb in result["thumbnails"]] == ["a9"]
     assert not search.called
 
 
@@ -127,12 +127,12 @@ class StubDup(StubClient3):
 @pytest.mark.asyncio
 async def test_get_album_reports_people_per_asset(fake_ctx):
     out = json.loads(await server.get_album(fake_ctx(StubDup()), album_id="alb1"))
-    assert [a["people"][0]["name"] for a in out["assets"]] == ["Abe", "Abe"]
+    assert [asset["people"][0]["name"] for asset in out["assets"]] == ["Abe", "Abe"]
     assert out["asset_ids"] == ["a1", "a2"]
 
 
 @pytest.mark.asyncio
 async def test_get_duplicates_scoped_to_album(fake_ctx):
     out = json.loads(await server.get_duplicates(fake_ctx(StubDup()), album_id="alb1"))
-    assert [g["duplicateId"] for g in out["groups"]] == ["g1"]
+    assert [group["duplicateId"] for group in out["groups"]] == ["g1"]
     assert out["groups"][0]["inAlbum"] == ["a1"] and out["groups"][0]["outsideAlbum"] == ["zz"]

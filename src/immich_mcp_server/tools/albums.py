@@ -24,15 +24,15 @@ async def list_albums(ctx: Context, shared: bool | None = None) -> str:
     result = await _client(ctx).list_albums(shared=shared)
     albums = [
         {
-            "id": a["id"],
-            "albumName": a.get("albumName", ""),
-            "description": a.get("description", ""),
-            "assetCount": a.get("assetCount", 0),
-            "shared": a.get("shared", False),
-            "hasSharedLink": a.get("hasSharedLink", False),
-            "createdAt": a.get("createdAt", ""),
+            "id": album["id"],
+            "albumName": album.get("albumName", ""),
+            "description": album.get("description", ""),
+            "assetCount": album.get("assetCount", 0),
+            "shared": album.get("shared", False),
+            "hasSharedLink": album.get("hasSharedLink", False),
+            "createdAt": album.get("createdAt", ""),
         }
-        for a in result
+        for album in result
     ]
     return json.dumps({"total": len(albums), "albums": albums}, default=str)
 
@@ -63,19 +63,19 @@ async def get_album(ctx: Context, album_id: str) -> str:
             "hasSharedLink": result.get("hasSharedLink", False),
             "createdAt": result.get("createdAt", ""),
             "updatedAt": result.get("updatedAt", ""),
-            "asset_ids": [a["id"] for a in assets],
+            "asset_ids": [asset["id"] for asset in assets],
             "assets": [
                 {
-                    "id": a["id"],
-                    "originalFileName": a.get("originalFileName", ""),
-                    "type": a.get("type", ""),
-                    "fileCreatedAt": a.get("fileCreatedAt", ""),
+                    "id": asset["id"],
+                    "originalFileName": asset.get("originalFileName", ""),
+                    "type": asset.get("type", ""),
+                    "fileCreatedAt": asset.get("fileCreatedAt", ""),
                     "people": [
-                        {"id": p.get("id"), "name": p.get("name") or ""}
-                        for p in (a.get("people") or [])
+                        {"id": person.get("id"), "name": person.get("name") or ""}
+                        for person in (asset.get("people") or [])
                     ],
                 }
-                for a in assets
+                for asset in assets
             ],
         },
         default=str,

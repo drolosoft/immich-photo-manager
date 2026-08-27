@@ -43,7 +43,7 @@ async def get_album_images(
     Returns: A list of image blocks suitable for visual display.
     """
     result = await _client(ctx).get_album_thumbnails(album_id, size, min(limit, 50))
-    return [_entry_to_image(t) for t in result.get("thumbnails", [])]
+    return [_entry_to_image(thumb) for thumb in result.get("thumbnails", [])]
 
 
 @mcp.tool(structured_output=False)
@@ -63,4 +63,4 @@ async def get_images_batch(
     Returns: A list of image blocks suitable for visual display.
     """
     result = await _client(ctx).get_thumbnails_batch(asset_ids, size, min(limit, 50))
-    return [_entry_to_image(t) for t in result.get("thumbnails", [])]
+    return [_entry_to_image(thumb) for thumb in result.get("thumbnails", [])]

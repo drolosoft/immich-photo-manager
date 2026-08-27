@@ -22,8 +22,8 @@ if not frame_files:
     exit(1)
 
 print(f"Found {len(frame_files)} frames:")
-for f in frame_files:
-    print(f"  {os.path.basename(f)}")
+for frame_file in frame_files:
+    print(f"  {os.path.basename(frame_file)}")
 
 # Frame durations in ms
 # frame0=start, frame1=setup, frame2=gallery, frame3=selection,
@@ -36,12 +36,12 @@ while len(delays) < len(frame_files):
 
 # Load and resize frames
 images = []
-for f in frame_files:
-    img = Image.open(f).convert("RGBA")
+for frame_file in frame_files:
+    img = Image.open(frame_file).convert("RGBA")
     # Scale down to 800px wide for reasonable GIF size
-    w, h = img.size
+    width, height = img.size
     new_w = 800
-    new_h = int(h * new_w / w)
+    new_h = int(height * new_w / width)
     img = img.resize((new_w, new_h), Image.LANCZOS)
     # Convert to RGB (GIF doesn't support alpha)
     rgb = Image.new("RGB", img.size, (236, 231, 223))  # --bg color

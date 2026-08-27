@@ -105,8 +105,8 @@ async def search_smart(
             page=page,
             size=min(size, 200),
         )
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 500:
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 500:
             return json.dumps({
                 "error": "Smart search is not available on this Immich server.",
                 "detail": (
