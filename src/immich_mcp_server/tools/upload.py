@@ -10,6 +10,7 @@ import httpx
 from mcp.server.fastmcp import Context
 
 from ..app import mcp, _client
+from ._common import _api_error
 
 ALLOWED_UPLOAD_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".mp4", ".mov", ".gif", ".webp"}
 MAX_UPLOAD_SIZE = 25 * 1024 * 1024  # 25MB
@@ -51,7 +52,7 @@ async def upload_asset(ctx: Context, file_path: str, album_id: str = "") -> str:
     try:
         result = await client.upload_asset(file_path)
     except httpx.HTTPStatusError as exc:
-        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
+        return _api_error(exc)
 
     if album_id and result.get("id"):
         try:

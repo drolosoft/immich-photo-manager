@@ -72,6 +72,34 @@ async def update_asset_metadata(
     return json.dumps(result, default=str)
 
 
+async def _rotate_one(client, asset_id: str, angle: int) -> None:
+    """Add `angle` degrees to the asset's current rotation, keeping its other edits.
+
+    Immich's edits API replaces the whole edit list on every write, so the
+    existing crop or mirror entries are read first and written back untouched.
+    A rotation that lands on 0 removes the record instead of storing a no-op.
+    """
+    try:
+        existing = (await client.get_asset_edits(asset_id)).get("edits", []) or []
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code != 404:
+            raise  # unreadable edits: fail the asset rather than guess the angle
+        existing = []  # the asset simply has no edits yet
+    current_angle = 0
+    for edit in existing:
+        if edit.get("action") == "rotate":
+            current_angle = edit.get("parameters", {}).get("angle", 0)
+    other_edits = [edit for edit in existing if edit.get("action") != "rotate"]
+    new_angle = (current_angle + angle) % 360
+    new_edits = list(other_edits)
+    if new_angle:
+        new_edits.append({"action": "rotate", "parameters": {"angle": new_angle}})
+    if new_edits:
+        await client.apply_asset_edits(asset_id, new_edits)
+    else:
+        await client.delete_asset_edits(asset_id)
+
+
 @mcp.tool()
 async def rotate_assets(
     ctx: Context,
@@ -111,36 +139,13 @@ async def rotate_assets(
         return json.dumps({"error": "Provide either asset_ids or album_id."})
 
     results: dict = {"rotated": 0, "failed": 0, "errors": []}
-    for aid in ids:
+    for asset_id in ids:
         try:
-            # Read the full current edit list — apply replaces it wholesale,
-            # so anything not carried over (crop, mirror) would be lost.
-            try:
-                existing = (await client.get_asset_edits(aid)).get("edits", []) or []
-            except httpx.HTTPStatusError as exc:
-                if exc.response.status_code == 404:
-                    existing = []  # asset simply has no edits yet
-                else:
-                    raise  # unreadable edits: fail the asset, never guess the angle
-            current_angle = 0
-            for edit in existing:
-                if edit.get("action") == "rotate":
-                    current_angle = edit.get("parameters", {}).get("angle", 0)
-            other_edits = [exc for exc in existing if exc.get("action") != "rotate"]
-            new_angle = (current_angle + angle) % 360
-            new_edits = other_edits + (
-                [{"action": "rotate", "parameters": {"angle": new_angle}}]
-                if new_angle else []
-            )
-            if new_edits:
-                await client.apply_asset_edits(aid, new_edits)
-            else:
-                # Nothing left at all — remove the (rotation-only) edit record
-                await client.delete_asset_edits(aid)
+            await _rotate_one(client, asset_id, angle)
             results["rotated"] += 1
         except Exception as exc:
             results["failed"] += 1
-            results["errors"].append({"asset_id": aid, "error": str(exc)})
+            results["errors"].append({"asset_id": asset_id, "error": str(exc)})
 
     results["angle"] = angle
     results["total_requested"] = len(ids)

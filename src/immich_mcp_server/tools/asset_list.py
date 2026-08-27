@@ -10,6 +10,7 @@ import httpx
 from mcp.server.fastmcp import Context
 
 from ..app import mcp, _client
+from ._common import _api_error
 
 @mcp.tool()
 async def list_assets(
@@ -48,4 +49,4 @@ async def list_assets(
         total = result.get("assets", {}).get("total", 0)
         return json.dumps({"total": total, "page": page, "assets": assets}, default=str)
     except httpx.HTTPStatusError as exc:
-        return json.dumps({"error": f"Immich API error: {exc.response.status_code}", "detail": exc.response.text[:200]})
+        return _api_error(exc)

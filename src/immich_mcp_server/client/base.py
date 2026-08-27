@@ -18,6 +18,7 @@ class ImmichClientBase:
     _cache_dir: str | None = None
 
     def __init__(self, base_url: str | None = None, api_key: str | None = None):
+        """Resolve the server URL and API key: explicit arguments, else config.json, else the environment."""
         # Explicit credentials always win — the config.json override only
         # applies to default construction (otherwise rotating credentials
         # would silently resurrect the old ones from disk).
@@ -41,7 +42,7 @@ class ImmichClientBase:
             "Accept": "application/json",
         }
 
-    # ── Config override (writable cache) ────────────────────
+    # ── Config override (writable cache) ─────────────────
 
     @classmethod
     def _find_cache_dir(cls) -> str | None:
@@ -110,7 +111,7 @@ class ImmichClientBase:
         os.chmod(config_path, 0o600)
         return config_path
 
-    # ── HTTP ────────────────────────────────────────────────
+    # ── HTTP ─────────────────────────────────────────────
 
     async def _request(
         self, method: str, path: str, json: dict | None = None, params: dict | None = None

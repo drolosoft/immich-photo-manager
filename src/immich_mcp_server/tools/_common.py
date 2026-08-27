@@ -1,9 +1,24 @@
-"""Helpers shared by several tool modules (album contents across Immich versions,
-base64 thumbnail entries to MCP image blocks)."""
+"""Helpers shared by several tool modules: album contents across Immich versions,
+base64 thumbnail entries to MCP image blocks, the JSON shape of an Immich API error."""
 
 import base64
+import json
 
+import httpx
 from mcp.server.fastmcp import Image
+
+
+def _api_error(exc: httpx.HTTPStatusError) -> str:
+    """The JSON a tool returns when Immich answers with an HTTP error status.
+
+    The status code tells the model what happened (404 unknown id, 403 a key
+    without that permission); the first 200 characters of the body carry
+    Immich's own message without flooding the context.
+    """
+    return json.dumps({
+        "error": f"Immich API error: {exc.response.status_code}",
+        "detail": exc.response.text[:200],
+    })
 
 
 async def _album_assets(client, album_id: str, album: dict) -> list[dict]:
