@@ -4,7 +4,6 @@ Every `@mcp.tool()` here registers on the shared FastMCP app from `..app` when t
 module is imported; `server.py` imports all tool modules and re-exports the functions.
 """
 
-
 from mcp.server.fastmcp import Context, Image
 
 from ..app import mcp, _client

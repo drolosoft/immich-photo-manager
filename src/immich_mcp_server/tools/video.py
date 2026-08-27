@@ -51,7 +51,6 @@ _VIDEO_ARGS = """
         confirm: Required (true) when more than 12 frames would be produced; ask the user first.
 """
 
-
 @mcp.tool(structured_output=False)
 async def get_video_frames(
     ctx: Context, asset_id: str, count: int = 6, size: str = "thumbnail",

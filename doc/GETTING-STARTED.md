@@ -423,9 +423,14 @@ Important file structure:
 ```
 immich-photo-manager/
 ├── src/immich_mcp_server/   # Python server code
-│   ├── server.py            #   MCP tools + HTTP app
-│   ├── immich_client.py     #   Immich REST API client
-│   └── __main__.py          #   entry point (stdio/http)
+│   ├── __main__.py          #   entry point (stdio/http)
+│   ├── app.py               #   FastMCP app, lifespan, transport settings
+│   ├── server.py            #   imports every tool module, re-exports the tools, HTTP app
+│   ├── tools/               #   one module per area (albums, people, video, export, ...)
+│   ├── immich_client.py     #   ImmichClient, composed from client/
+│   ├── client/              #   Immich REST API, one mixin per area
+│   ├── video_frames.py      #   frame extraction (PyAV or ffmpeg)
+│   └── pdf_export.py        #   PDF composition (fpdf2)
 ├── scripts/setup-mcp.sh     # interactive setup script
 ├── start-mcp.sh             # manual launch (HTTP / stdio)
 ├── .env.example             # environment variable template
