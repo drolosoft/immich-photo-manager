@@ -6,7 +6,7 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
-## [v1.7.0] — 2026-08-27
+## [v1.7.0] — 2026-08-28
 
 ### Added
 - **`export_pdf(album_id / asset_ids, captions, layout, frames_per_video, frame_interval, image_size, map, ...)`** builds a PDF (cover, index with links, places table with an optional OpenStreetMap map, one detail page per asset or a six-per-page grid, video frames laid out four per row with timestamps, footer on every page) from an album or a list of assets, on the machine running the server. Immich metadata (date, place, camera, people, tags) is always included; `captions` add the model's own description of each asset. The file is never sent anywhere unless `return_base64=true`. Needs `pip install immich-photo-manager[pdf]`.

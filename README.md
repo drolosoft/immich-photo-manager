@@ -232,7 +232,7 @@ Immich is excellent at storing and viewing your photos. But managing a large lib
 ## How it's tested
 
 - **Unit suite, every push**: 88 pytest cases on Python 3.10 and 3.13 (HTTP mocked), plus ruff. Releases are tagged only when this gate is green.
-- **Live, every tool, two Immich versions**: [`tests/live/`](tests/live/) starts real Immich **2.7.5** and **3.1.0** in Docker, fills them with a small library, and drives all 57 tools over the MCP protocol, re-reading state after each write. Run before every release; last full run 2026-08-27, 79/79 checks on both.
+- **Live, every tool, two Immich versions**: [`tests/live/`](tests/live/) starts real Immich **2.7.5** and **3.1.0** in Docker, fills them with a small library, and drives all 57 tools over the MCP protocol, re-reading state after each write. Run before every release; last full run 2026-08-28, 79/79 checks on both.
 - **In use**: [PyPI](https://pypi.org/project/immich-photo-manager/) downloads, merged PRs from four outside contributors, and the demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions.
 
 ## Built with Claude
