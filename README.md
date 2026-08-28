@@ -93,6 +93,14 @@ claude plugin update immich-photo-manager@drolosoft-marketplace
 
 Then restart Claude Code. `drolosoft-marketplace` is the name the marketplace gets when you add it from the clone (`claude plugin marketplace list` shows it). Your saved credentials carry over.
 
+Video frames and PDF export (v1.6.0, v1.7.0) need two libraries the plugin's system Python does not have by default. Once:
+
+```sh
+pip3 install av fpdf2
+```
+
+On the uvx route the same is `uvx --refresh --from "immich-photo-manager[all]" immich-photo-manager --help`, then restart the client.
+
 ### What leaves your network
 
 The plugin process runs on your machine and only talks to your Immich. But everything the assistant *reads* through it goes to the model you use: filenames, dates, EXIF, album lists, and, when you ask it to look at pictures, thumbnails (250px by default, 1440px previews on request). Originals are never fetched. With Claude that means those thumbnails leave your network; with a local model over MCP (LM Studio, Ollama) nothing does. Nothing is sent unless you ask for it: listing albums or fixing dates moves text only, "tell me what's in these photos" moves images.
@@ -132,7 +140,7 @@ Use the package entry point directly with `uvx`:
   "mcpServers": {
     "immich": {
       "command": "uvx",
-      "args": ["immich-photo-manager"],
+      "args": ["--from", "immich-photo-manager[all]", "immich-photo-manager"],
       "env": {
         "IMMICH_BASE_URL": "https://your-immich-server.com",
         "IMMICH_API_KEY": "your-api-key"

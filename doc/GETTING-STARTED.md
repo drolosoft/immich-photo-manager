@@ -83,7 +83,7 @@ For MCP clients that can run package entry points, use `uvx`:
   "mcpServers": {
     "immich": {
       "command": "uvx",
-      "args": ["immich-photo-manager"],
+      "args": ["--from", "immich-photo-manager[all]", "immich-photo-manager"],
       "env": {
         "IMMICH_BASE_URL": "https://your-immich-server.com",
         "IMMICH_API_KEY": "your-api-key"
@@ -93,7 +93,15 @@ For MCP clients that can run package entry points, use `uvx`:
 }
 ```
 
-The `immich-photo-manager` command defaults to MCP stdio transport. For a local checkout before publishing, use:
+`[all]` brings the two optional features with it: video frames (PyAV) and PDF export (fpdf2). Without it the tools still load and tell you what to install when you call them. The `immich-photo-manager` command defaults to MCP stdio transport.
+
+To update a uvx install to the latest release, run once in a terminal, then quit and reopen the client:
+
+```sh
+uvx --refresh --from "immich-photo-manager[all]" immich-photo-manager --help
+```
+
+For a local checkout before publishing, use:
 
 ```json
 {
