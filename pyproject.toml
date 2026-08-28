@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "immich-photo-manager"
-version = "1.7.0"
+version = "1.7.1"
 description = "MCP server for intelligent photo management with Immich"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,26 +27,24 @@ dependencies = [
   "httpx>=0.24.0,<1.0",
   "mcp>=1.9.0,<2.0",
   "uvicorn>=0.24.0,<1.0",
+  # Video frames (PyAV) and PDF export (fpdf2) ship with the package since
+  # 1.7.1: one install, no extras to remember, at the price of ~60 MB more.
+  "av>=12",
+  "fpdf2>=2.7,<3",
 ]
 
 [project.optional-dependencies]
-video = [
-  "av>=12",
-]
-pdf = [
-  "fpdf2>=2.7,<3",
-]
-all = [
-  "av>=12",
-  "fpdf2>=2.7,<3",
-]
+# Kept empty so `immich-photo-manager[video]`, `[pdf]` and `[all]` from the
+# 1.6.0/1.7.0 docs keep installing; the libraries are core dependencies now.
+video = []
+pdf = []
+all = []
 dev = [
   "pytest>=8",
   "pytest-asyncio>=0.24",
   "respx>=0.21",
   "ruff>=0.6",
   "pypdf>=4",
-  "fpdf2>=2.7,<3",
 ]
 
 [project.urls]

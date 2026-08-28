@@ -40,9 +40,6 @@ claude plugin marketplace add ./
 claude plugin install immich-photo-manager
 ```
 
-The plugin runs on the system python3, so optional features are installed the same
-way: `pip3 install av fpdf2` (`av` for video frames, `fpdf2` for PDF export).
-
 Open Claude Code (restart it if it was open) and connect it to your Immich, guided:
 
 ```
@@ -83,7 +80,7 @@ For MCP clients that can run package entry points, use `uvx`:
   "mcpServers": {
     "immich": {
       "command": "uvx",
-      "args": ["--from", "immich-photo-manager[all]", "immich-photo-manager"],
+      "args": ["immich-photo-manager"],
       "env": {
         "IMMICH_BASE_URL": "https://your-immich-server.com",
         "IMMICH_API_KEY": "your-api-key"
@@ -93,12 +90,12 @@ For MCP clients that can run package entry points, use `uvx`:
 }
 ```
 
-`[all]` brings the two optional features with it: video frames (PyAV) and PDF export (fpdf2). Without it the tools still load and tell you what to install when you call them. The `immich-photo-manager` command defaults to MCP stdio transport.
+The `immich-photo-manager` command defaults to MCP stdio transport. Video frames and PDF export come with the package (since 1.7.1).
 
 To update a uvx install to the latest release, run once in a terminal, then quit and reopen the client:
 
 ```sh
-uvx --refresh --from "immich-photo-manager[all]" immich-photo-manager --help
+uvx --refresh immich-photo-manager --help
 ```
 
 For a local checkout before publishing, use:

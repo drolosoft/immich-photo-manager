@@ -542,7 +542,7 @@ Cover page, an index with links to each asset, a Places table (with an optional 
 
 ### Requirements
 
-`pip install immich-photo-manager[pdf]` for PDF generation, `[video]` (or `ffmpeg` on PATH) for video frames, `[all]` for both.
+None beyond the package since 1.7.1 (`fpdf2` and PyAV are dependencies; `ffmpeg` on PATH also works for frames).
 
 ---
 

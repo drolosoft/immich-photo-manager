@@ -93,13 +93,7 @@ claude plugin update immich-photo-manager@drolosoft-marketplace
 
 Then restart Claude Code. `drolosoft-marketplace` is the name the marketplace gets when you add it from the clone (`claude plugin marketplace list` shows it). Your saved credentials carry over.
 
-Video frames and PDF export (v1.6.0, v1.7.0) need two libraries the plugin's system Python does not have by default. Once:
-
-```sh
-pip3 install av fpdf2
-```
-
-On the uvx route the same is `uvx --refresh --from "immich-photo-manager[all]" immich-photo-manager --help`, then restart the client.
+After pulling a new version, run `pip3 install -r src/requirements.txt` again: 1.7.1 added the video (`av`) and PDF (`fpdf2`) libraries to the plugin's dependencies. On the uvx route, `uvx --refresh immich-photo-manager --help` once, then restart the client.
 
 ### What leaves your network
 
@@ -140,7 +134,7 @@ Use the package entry point directly with `uvx`:
   "mcpServers": {
     "immich": {
       "command": "uvx",
-      "args": ["--from", "immich-photo-manager[all]", "immich-photo-manager"],
+      "args": ["immich-photo-manager"],
       "env": {
         "IMMICH_BASE_URL": "https://your-immich-server.com",
         "IMMICH_API_KEY": "your-api-key"
@@ -206,8 +200,8 @@ RESULT: Zero cloud dependency — fully self-hosted stack.
 - **Library cleanup** — detect screenshots, duplicates, and low-quality images with multi-signal analysis
 - **Duplicate detection** — cross-source analysis using perceptual hashing (finds re-encoded copies across Apple Photos, Google Photos, and other imports)
 - **Bulk rotation** — rotate entire albums or selections at once (90°/180°/270°); non-destructive, accumulates across calls, one-click revert
-- **PDF reports** — album or selection to a PDF with metadata, video frames and Claude's captions, built on your machine (needs `pip install immich-photo-manager[pdf]`, or `[all]` for PDF + video frames together; plugin route: `pip3 install av fpdf2`)
-- **Video frames** — cut evenly spaced frames out of any clip, or a segment (`start`/`end`) down to one frame per second (`interval`), so Claude can describe what happens in it; Immich itself keeps one poster per video (needs PyAV via `pip install immich-photo-manager[video]` or `ffmpeg`; plugin route: `pip3 install av fpdf2`)
+- **PDF reports** — album or selection to a PDF with metadata, video frames and Claude's captions, built on your machine
+- **Video frames** — cut evenly spaced frames out of any clip, or a segment (`start`/`end`) down to one frame per second (`interval`), so Claude can describe what happens in it; Immich itself keeps one poster per video
 - **People & face management** — list, search, merge, and organize recognized people; reassign misidentified faces; view face thumbnails
 - **Trash & asset lifecycle** — safely delete assets to trash, permanently remove, restore from trash; complete asset lifecycle management
 - **Library health** — one command for asset inventory, metadata quality, storage breakdown, and recommendations

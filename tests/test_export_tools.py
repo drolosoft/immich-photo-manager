@@ -244,4 +244,4 @@ async def test_export_pdf_base64_and_errors(fake_ctx, tmp_path, monkeypatch):
 async def test_export_pdf_no_fpdf(fake_ctx, tmp_path, monkeypatch):
     monkeypatch.setattr(pdf_export, "_fpdf_available", lambda: False)
     data = json.loads(await server.export_pdf(fake_ctx(StubClient()), asset_ids=["a1"], output_path=str(tmp_path / "n.pdf")))
-    assert "immich-photo-manager[pdf]" in data["error"]
+    assert "fpdf2" in data["error"]

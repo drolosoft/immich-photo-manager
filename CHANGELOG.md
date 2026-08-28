@@ -6,6 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.7.1] — 2026-08-28
+
+### Changed
+- **PyAV and fpdf2 are dependencies of the package.** `pip install immich-photo-manager` (or `uvx immich-photo-manager`) now brings video frames and PDF export with it; nothing extra to install, one line in the client config. The `[video]`, `[pdf]` and `[all]` extras still exist, empty, so commands copied from the 1.6.0 and 1.7.0 docs keep working. Plugin route: `pip3 install -r src/requirements.txt` after pulling.
+
 ## [v1.7.0] — 2026-08-28
 
 ### Added
@@ -135,6 +140,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.7.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.7.1
 [v1.7.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.7.0
 [v1.6.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.6.0
 [v1.5.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.5.3

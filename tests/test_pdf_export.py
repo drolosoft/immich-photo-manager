@@ -140,7 +140,7 @@ def test_no_backend_message(monkeypatch):
     monkeypatch.setattr(pdf_export, "_fpdf_available", lambda: False)
     with pytest.raises(pdf_export.NoPdfBackend) as exc:
         pdf_export.build(_doc())
-    assert "immich-photo-manager[pdf]" in str(exc.value)
+    assert "fpdf2" in str(exc.value)
 
 
 def test_render_map_uses_at_most_16_tiles_and_draws_points():

@@ -250,7 +250,7 @@ async def export_pdf(
     camera, people, tags) is always included; pass `captions` {asset_id: text} with
     what you saw to add your analysis. Video frames go straight into the PDF and cost
     no tokens (up to 120 per video). The PDF never enters the conversation unless
-    return_base64=True. Needs `pip install immich-photo-manager[pdf]`.
+    return_base64=True.
 
     Args:
         album_id: Album UUID, or asset_ids: explicit asset UUIDs (exactly one of the two).
@@ -274,7 +274,7 @@ async def export_pdf(
     except ValueError as exc:
         return json.dumps({"error": str(exc)})
     if not pdf_export._fpdf_available():
-        return json.dumps({"error": "PDF export needs fpdf2: `pip install immich-photo-manager[pdf]`."})
+        return json.dumps({"error": "PDF export needs fpdf2: `pip install fpdf2` (it ships with immich-photo-manager since 1.7.1)."})
 
     # Arguments come from the model: clamp and default them rather than fail.
     frames = max(0, min(int(frames_per_video or 0), video_frames.MAX_FRAMES))

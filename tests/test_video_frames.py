@@ -135,7 +135,7 @@ def test_no_backend_names_both_options(monkeypatch):
     with pytest.raises(video_frames.NoVideoBackend) as exc:
         video_frames.extract_frames(b"", count=2, size="thumbnail")
     msg = str(exc.value)
-    assert "immich-photo-manager[video]" in msg and "ffmpeg" in msg
+    assert "pip install av" in msg and "ffmpeg" in msg
 
 
 # ── the tools ───────────────────────────────────────────────
@@ -229,10 +229,10 @@ async def test_get_video_frames_json_has_timestamps_and_base64(fake_ctx, monkeyp
 async def test_get_video_frames_json_reports_missing_backend(fake_ctx, monkeypatch):
     monkeypatch.setattr(video_frames, "probe_duration", lambda data: 10.0)
     def boom(*args, **kwargs):
-        raise video_frames.NoVideoBackend("install immich-photo-manager[video] or ffmpeg")
+        raise video_frames.NoVideoBackend("install av or ffmpeg")
     monkeypatch.setattr(video_frames, "extract_frames", boom)
     data = json.loads(await server.get_video_frames_json(fake_ctx(StubClient()), asset_id="vid1"))
-    assert "immich-photo-manager[video]" in data["error"]
+    assert "install av" in data["error"]
 
 
 @pytest.mark.asyncio

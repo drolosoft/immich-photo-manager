@@ -47,8 +47,8 @@ async def get_video_frames(
     start: float = 0.0, end: float = 0.0, interval: float = 0.0, confirm: bool = False,
 ) -> list[Image] | str:
     """Get frames of a video as image blocks, to "watch" a clip. Immich keeps one
-    poster per video; this downloads the video and cuts frames locally (PyAV via
-    `pip install immich-photo-manager[video]`, or ffmpeg on PATH). Every frame is one
+    poster per video; this downloads the video and cuts frames locally (PyAV, a
+    dependency since 1.7.1, or ffmpeg on PATH). Every frame is one
     image for the model. Workflow: 6 frames first; to look closer, narrow with
     start/end or use interval (down to 1 s). Above 12 frames the tool returns a JSON
     plan with frames_planned and estimated_tokens instead of images: show it to the

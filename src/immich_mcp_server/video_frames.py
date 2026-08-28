@@ -4,7 +4,7 @@ Immich only produces one poster thumbnail per video. To let a model "watch" a
 clip, the server downloads the original and decodes frames locally with one of
 two backends, tried in this order:
 
-1. PyAV (``pip install immich-photo-manager[video]``), in-process, no binary.
+1. PyAV (a dependency of the package since 1.7.1), in-process, no binary.
 2. The ``ffmpeg`` binary on PATH (``ffprobe`` for the duration when present).
 
 The planning functions (`frame_timestamps`, `interval_timestamps`,
@@ -289,8 +289,8 @@ def extract_frames(
         backend = "pyav" if _pyav_available() else "ffmpeg" if shutil.which("ffmpeg") else None
     if backend is None:
         raise NoVideoBackend(
-            "Video frame extraction needs a decoder: install the optional extra "
-            "`pip install immich-photo-manager[video]` (PyAV) or put `ffmpeg` on PATH."
+            "Video frame extraction needs a decoder: install PyAV (`pip install av`, "
+            "it ships with immich-photo-manager since 1.7.1) or put `ffmpeg` on PATH."
         )
     path = _to_tempfile(data)
     try:

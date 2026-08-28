@@ -2,8 +2,8 @@
 
 Pure: takes bytes and strings, returns bytes. No HTTP, no Immich. The caller
 (`tools/export.py`) fetches images and frames and fills a `Document`; this
-module only lays it out. Optional dependency `fpdf2`
-(`pip install immich-photo-manager[pdf]`), which brings Pillow along.
+module only lays it out. Needs `fpdf2` (a dependency of the package since 1.7.1),
+which brings Pillow along.
 """
 
 from __future__ import annotations
@@ -94,7 +94,7 @@ class Document:
 
 
 def _fpdf_available() -> bool:
-    """True when fpdf2 can be imported (it is an optional extra)."""
+    """True when fpdf2 can be imported (a dependency, but a broken install must not crash the server)."""
     try:
         import fpdf  # noqa: F401
     except Exception:
@@ -337,7 +337,7 @@ def build(doc: Document) -> bytes:
     """Compose the PDF and return its bytes. Raises NoPdfBackend when fpdf2 is missing."""
     if not _fpdf_available():
         raise NoPdfBackend(
-            "PDF export needs fpdf2: install the optional extra `pip install immich-photo-manager[pdf]`."
+            "PDF export needs fpdf2: `pip install fpdf2` (it ships with immich-photo-manager since 1.7.1)."
         )
     writer = _Pdf(doc)
     _cover(writer)

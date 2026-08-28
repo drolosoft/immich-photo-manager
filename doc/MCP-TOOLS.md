@@ -104,7 +104,7 @@ Image-block variants of the thumbnail tools — return MCP `ImageContent` for cl
 
 ### Video (2)
 
-Immich keeps one poster thumbnail per video and no per-frame previews. These tools download the video (`GET /assets/{id}/video/playback`) and cut frames locally, so a model can "watch" a clip, a segment of it (`start`/`end`), or a fixed cadence (`interval`, down to one frame per second). They need a decoder: PyAV (`pip install immich-photo-manager[video]`) or `ffmpeg` on PATH; without one they return a clear error naming both. Above 12 frames the tool asks for confirmation instead of extracting: it returns `{confirm_required: true, frames_planned, estimated_tokens, ...}` so the caller can tell the user the cost before spending it; call again with `confirm=true` to proceed. Hard cap: 120 frames per call.
+Immich keeps one poster thumbnail per video and no per-frame previews. These tools download the video (`GET /assets/{id}/video/playback`) and cut frames locally, so a model can "watch" a clip, a segment of it (`start`/`end`), or a fixed cadence (`interval`, down to one frame per second). The decoder is PyAV, installed with the package since 1.7.1 (`ffmpeg` on PATH works as a fallback); without either they return a clear error naming both. Above 12 frames the tool asks for confirmation instead of extracting: it returns `{confirm_required: true, frames_planned, estimated_tokens, ...}` so the caller can tell the user the cost before spending it; call again with `confirm=true` to proceed. Hard cap: 120 frames per call.
 
 | Tool | Description | Returns |
 |------|-------------|---------|
@@ -227,7 +227,7 @@ Frames are taken at the centre of equal time bins within the segment, so a 3 s c
 
 **Cost:** every frame is one image for the model. Six thumbnail frames are cheap; a `interval=1` pass over a long clip is not. Start with the default and narrow with `start`/`end` or `interval` only for the clips that need it.
 
-**Decoder:** PyAV is tried first (in-process, `pip install immich-photo-manager[video]`), then the `ffmpeg` binary. Neither is installed by default; the error message tells you which to add. The whole video file is downloaded to a temp file and deleted after extraction.
+**Decoder:** PyAV is tried first (in-process, a dependency of the package since 1.7.1), then the `ffmpeg` binary. If PyAV was removed and there is no ffmpeg, the error message says so. The whole video file is downloaded to a temp file and deleted after extraction.
 
 **Example:**
 ```
@@ -265,7 +265,7 @@ Turn an album or a selection into a PDF (cover, index, places, one section per a
 
 **What leaves the network:** Immich → your machine (metadata and images, same as any other tool). The PDF itself stays on disk and is not sent anywhere unless `return_base64=true`, in which case it goes back over MCP like any other tool result. `map=true` is the only call that reaches outside your Immich: it fetches tiles from `tile.openstreetmap.org`.
 
-**Requirements:** `pip install immich-photo-manager[pdf]` for `fpdf2`; video frames additionally need `[video]` (PyAV) or `ffmpeg` on PATH; `[all]` installs both extras. Plugin route: `pip3 install av fpdf2`.
+**Requirements:** none beyond the package since 1.7.1 (`fpdf2` and PyAV are dependencies). On the Claude Code plugin route, `pip3 install -r src/requirements.txt` after updating.
 
 **Example:**
 ```
