@@ -343,3 +343,34 @@ async def test_live_photo_motion_clip_is_folded_into_its_photo(fake_ctx, tmp_pat
     data = json.loads(await server.export_pdf(fake_ctx(LivePhotoClient()), album_id="alb",
                                               output_path=str(tmp_path / "l.pdf")))
     assert data["assets_included"] == 2 and data["assets_skipped"] == []
+
+
+# ── v1.10.0: frame_times picks the representative frames ────
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_frame_times_win_for_that_video(fake_ctx, tmp_path, monkeypatch):
+    """A video listed in frame_times gets exactly those moments; the rest keep frames_per_video."""
+    from immich_mcp_server import video_frames
+    JPEG_B64 = base64.b64encode(PNG_RED).decode("ascii")
+    calls = []
+
+    def fake_at(data, times, size="thumbnail", backend=None):
+        calls.append(("at", tuple(times), size))
+        return {"duration": 3.0, "backend": "stub",
+                "frames": [{"timestamp": float(t), "data": JPEG_B64, "type": "image/jpeg"} for t in times]}
+
+    def fake_extract(data, count=6, size="thumbnail", backend=None, start=0.0, end=0.0, interval=0.0):
+        calls.append(("spread", count, size))
+        return _fake_frames(data, count, size, backend, start, end, interval)
+
+    monkeypatch.setattr(video_frames, "extract_frames_at", fake_at)
+    monkeypatch.setattr(video_frames, "extract_frames", fake_extract)
+    client = StubClient(assets=[_asset(1), _asset(3, "VIDEO"), _asset(4, "VIDEO")])
+    data = json.loads(await server.export_pdf(
+        fake_ctx(client), album_id="alb", output_path=str(tmp_path / "t.pdf"),
+        layout="photobook", frames_per_video=1, frame_times={"a3": [73.5]},
+    ))
+    assert data["assets_included"] == 3 and data["warnings"] == []
+    assert ("at", (73.5,), "preview") in calls          # the chosen moment, at preview quality
+    assert ("spread", 1, "preview") in calls            # the other video keeps the default

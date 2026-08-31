@@ -312,3 +312,23 @@ def test_pyav_rotation_direction_matches_ffmpeg(flagged_portrait_clip):
         return top_mean > bottom_mean
 
     assert top_is_bright(pyav_frame) == top_is_bright(ffmpeg_frame)
+
+
+# ── v1.10.0: exact timestamps ───────────────────────────────
+
+
+def test_extract_frames_at_cuts_the_asked_moments(clip):
+    result = video_frames.extract_frames_at(clip, [1.5, 0.5], size="thumbnail")
+    assert [frame["timestamp"] for frame in result["frames"]] == [0.5, 1.5]  # sorted
+    assert all(base64.b64decode(frame["data"])[:2] == b"\xff\xd8" for frame in result["frames"])
+
+
+def test_extract_frames_at_clamps_to_the_video(clip):
+    result = video_frames.extract_frames_at(clip, [-3.0, 99.0], size="thumbnail")
+    timestamps = [frame["timestamp"] for frame in result["frames"]]
+    assert len(timestamps) == 2 and timestamps[0] >= 0.0 and timestamps[-1] <= result["duration"]
+
+
+def test_extract_frames_at_refuses_more_than_the_cap(clip):
+    with pytest.raises(video_frames.TooManyFrames):
+        video_frames.extract_frames_at(clip, [0.1] * 121, size="thumbnail")

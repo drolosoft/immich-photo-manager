@@ -6,6 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.10.0] — 2026-08-31
+
+### Added
+- **`frame_times` in `export_pdf`**: `{asset_id: [seconds]}` cuts a video's PDF frames at exact moments instead of an even spread, so the page carries the representative frame the model chose after watching, not the blind middle of the clip. Wins over `frames_per_video`/`frame_interval` for the listed videos. Asked for in #15 ("extract a representative frame").
+
 ## [v1.9.0] — 2026-08-31
 
 ### Added
@@ -155,6 +160,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.10.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.10.0
 [v1.9.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.9.0
 [v1.8.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.8.0
 [v1.7.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.7.1

@@ -268,6 +268,38 @@ def probe_duration(data: bytes) -> float:
         os.unlink(path)
 
 
+def extract_frames_at(data: bytes, times: list[float], size: str = "thumbnail",
+                      backend: str | None = None) -> dict:
+    """Decode frames at exact moments (seconds), for a caller that already chose them.
+
+    The moments are clamped to the video, sorted, and cut in one decoding pass.
+    Same return shape and errors as `extract_frames`; the MAX_FRAMES cap applies.
+    """
+    if len(times) > MAX_FRAMES:
+        raise TooManyFrames(_too_many(len(times)))
+    target = SIZES.get(size, SIZES["thumbnail"])
+    if backend is None:
+        backend = "pyav" if _pyav_available() else "ffmpeg" if shutil.which("ffmpeg") else None
+    if backend is None:
+        raise NoVideoBackend(
+            "Video frame extraction needs a decoder: install PyAV (`pip install av`, "
+            "it ships with immich-photo-manager since 1.7.1) or put `ffmpeg` on PATH."
+        )
+    path = _to_tempfile(data)
+    try:
+        duration = _duration(path)
+        upper = duration if duration > 0 else max(times, default=0.0)
+        timestamps = sorted(round(min(max(moment, 0.0), upper), 3) for moment in times)
+        if backend == "pyav":
+            return _extract_pyav(path, timestamps, target)
+        return _extract_ffmpeg(path, timestamps, target)
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
 def extract_frames(
     data: bytes, count: int = 6, size: str = "thumbnail", backend: str | None = None,
     start: float = 0.0, end: float = 0.0, interval: float = 0.0,

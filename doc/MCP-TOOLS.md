@@ -254,6 +254,7 @@ Turn an album or a selection into a PDF (cover, index, places, one section per a
 - `frames_per_video` (int, optional): frames per video, evenly spaced, 0-120, default 4 (`0` = poster only)
 - `frame_interval` (float, optional): one frame every N seconds instead of `frames_per_video` (same 120 cap)
 - `image_size` (string, optional): `"preview"` (default, 1440px), `"thumbnail"` (250px) or `"original"` for photos: the stored file at print quality, re-encoded to at most 3000px on the long side (a format the server cannot decode, like some HEIC, falls back to preview with a note)
+- `frame_times` (object, optional): `{asset_id: [seconds, ...]}` exact moments for specific videos, chosen after looking at their frames; wins over `frames_per_video`/`frame_interval` for the listed videos ("use the frame at second 8 for this clip")
 - `frame_size` (string, optional): size of the video frames inside the PDF: `"auto"` (default: preview quality up to 4 frames per video, thumbnail above), `"preview"` or `"thumbnail"`
 - `map` (bool, optional): add an OpenStreetMap map to the Places page (fetches tiles from `tile.openstreetmap.org`)
 - `return_base64` (bool, optional): also return the PDF bytes in the JSON response (skipped above 2 MB; every MB is roughly 350k tokens in the conversation)
