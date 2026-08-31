@@ -6,6 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.12.1] — 2026-08-31
+
+### Fixed
+- **Fresh installs via `scripts/setup-mcp.sh` crashed on import** (#16): `src/requirements.txt` allowed the new mcp 2.x SDK, where `FastMCP` was renamed and the 1.x import fails. The file now carries the same `mcp>=1.9.0,<2.0` bound `pyproject.toml` always had (the pip/uvx route was never affected), and a test keeps both dependency lists identical from now on.
+
 ## [v1.12.0] — 2026-08-31
 
 ### Added
@@ -178,6 +183,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.12.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.1
 [v1.12.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.0
 [v1.11.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.11.0
 [v1.10.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.10.0
