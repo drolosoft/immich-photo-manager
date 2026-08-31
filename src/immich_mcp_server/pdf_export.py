@@ -56,6 +56,22 @@ MAP_MAX_ZOOM = 12
 DOT_RADIUS = 6
 
 
+# The fixed words printed on the pages. Captions come from the model in the
+# conversation's language already; these are the plugin's own labels.
+LABELS = {
+    "en": {
+        "index": "Index", "places": "Places", "no_location": "No location data in these assets.",
+        "taken": "Taken", "place": "Place", "camera": "Camera", "people": "People", "tags": "Tags",
+        "page": "page",
+    },
+    "es": {
+        "index": "Índice", "places": "Lugares", "no_location": "Estos elementos no llevan localización.",
+        "taken": "Fecha", "place": "Lugar", "camera": "Cámara", "people": "Personas", "tags": "Etiquetas",
+        "page": "página",
+    },
+}
+
+
 class NoPdfBackend(RuntimeError):
     """fpdf2 is not installed."""
 
@@ -88,6 +104,7 @@ class Document:
     source_url: str
     version: str
     layout: str = "detail"  # "detail" | "grid" | "photobook"
+    language: str = "en"  # labels on the pages; "en" or "es", unknown falls back to "en"
     assets: list[AssetEntry] = field(default_factory=list)
     places: list[tuple[str, str, int]] = field(default_factory=list)
     map_png: bytes | None = None
@@ -148,6 +165,7 @@ class _Pdf:
         from fpdf import FPDF
 
         self.doc = doc
+        self.labels = LABELS.get(getattr(doc, "language", "en"), LABELS["en"])
         self.pdf = FPDF(orientation="P", unit="mm", format="A4")
         self.pdf.set_auto_page_break(auto=True, margin=MARGIN)
         self.pdf.set_margins(MARGIN, MARGIN, MARGIN)
@@ -198,7 +216,8 @@ class _Pdf:
             self.pdf.page = page_number
             self.font(8)
             self.pdf.set_xy(MARGIN, A4_H - FOOTER_H)
-            footer = f"immich-photo-manager v{self.doc.version} · {self.doc.source_url} · page {page_number}/{total}"
+            footer = (f"immich-photo-manager v{self.doc.version} · {self.doc.source_url}"
+                      f" · {self.labels['page']} {page_number}/{total}")
             self.pdf.cell(CONTENT_W, 5, self.text(footer), align="C")
 
 
@@ -220,7 +239,7 @@ def _index(writer: _Pdf) -> list:
     """One line per asset; returns the links so the asset pages can register themselves."""
     writer.pdf.add_page()
     writer.font(16, bold=True)
-    writer.pdf.cell(CONTENT_W, 10, writer.text("Index"), new_x="LMARGIN", new_y="NEXT")
+    writer.pdf.cell(CONTENT_W, 10, writer.text(writer.labels["index"]), new_x="LMARGIN", new_y="NEXT")
     writer.font(9)
     links = []
     for position, asset in enumerate(writer.doc.assets, 1):
@@ -235,10 +254,10 @@ def _places(writer: _Pdf):
     """The country / city / count table, with the map below it when there is one."""
     writer.pdf.add_page()
     writer.font(16, bold=True)
-    writer.pdf.cell(CONTENT_W, 10, writer.text("Places"), new_x="LMARGIN", new_y="NEXT")
+    writer.pdf.cell(CONTENT_W, 10, writer.text(writer.labels["places"]), new_x="LMARGIN", new_y="NEXT")
     writer.font(10)
     if not writer.doc.places:
-        writer.pdf.cell(CONTENT_W, 6, writer.text("No location data in these assets."), new_x="LMARGIN", new_y="NEXT")
+        writer.pdf.cell(CONTENT_W, 6, writer.text(writer.labels["no_location"]), new_x="LMARGIN", new_y="NEXT")
     for country, city, total in writer.doc.places:
         writer.pdf.cell(60, 6, writer.text(country))
         writer.pdf.cell(80, 6, writer.text(city))
@@ -256,17 +275,17 @@ def _places(writer: _Pdf):
     writer.image(writer.doc.map_png, MARGIN, top, CONTENT_W, max_h)
 
 
-def _meta_lines(asset: AssetEntry) -> list[str]:
+def _meta_lines(asset: AssetEntry, labels: dict) -> list[str]:
     """The metadata block under an asset, one line per known field."""
-    lines = [asset.filename, f"Taken: {asset.taken_at}" if asset.taken_at else ""]
+    lines = [asset.filename, f"{labels['taken']}: {asset.taken_at}" if asset.taken_at else ""]
     if asset.place:
-        lines.append(f"Place: {asset.place}")
+        lines.append(f"{labels['place']}: {asset.place}")
     if asset.camera:
-        lines.append(f"Camera: {asset.camera}")
+        lines.append(f"{labels['camera']}: {asset.camera}")
     if asset.people:
-        lines.append("People: " + ", ".join(asset.people))
+        lines.append(f"{labels['people']}: " + ", ".join(asset.people))
     if asset.tags:
-        lines.append("Tags: " + ", ".join(asset.tags))
+        lines.append(f"{labels['tags']}: " + ", ".join(asset.tags))
     return [line for line in lines if line]
 
 
@@ -303,7 +322,7 @@ def _detail(writer: _Pdf, asset: AssetEntry, link):
         top += writer.image(asset.images[0], MARGIN, top, CONTENT_W, 150) + 4
     writer.pdf.set_xy(MARGIN, top)
     writer.font(10)
-    for line in _meta_lines(asset):
+    for line in _meta_lines(asset, writer.labels):
         writer.pdf.cell(CONTENT_W, 5.5, writer.text(line), new_x="LMARGIN", new_y="NEXT")
     if asset.caption:
         writer.pdf.ln(2)
@@ -323,9 +342,20 @@ def _photobook(writer: _Pdf, asset: AssetEntry, link):
     caption_space = 34.0
     image_height = A4_H - 2 * MARGIN - caption_space
     drawn = 0.0
+    offset = 0.0
     if asset.images:
-        drawn = writer.image(asset.images[0], MARGIN, MARGIN, CONTENT_W, image_height)
-    top = MARGIN + min(drawn, image_height) + 4
+        # A width-bound (landscape) image is much shorter than the area; centre
+        # it vertically instead of gluing it to the top with a white gap below.
+        import io as io_module
+
+        from PIL import Image as PILImage
+
+        with PILImage.open(io_module.BytesIO(asset.images[0])) as measured:
+            width, height = measured.size
+        scale = min(CONTENT_W / width, image_height / height)
+        offset = max(0.0, (image_height - height * scale) / 2)
+        drawn = writer.image(asset.images[0], MARGIN, MARGIN + offset, CONTENT_W, image_height)
+    top = MARGIN + offset + min(drawn, image_height) + 4
     writer.pdf.set_xy(MARGIN, top)
     writer.font(8)
     header = "  ·  ".join(part for part in (asset.filename, asset.taken_at[:10], asset.place) if part)

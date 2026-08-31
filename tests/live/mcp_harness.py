@@ -339,6 +339,22 @@ class LiveHarness:
             self.okj(data, failed) and data.get("assets_included") == 1 and not data.get("warnings"),
             f"pages={data.get('pages') if isinstance(data, dict) else 0} warnings={data.get('warnings') if isinstance(data, dict) else '?'}",
         )
+        data, images, failed, _ = await self.call(
+            "get_video_frames", asset_id=VIDEO, interval=1.0, sheet=True,
+        )
+        rec(
+            "get_video_frames(sheet)",
+            (not failed) and len(images) == 1,
+            f"{len(images)} sheet(s) for a 3 s clip at 1 fps",
+        )
+        data, _, failed, _ = await self.call(
+            "export_pdf", asset_ids=[PHOTO1], output_path=out, language="es",
+        )
+        rec(
+            "export_pdf(language=es)",
+            self.okj(data, failed) and data.get("assets_included") == 1 and not data.get("warnings"),
+            f"pages={data.get('pages') if isinstance(data, dict) else 0}",
+        )
 
     async def check_shared_links(self):
         """Shared links."""

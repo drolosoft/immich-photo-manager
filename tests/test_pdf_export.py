@@ -217,3 +217,42 @@ def test_photobook_image_larger_than_detail_image():
         return max(heights)
 
     assert drawn_height("photobook") > drawn_height("detail")
+
+
+# ── v1.11.0: PDF labels in the user's language; centered photobook images ──
+
+
+def test_spanish_labels_reach_the_page():
+    doc = _doc()
+    doc.language = "es"
+    reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
+    assert "Índice" in reader.pages[1].extract_text()
+    assert "Lugares" in reader.pages[2].extract_text()
+    assert "Cámara:" in reader.pages[3].extract_text()
+    assert "página 4/7" in reader.pages[3].extract_text()
+
+
+def test_unknown_language_falls_back_to_english():
+    doc = _doc()
+    doc.language = "de"
+    reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
+    assert "Index" in reader.pages[1].extract_text()
+
+
+def test_photobook_centers_a_landscape_image_vertically():
+    """A width-bound image sits in the middle of the image area, not glued to the top."""
+    import re
+
+    doc = _doc(layout="photobook", photo_count=1, with_video=False)  # 64x40 landscape fixture
+    reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
+    content = reader.pages[3].get_contents().get_data().decode("latin-1")
+    match = re.search(r"([\d.]+) 0 0 ([\d.]+) ([\d.-]+) ([\d.-]+) cm", content)
+    assert match, "no image transform on the photobook page"
+    drawn_h, bottom = float(match.group(2)), float(match.group(4))
+    points_per_mm = 72 / 25.4
+    page_h = pdf_export.A4_H * points_per_mm
+    area_top = page_h - pdf_export.MARGIN * points_per_mm
+    area_bottom = page_h - (pdf_export.A4_H - 2 * pdf_export.MARGIN - 34.0 + pdf_export.MARGIN) * points_per_mm
+    image_center = bottom + drawn_h / 2
+    area_center = (area_top + area_bottom) / 2
+    assert abs(image_center - area_center) < 15  # within ~5 mm of the area's middle

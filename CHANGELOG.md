@@ -6,6 +6,16 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.11.0] — 2026-08-31
+
+### Added
+- **Contact sheets**: `get_video_frames(..., sheet=true)` packs the frames into grid images (30 per sheet, the timestamp burned under each), so skimming a long video costs one or two images instead of dozens, and needs no confirmation.
+- **`language` in `export_pdf`**: `"es"` prints the fixed page labels (Índice, Lugares, Cámara, página n/n) in Spanish; captions stay as written. English remains the default.
+- **`--version`**: `immich-photo-manager --version` prints the installed version, which a uvx environment could not answer before.
+
+### Fixed
+- Photobook pages centre a landscape image vertically instead of leaving the bottom half of the page empty.
+
 ## [v1.10.0] — 2026-08-31
 
 ### Added
@@ -160,6 +170,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.11.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.11.0
 [v1.10.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.10.0
 [v1.9.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.9.0
 [v1.8.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.8.0

@@ -220,6 +220,7 @@ Image-block variants of `get_asset_thumbnail`, `get_album_thumbnails`, and `get_
 - `start` / `end` (float, optional): Segment bounds in seconds (default 0 / 0, where `end=0` means to the end of the clip)
 - `interval` (float, optional): One frame every N seconds instead of `count` (e.g. `interval=1` for one frame per second — the maximum granularity)
 - `confirm` (bool, optional): Required (`true`) when the plan produces more than 12 frames
+- `sheet` (bool, optional): pack the frames into contact sheets (30 per image, the timestamp burned under each); a long video becomes one or two images and needs no confirmation
 
 Frames are taken at the centre of equal time bins within the segment, so a 3 s clip with `count=3` yields 0.5 s, 1.5 s, 2.5 s (never the black first frame). `get_video_frames` returns JPEG image blocks in time order; `get_video_frames_json` returns `{asset_id, duration, backend, count, frames: [{timestamp, data, type}]}` for HTML galleries.
 
@@ -254,6 +255,7 @@ Turn an album or a selection into a PDF (cover, index, places, one section per a
 - `frames_per_video` (int, optional): frames per video, evenly spaced, 0-120, default 4 (`0` = poster only)
 - `frame_interval` (float, optional): one frame every N seconds instead of `frames_per_video` (same 120 cap)
 - `image_size` (string, optional): `"preview"` (default, 1440px), `"thumbnail"` (250px) or `"original"` for photos: the stored file at print quality, re-encoded to at most 3000px on the long side (a format the server cannot decode, like some HEIC, falls back to preview with a note)
+- `language` (string, optional): `"en"` (default) or `"es"` for the fixed labels on the pages (Index, Places, Camera, page numbers); captions stay as written
 - `frame_times` (object, optional): `{asset_id: [seconds, ...]}` exact moments for specific videos, chosen after looking at their frames; wins over `frames_per_video`/`frame_interval` for the listed videos ("use the frame at second 8 for this clip")
 - `frame_size` (string, optional): size of the video frames inside the PDF: `"auto"` (default: preview quality up to 4 frames per video, thumbnail above), `"preview"` or `"thumbnail"`
 - `map` (bool, optional): add an OpenStreetMap map to the Places page (fetches tiles from `tile.openstreetmap.org`)

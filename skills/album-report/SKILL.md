@@ -35,7 +35,7 @@ Build a PDF on the user's machine with `export_pdf`. Metadata comes from Immich;
 
 1. `get_export_preview(album_id=…)` (or `asset_ids=…` from a search). Note the count and which items are videos, with their duration.
 2. Look: `get_album_images(album_id, size="thumbnail")` for photos. For each video, `get_video_frames(asset_id, count=6)`.
-3. If a video needs a closer look (something passes between two frames), narrow it: `get_video_frames(asset_id, count=8, start=8, end=12)`, or `interval=1` for one frame per second. When the tool answers with `confirm_required`, tell the user the number of frames and the estimated tokens and continue only if they agree (`confirm=true`).
+3. For a long video, skim it first with one call: `get_video_frames(asset_id, interval=5, sheet=true)` returns contact sheets (30 stamped frames per image) instead of dozens of images. If a video needs a closer look (something passes between two frames), narrow it: `get_video_frames(asset_id, count=8, start=8, end=12)`, or `interval=1` for one frame per second. When the tool answers with `confirm_required`, tell the user the number of frames and the estimated tokens and continue only if they agree (`confirm=true`).
 4. Write one caption per asset (what it shows, in the user's language) into `captions={asset_id: text}`.
 5. `export_pdf(album_id=…, captions=…, frames_per_video=6)`; report the path, pages and warnings. Offer `layout="grid"` for big sets, `map=true` when there is GPS data (explain it fetches OpenStreetMap tiles), and a higher `frames_per_video` (up to 120, free of tokens) for videos that matter.
 

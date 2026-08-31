@@ -292,7 +292,8 @@ async def export_pdf(
     ctx: Context, album_id: str = "", asset_ids: list[str] = [], output_path: str = "",
     title: str = "", captions: dict = {}, layout: str = "detail", frames_per_video: int = 4,
     frame_interval: float = 0.0, frame_times: dict = {}, image_size: str = "preview",
-    frame_size: str = "auto", map: bool = False, limit: int = 100, return_base64: bool = False,
+    frame_size: str = "auto", language: str = "en", map: bool = False, limit: int = 100,
+    return_base64: bool = False,
 ) -> str:
     """Build a PDF (cover, index, places, one section per asset) from an album or a
     list of assets, on the machine running this server. Immich metadata (date, place,
@@ -319,6 +320,8 @@ async def export_pdf(
             the server cannot decode, like some HEIC, falls back to preview with a note).
         frame_size: video frame size in the PDF: 'auto' (default: preview up to 4 frames
             per video, thumbnail above), 'preview' or 'thumbnail'.
+        language: 'en' (default) or 'es' for the fixed labels on the pages (Index,
+            Places, Camera, page numbers); captions stay in whatever language you wrote.
         map: Add an OpenStreetMap map to the Places page (fetches tiles from tile.openstreetmap.org).
         limit: Max assets (1-500, default 100).
         return_base64: Also return the PDF bytes (skipped above 2 MB; every MB is
@@ -363,12 +366,18 @@ async def export_pdf(
 
     photos = sum(1 for entry in entries if entry.kind == "IMAGE")
     exported_on = datetime.date.today().isoformat()
+    if language == "es":
+        subtitle = f"{len(entries)} elementos · {photos} fotos, {len(entries) - photos} vídeos · exportado {exported_on}"
+    else:
+        language = language if language == "en" else "en"
+        subtitle = f"{len(entries)} assets · {photos} photos, {len(entries) - photos} videos · exported {exported_on}"
     doc = Document(
         title=title,
-        subtitle=f"{len(entries)} assets · {photos} photos, {len(entries) - photos} videos · exported {exported_on}",
+        subtitle=subtitle,
         source_url=client.base_url,
         version=__version__,
         layout=layout,
+        language=language,
         assets=entries,
         places=pdf_export.places_table(entries),
         map_png=map_png,
