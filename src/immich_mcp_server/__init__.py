@@ -4,4 +4,4 @@
 and pyproject carry the same number and the release gate keeps the three in sync.
 """
 
-__version__ = "1.7.1"
+__version__ = "1.8.0"

@@ -250,16 +250,17 @@ Turn an album or a selection into a PDF (cover, index, places, one section per a
 - `output_path` (string, optional): where to write the file, on the machine running the server. Default `~/Desktop/<title>.pdf`. A directory is accepted (the file is placed inside it as `<title>.pdf`); a path with no `.pdf` extension gets one appended. An existing file is never overwritten — `report.pdf` becomes `report-2.pdf`, `report-3.pdf`, ...
 - `title` (string, optional): cover title. Default: the album's name, or `"Immich export <date>"`.
 - `captions` (dict, optional): `{asset_id: text}` — Claude's own description of each photo/video after looking at it. Immich's own metadata (date, place, camera, people, tags) is always included regardless of captions.
-- `layout` (string, optional): `"detail"` (one asset per page, default) or `"grid"` (six per page, smaller images, shorter captions)
+- `layout` (string, optional): `"detail"` (one asset per page with its data, default), `"grid"` (six per page) or `"photobook"` (one full-page image per asset, fitted without cropping, caption under it; pair with `frames_per_video=1` so a video reads like a photo)
 - `frames_per_video` (int, optional): frames per video, evenly spaced, 0-120, default 4 (`0` = poster only)
 - `frame_interval` (float, optional): one frame every N seconds instead of `frames_per_video` (same 120 cap)
 - `image_size` (string, optional): `"preview"` (default) or `"thumbnail"` for photos
+- `frame_size` (string, optional): size of the video frames inside the PDF: `"auto"` (default: preview quality up to 4 frames per video, thumbnail above), `"preview"` or `"thumbnail"`
 - `map` (bool, optional): add an OpenStreetMap map to the Places page (fetches tiles from `tile.openstreetmap.org`)
 - `return_base64` (bool, optional): also return the PDF bytes in the JSON response (skipped above 2 MB; every MB is roughly 350k tokens in the conversation)
 
 **`export_pdf` returns:** JSON `{path, pages, bytes, assets_included, assets_skipped: [{id, reason}], warnings: []}`, or `{"pdf_base64": "..."}` in addition when `return_base64=true`.
 
-**PDF structure:** cover page (title, subtitle, first image) → index (one line per asset, each linking to its page) → Places (a table of country/city/count, plus a stitched OpenStreetMap image when `map=true` and GPS data exists) → one detail page per asset in `"detail"` layout (metadata block plus the photo or, for a video, its frames laid out four per row with a timestamp under each), or a six-per-page grid in `"grid"` layout → a footer with the plugin version, server URL, and page number on every page.
+**PDF structure:** cover page (title, subtitle, first image) → index (one line per asset, each linking to its page) → Places (a table of country/city/count, plus a stitched OpenStreetMap image when `map=true` and GPS data exists) → one detail page per asset in `"detail"` layout (metadata block plus the photo or, for a video, its frames laid out four per row with a timestamp under each), a six-per-page grid in `"grid"` layout, or one full-page image with the caption under it in `"photobook"` → a footer with the plugin version, server URL, and page number on every page.
 
 **Cost:** frames that go into the PDF cost no tokens — they never enter the conversation. Only the frames you look at while writing captions do. A PDF with `frames_per_video=120` on ten videos costs nothing extra over the default; looking at 120 frames to caption them does.
 

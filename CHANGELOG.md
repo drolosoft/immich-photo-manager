@@ -6,6 +6,15 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.8.0] — 2026-08-31
+
+### Added
+- **`layout="photobook"` in `export_pdf`**: one asset per page, the image as large as the page allows, fitted without cropping (letterbox, never a crop that cuts off edges), one metadata line and the caption under it. With `frames_per_video=1` a video reads like a photo. Asked for in #15 for a car-spotting photobook.
+- **`frame_size` in `export_pdf`**: size of the video frames inside the PDF. `"auto"` (default) uses preview quality (1440px) up to 4 frames per video and thumbnail (250px) above; `"preview"` and `"thumbnail"` force it. Before, frames in the PDF were always 250px.
+
+### Fixed
+- **Vertical phone videos came out sideways** in the PyAV frames (`get_video_frames` and the PDF): phones store the video rotated with a display-rotation flag, which PyAV decodes but does not apply. Frames now honour the flag, matching ffmpeg's behavior; verified against ffmpeg's auto-rotation on both Immich versions. Reported in #15.
+
 ## [v1.7.1] — 2026-08-28
 
 ### Changed
@@ -140,6 +149,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.8.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.8.0
 [v1.7.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.7.1
 [v1.7.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.7.0
 [v1.6.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.6.0

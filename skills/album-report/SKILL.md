@@ -39,6 +39,10 @@ Build a PDF on the user's machine with `export_pdf`. Metadata comes from Immich;
 4. Write one caption per asset (what it shows, in the user's language) into `captions={asset_id: text}`.
 5. `export_pdf(album_id=…, captions=…, frames_per_video=6)`; report the path, pages and warnings. Offer `layout="grid"` for big sets, `map=true` when there is GPS data (explain it fetches OpenStreetMap tiles), and a higher `frames_per_video` (up to 120, free of tokens) for videos that matter.
 
+## Photobook
+
+When the user wants an album book (one subject per page, like a car spotter's collection), use `layout="photobook"` with `frames_per_video=1`: every asset gets a full page, the image fitted without cropping, the caption under it; a video reads like a photo through its one preview-sized frame. Identify subjects by looking at `get_asset_image(size="preview")`, never at a thumbnail: closely related models (a Veyron against a Chiron) need the pixels. Write captions that say something real about the subject, and vary them when the same subject repeats.
+
 ## Cost to state up front
 
 Every frame you look at is one image in the context (~1.6k tokens as thumbnail). Frames that go only into the PDF cost nothing. Start with 6 per video; go finer only where the user asks.

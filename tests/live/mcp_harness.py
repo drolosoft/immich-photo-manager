@@ -313,6 +313,15 @@ class LiveHarness:
         data, _, failed, _ = await self.call("export_pdf", asset_ids=[PHOTO1, VIDEO], output_path=out, layout="grid", return_base64=True)
         rec("export_pdf(ids,grid,b64)", self.okj(data, failed) and data["path"].endswith("-2.pdf") and base64.b64decode(data["pdf_base64"])[:4] == b"%PDF",
             f"path={data.get('path') if isinstance(data, dict) else data}")
+        data, _, failed, _ = await self.call(
+            "export_pdf", asset_ids=[PHOTO1, VIDEO], output_path=out,
+            layout="photobook", frames_per_video=1,
+        )
+        rec(
+            "export_pdf(photobook)",
+            self.okj(data, failed) and data.get("assets_included") == 2 and not data.get("warnings"),
+            f"path={data.get('path') if isinstance(data, dict) else data} pages={data.get('pages') if isinstance(data, dict) else 0}",
+        )
 
     async def check_shared_links(self):
         """Shared links."""
