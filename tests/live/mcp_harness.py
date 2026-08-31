@@ -322,6 +322,14 @@ class LiveHarness:
             self.okj(data, failed) and data.get("assets_included") == 2 and not data.get("warnings"),
             f"path={data.get('path') if isinstance(data, dict) else data} pages={data.get('pages') if isinstance(data, dict) else 0}",
         )
+        data, _, failed, _ = await self.call(
+            "export_pdf", asset_ids=[PHOTO1], output_path=out, image_size="original",
+        )
+        rec(
+            "export_pdf(original)",
+            self.okj(data, failed) and data.get("assets_included") == 1 and not data.get("warnings"),
+            f"bytes={data.get('bytes') if isinstance(data, dict) else 0} warnings={data.get('warnings') if isinstance(data, dict) else '?'}",
+        )
 
     async def check_shared_links(self):
         """Shared links."""

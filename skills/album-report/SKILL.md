@@ -41,7 +41,7 @@ Build a PDF on the user's machine with `export_pdf`. Metadata comes from Immich;
 
 ## Photobook
 
-When the user wants an album book (one subject per page, like a car spotter's collection), use `layout="photobook"` with `frames_per_video=1`: every asset gets a full page, the image fitted without cropping, the caption under it; a video reads like a photo through its one preview-sized frame. Identify subjects by looking at `get_asset_image(size="preview")`, never at a thumbnail: closely related models (a Veyron against a Chiron) need the pixels. Write captions that say something real about the subject, and vary them when the same subject repeats.
+When the user wants an album book (one subject per page, like a car spotter's collection), use `layout="photobook"` with `frames_per_video=1`: every asset gets a full page, the image fitted without cropping, the caption under it; a video reads like a photo through its one preview-sized frame. Identify subjects by looking at `get_asset_image(size="preview")`, never at a thumbnail: closely related models (a Veyron against a Chiron) need the pixels. Write captions that say something real about the subject, and vary them when the same subject repeats. For a book meant for print, add `image_size="original"`: the stored photos at print quality instead of the 1440px previews. Live Photos count once (the motion clip folds into its still).
 
 ## Cost to state up front
 

@@ -277,3 +277,69 @@ async def test_export_pdf_accepts_photobook_layout(fake_ctx, tmp_path, monkeypat
     data = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb",
                                               output_path=str(tmp_path / "p.pdf"), layout="photobook"))
     assert data["assets_included"] == 3 and data["pages"] == 3 + 3  # cover, index, places, one page each
+
+
+# ── v1.9.0: original-quality photos and Live Photo folding ──
+
+
+@pytest.mark.asyncio
+async def test_get_asset_original_returns_bytes(env_credentials, isolated_cache):
+    with respx.mock(base_url=BASE) as mock:
+        mock.get("/api/assets/a1/original").mock(
+            return_value=httpx.Response(200, content=b"JPEGBYTES", headers={"content-type": "image/jpeg"})
+        )
+        original = await ImmichClient().get_asset_original("a1")
+    assert original == {"data": b"JPEGBYTES", "type": "image/jpeg"}
+
+
+def _big_jpeg(width, height):
+    from PIL import Image as PILImage
+    buffer = io.BytesIO()
+    PILImage.new("RGB", (width, height), "purple").save(buffer, format="JPEG")
+    return buffer.getvalue()
+
+
+class OriginalsClient(StubClient):
+    """Serves a 4000px original for a1 and an undecodable one for a2."""
+
+    async def get_asset_original(self, asset_id):
+        if asset_id == "a2":
+            return {"data": b"HEIC-THAT-PILLOW-CANNOT-OPEN", "type": "image/heic"}
+        return {"data": _big_jpeg(4000, 3000), "type": "image/jpeg"}
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_original_size_downscales_and_falls_back(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    data = json.loads(await server.export_pdf(fake_ctx(OriginalsClient()), album_id="alb",
+                                              output_path=str(tmp_path / "o.pdf"), image_size="original"))
+    assert data["assets_included"] == 3
+    assert any("a2" in note and "preview" in note for note in data["warnings"])
+    from pypdf import PdfReader
+    from PIL import Image as PILImage
+    reader = PdfReader(str(tmp_path / "o.pdf"))
+    sizes = [PILImage.open(io.BytesIO(image.data)).size for page in reader.pages for image in page.images]
+    # The 4000px original must come in capped at 3000 on the long side, not at 4000.
+    assert (3000, 2250) in sizes and all(size[0] <= 3000 for size in sizes)
+
+
+class LivePhotoClient(StubClient):
+    """A photo whose motion clip is also in the album, plus a plain video."""
+
+    def __init__(self):
+        photo = _asset(1)
+        photo["livePhotoVideoId"] = "a3"
+        super().__init__(assets=[photo, _asset(2), _asset(3, "VIDEO")])
+
+
+@pytest.mark.asyncio
+async def test_live_photo_motion_clip_is_folded_into_its_photo(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    preview = json.loads(await server.get_export_preview(fake_ctx(LivePhotoClient()), album_id="alb"))
+    assert preview["count"] == 2 and [asset["id"] for asset in preview["assets"]] == ["a1", "a2"]
+    assert any("live" in note.lower() for note in preview["warnings"])
+    data = json.loads(await server.export_pdf(fake_ctx(LivePhotoClient()), album_id="alb",
+                                              output_path=str(tmp_path / "l.pdf")))
+    assert data["assets_included"] == 2 and data["assets_skipped"] == []

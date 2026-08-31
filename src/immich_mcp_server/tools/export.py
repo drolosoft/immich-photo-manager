@@ -34,6 +34,10 @@ BASE64_MAX_BYTES = 2 * 1024 * 1024
 # in a worker thread. Above the client's own 10 s HTTP timeout on purpose.
 TILE_WAIT_SECONDS = 15
 
+# Originals go into the PDF capped at this long side: A4 at 300 dpi is about
+# 2480 px, so 3000 keeps print quality without embedding 40 MB camera files.
+ORIGINAL_MAX_SIDE = 3000
+
 
 def _duration_seconds(raw: dict) -> float:
     """Video duration in seconds from an Immich asset.
@@ -91,6 +95,15 @@ async def _collect_assets(client, album_id: str, asset_ids: list[str], limit: in
     if len(raw) > limit:
         raw = raw[:limit]
         notes.append(f"limit {limit} reached: only the first {limit} assets are included")
+    # A Live Photo is one moment stored twice: the still points at its motion
+    # clip through livePhotoVideoId. Keep the still, fold the clip.
+    motion_ids = {asset.get("livePhotoVideoId") for asset in raw if asset.get("livePhotoVideoId")}
+    if motion_ids:
+        kept = [asset for asset in raw if asset["id"] not in motion_ids]
+        folded = len(raw) - len(kept)
+        if folded:
+            raw = kept
+            notes.append(f"{folded} live photo motion clip(s) folded into their photos")
     if not raw:
         raise ValueError("No assets found for that album/ids.")
     return title, raw, notes
@@ -146,6 +159,38 @@ async def _attach_video_frames(client, entry: AssetEntry, frames: int, interval:
     return True
 
 
+def _downscaled_original(data: bytes) -> bytes:
+    """The original re-encoded as a JPEG no larger than ORIGINAL_MAX_SIDE.
+
+    Raises whatever Pillow raises when the format cannot be decoded (a HEIC
+    without a HEIF plugin, a RAW file); the caller falls back to the preview.
+    """
+    import io
+
+    from PIL import Image, ImageOps
+
+    with Image.open(io.BytesIO(data)) as image:
+        # Photos carry their rotation in EXIF; apply it or portrait shots lie down.
+        image = ImageOps.exif_transpose(image)
+        image.thumbnail((ORIGINAL_MAX_SIDE, ORIGINAL_MAX_SIDE))
+        buffer = io.BytesIO()
+        image.convert("RGB").save(buffer, format="JPEG", quality=90)
+        return buffer.getvalue()
+
+
+async def _photo_bytes(client, entry: AssetEntry, image_size: str, notes: list[str]) -> bytes:
+    """The image that represents a photo (or a video's poster) at the asked quality."""
+    if image_size == "original" and entry.kind == "IMAGE":
+        original = await client.get_asset_original(entry.id)
+        try:
+            return await asyncio.to_thread(_downscaled_original, original["data"])
+        except Exception:
+            notes.append(f"{entry.id}: original could not be decoded ({original.get('type')}); preview used")
+    size = image_size if image_size in ("thumbnail", "preview") else "preview"
+    thumb = await client.get_asset_thumbnail(entry.id, size)
+    return base64.b64decode(thumb["data"])
+
+
 async def _asset_entry(client, raw: dict, image_size: str, frames: int, interval: float,
                        frame_size: str, notes: list[str], captions: dict) -> AssetEntry:
     """Build the entry for one asset: metadata, then frames for a video or the poster/preview."""
@@ -153,8 +198,7 @@ async def _asset_entry(client, raw: dict, image_size: str, frames: int, interval
     wants_frames = entry.kind == "VIDEO" and (frames > 0 or interval > 0)
     if wants_frames and await _attach_video_frames(client, entry, frames, interval, frame_size, notes):
         return entry
-    thumb = await client.get_asset_thumbnail(entry.id, image_size)
-    entry.images = [base64.b64decode(thumb["data"])]
+    entry.images = [await _photo_bytes(client, entry, image_size, notes)]
     return entry
 
 
@@ -263,7 +307,9 @@ async def export_pdf(
             pair it with frames_per_video=1 so a video reads like a photo).
         frames_per_video: Frames per video, evenly spaced (0-120, default 4; 0 = poster only).
         frame_interval: One frame every N seconds instead of frames_per_video (same 120 cap).
-        image_size: 'preview' (default) or 'thumbnail' for photos.
+        image_size: 'preview' (default, 1440px), 'thumbnail', or 'original' for photos:
+            the stored file, print quality, re-encoded to at most 3000px (a format
+            the server cannot decode, like some HEIC, falls back to preview with a note).
         frame_size: video frame size in the PDF: 'auto' (default: preview up to 4 frames
             per video, thumbnail above), 'preview' or 'thumbnail'.
         map: Add an OpenStreetMap map to the Places page (fetches tiles from tile.openstreetmap.org).
@@ -286,7 +332,7 @@ async def export_pdf(
     interval = float(frame_interval or 0)
     if layout not in ("detail", "grid", "photobook"):
         layout = "detail"
-    if image_size not in ("thumbnail", "preview"):
+    if image_size not in ("thumbnail", "preview", "original"):
         image_size = "preview"
     # Few frames end up large on the page, so they deserve preview quality; a
     # long strip stays at thumbnail size to keep the file reasonable.

@@ -6,6 +6,12 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.9.0] — 2026-08-31
+
+### Added
+- **`image_size="original"` in `export_pdf`**: photos go in at the stored file's quality, re-encoded to at most 3000px on the long side (A4 print territory) with EXIF rotation applied. A format the server cannot decode (some HEIC, RAW) falls back to the preview with a note in `warnings`. Asked for in #15 ("the actual photos, not blown up thumbnails").
+- **Live Photos count once**: the motion clip a still points at through `livePhotoVideoId` is folded into its photo in `get_export_preview` and `export_pdf`, with a note. Asked for in #15.
+
 ## [v1.8.0] — 2026-08-31
 
 ### Added
@@ -149,6 +155,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.9.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.9.0
 [v1.8.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.8.0
 [v1.7.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.7.1
 [v1.7.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.7.0

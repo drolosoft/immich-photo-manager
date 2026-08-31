@@ -5,6 +5,8 @@ Mixin of `ImmichClient` (see `immich_client.py`).
 
 from typing import Any
 
+import httpx
+
 
 class AssetsApi:
     """Single assets: read, update, list, jobs, map markers."""
@@ -12,6 +14,18 @@ class AssetsApi:
     async def get_asset(self, asset_id: str) -> dict:
         """Get full metadata for a single asset."""
         return await self._request("GET", f"/assets/{asset_id}")
+
+    async def get_asset_original(self, asset_id: str) -> dict:
+        """The asset's original file, as stored (any format, full resolution).
+
+        GET /assets/{id}/original exists on Immich 2.x and 3.x. The bytes come
+        back raw, not base64: originals can be tens of megabytes.
+        """
+        url = f"{self.base_url}/api/assets/{asset_id}/original"
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            response = await client.get(url, headers=self._headers)
+            response.raise_for_status()
+            return {"data": response.content, "type": response.headers.get("content-type", "image/jpeg")}
 
     async def update_asset(self, asset_id: str, **fields: Any) -> dict:
         """Update asset metadata (dates, GPS, description, etc)."""
