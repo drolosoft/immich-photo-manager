@@ -21,7 +21,6 @@ import re
 import shutil
 import subprocess
 import tempfile
-from fractions import Fraction
 
 # Hard cap on frames per call (model tools) and per video (PDF export).
 MAX_FRAMES = 120
@@ -131,16 +130,6 @@ def _pyav_available() -> bool:
     return True
 
 
-def _scaled(width: int, height: int, target: int) -> tuple[int, int]:
-    """Frame size with the longer side at `target` (never upscaled), both sides even."""
-    # MJPEG with 4:2:0 chroma needs even dimensions; odd ones make the encoder fail.
-    longest = max(width, height)
-    if longest > target:
-        ratio = target / longest
-        width, height = round(width * ratio), round(height * ratio)
-    return max(2, width - width % 2), max(2, height - height % 2)
-
-
 def _entry(timestamp: float, jpeg: bytes) -> dict:
     """One frame as the tools return it: timestamp plus base64 JPEG."""
     return {"timestamp": timestamp, "data": base64.b64encode(jpeg).decode("ascii"), "type": "image/jpeg"}
@@ -172,17 +161,21 @@ def _pyav_frame_at(container, stream, timestamp: float):
     return picked
 
 
-def _pyav_jpeg(frame, width: int, height: int) -> bytes:
-    """Encode one decoded frame as a JPEG of the given size, without Pillow."""
-    import av
+def _pyav_jpeg(frame, target: int, rotation: int) -> bytes:
+    """One decoded frame as a JPEG: rotated the way the display matrix asks, longest side at `target`."""
+    import io
 
-    codec = av.CodecContext.create("mjpeg", "w")
-    codec.width, codec.height = width, height
-    codec.pix_fmt = "yuvj420p"
-    codec.time_base = Fraction(1, 25)
-    scaled = frame.reformat(width=width, height=height, format="yuvj420p")
-    packets = codec.encode(scaled) + codec.encode(None)
-    return b"".join(bytes(packet) for packet in packets)
+    image = frame.to_image()
+    # Phone videos are stored sideways with a rotation flag; PyAV decodes the
+    # stored pixels and, unlike ffmpeg, never applies the flag. `frame.rotation`
+    # carries the flag's angle in degrees counterclockwise, the same convention
+    # Pillow uses (the direction is pinned against ffmpeg's auto-rotation in the tests).
+    if rotation % 360:
+        image = image.rotate(rotation % 360, expand=True)
+    image.thumbnail((target, target))
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=85)
+    return buffer.getvalue()
 
 
 def _extract_pyav(path: str, timestamps: list[float], target: int) -> dict:
@@ -194,12 +187,12 @@ def _extract_pyav(path: str, timestamps: list[float], target: int) -> dict:
         stream = container.streams.video[0]
         stream.thread_type = "AUTO"
         duration = _pyav_duration(container, stream)
-        width, height = _scaled(stream.codec_context.width, stream.codec_context.height, target)
         for timestamp in timestamps:
             frame = _pyav_frame_at(container, stream, timestamp)
             if frame is None:
                 continue
-            frames.append(_entry(timestamp, _pyav_jpeg(frame, width, height)))
+            rotation = int(getattr(frame, "rotation", 0) or 0)
+            frames.append(_entry(timestamp, _pyav_jpeg(frame, target, rotation)))
     return {"duration": round(duration, 3), "backend": "pyav", "frames": frames}
 
 

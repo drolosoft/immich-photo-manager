@@ -7,6 +7,7 @@ the duration, with PyAV (optional extra `[video]`) or the `ffmpeg` binary.
 """
 
 import base64
+import io
 import json
 import shutil
 import subprocess
@@ -253,3 +254,61 @@ async def test_get_video_frames_reports_missing_backend(fake_ctx, monkeypatch):
     raw = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1")
     data = json.loads(raw)
     assert "no decoder" in data["error"]
+
+
+# ── rotation flag (vertical phone videos) ───────────────────
+
+
+@pytest.fixture(scope="module")
+def flagged_portrait_clip(tmp_path_factory):
+    """A landscape-encoded clip carrying a 90-degree display-rotation flag, the way phones record vertical video."""
+    if not shutil.which("ffmpeg"):
+        pytest.skip("ffmpeg not on PATH; cannot synthesize a clip")
+    folder = tmp_path_factory.mktemp("rotated")
+    flat = folder / "flat.mp4"
+    flagged = folder / "flagged.mp4"
+    # Left half white, right half black: after the 90-degree display rotation one
+    # vertical half must be bright, and both backends must agree on which one.
+    subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "color=c=black:s=568x320:d=2",
+         "-vf", "drawbox=x=0:y=0:w=284:h=320:color=white:t=fill", "-pix_fmt", "yuv420p", str(flat)],
+        check=True,
+    )
+    subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-y", "-display_rotation", "90", "-i", str(flat),
+         "-c", "copy", str(flagged)],
+        check=True,
+    )
+    return flagged.read_bytes()
+
+
+def _first_frame_image(result):
+    from PIL import Image
+    return Image.open(io.BytesIO(base64.b64decode(result["frames"][0]["data"]))).convert("L")
+
+
+def test_pyav_honours_the_rotation_flag(flagged_portrait_clip):
+    pytest.importorskip("av")
+    result = video_frames.extract_frames(flagged_portrait_clip, count=1, backend="pyav")
+    frame = _first_frame_image(result)
+    assert frame.size[0] < frame.size[1]  # portrait out, not sideways
+
+
+def test_pyav_rotation_direction_matches_ffmpeg(flagged_portrait_clip):
+    """Same clip through both backends must come out the same way up (ffmpeg auto-rotates)."""
+    pytest.importorskip("av")
+    pyav_frame = _first_frame_image(video_frames.extract_frames(flagged_portrait_clip, count=1, backend="pyav"))
+    ffmpeg_frame = _first_frame_image(video_frames.extract_frames(flagged_portrait_clip, count=1, backend="ffmpeg"))
+    assert abs(pyav_frame.size[0] - ffmpeg_frame.size[0]) <= 2
+    assert abs(pyav_frame.size[1] - ffmpeg_frame.size[1]) <= 2
+    # The source is a horizontal gradient, so after rotation one vertical half is
+    # bright and the other dark; both backends must agree on which.
+    def top_is_bright(image):
+        from PIL import ImageStat
+        width, height = image.size
+        top_mean = ImageStat.Stat(image.crop((0, 0, width, height // 4))).mean[0]
+        bottom_mean = ImageStat.Stat(image.crop((0, height - height // 4, width, height))).mean[0]
+        assert abs(top_mean - bottom_mean) > 60, "halves look alike; the fixture is wrong"
+        return top_mean > bottom_mean
+
+    assert top_is_bright(pyav_frame) == top_is_bright(ffmpeg_frame)
