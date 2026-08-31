@@ -276,7 +276,9 @@ async def test_export_pdf_accepts_photobook_layout(fake_ctx, tmp_path, monkeypat
     monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
     data = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb",
                                               output_path=str(tmp_path / "p.pdf"), layout="photobook"))
-    assert data["assets_included"] == 3 and data["pages"] == 3 + 3  # cover, index, places, one page each
+    # Front matter (cover, index, places), one page per photo, and the video
+    # unfolds into one page per extracted frame (the fake extractor cuts 4).
+    assert data["assets_included"] == 3 and data["pages"] == 3 + 2 + 4
 
 
 # ── v1.9.0: original-quality photos and Live Photo folding ──
@@ -374,3 +376,54 @@ async def test_export_pdf_frame_times_win_for_that_video(fake_ctx, tmp_path, mon
     assert data["assets_included"] == 3 and data["warnings"] == []
     assert ("at", (73.5,), "preview") in calls          # the chosen moment, at preview quality
     assert ("spread", 1, "preview") in calls            # the other video keeps the default
+
+
+# ── v1.12.0: frame_captions travel with frame_times ─────────
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_passes_frame_captions_to_the_entries(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    JPEG_B64 = base64.b64encode(PNG_RED).decode("ascii")
+
+    def fake_at(data, times, size="thumbnail", backend=None):
+        return {"duration": 30.0, "backend": "stub",
+                "frames": [{"timestamp": float(t), "data": JPEG_B64, "type": "image/jpeg"} for t in times]}
+
+    monkeypatch.setattr(video_frames, "extract_frames_at", fake_at)
+    client = StubClient(assets=[_asset(3, "VIDEO")])
+    data = json.loads(await server.export_pdf(
+        fake_ctx(client), album_id="alb", output_path=str(tmp_path / "c.pdf"), layout="photobook",
+        frame_times={"a3": [5.0, 15.0]}, frame_captions={"a3": ["First moment.", "Second moment."]},
+    ))
+    assert data["assets_included"] == 1 and data["warnings"] == []
+    from pypdf import PdfReader
+    reader = PdfReader(str(tmp_path / "c.pdf"))
+    assert len(reader.pages) == 3 + 2
+    assert "First moment." in reader.pages[3].extract_text()
+    assert "Second moment." in reader.pages[4].extract_text()
+
+
+# ── v1.12.0: optional front matter and the options catalogue ─
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_can_skip_the_front_matter(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    data = json.loads(await server.export_pdf(
+        fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "n.pdf"),
+        layout="photobook", cover=False, index=False, places=False,
+    ))
+    # 2 photo pages plus 4 frame pages for the video; no cover, index or places.
+    assert data["assets_included"] == 3 and data["pages"] == 2 + 4
+
+
+@pytest.mark.asyncio
+async def test_preview_lists_every_export_option(fake_ctx):
+    data = json.loads(await server.get_export_preview(fake_ctx(StubClient()), album_id="alb"))
+    options = data["options"]
+    for name in ("layout", "cover", "index", "places", "frames_per_video", "frame_times",
+                 "frame_captions", "image_size", "frame_size", "language", "map", "captions"):
+        assert name in options, name
+    assert "photobook" in options["layout"]

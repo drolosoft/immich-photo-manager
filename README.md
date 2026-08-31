@@ -22,7 +22,7 @@
 
 If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance — search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally and talks only to your Immich; your originals stay on your server (see [what leaves your network](#what-leaves-your-network)).
 
-> **Tested, not assumed.** Every push runs 115 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 57 tools over the MCP protocol, state re-read after each write) before it is tagged. The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Details: [How it's tested](#how-its-tested).
+> **Tested, not assumed.** Every push runs 122 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 57 tools over the MCP protocol, state re-read after each write) before it is tagged. The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Details: [How it's tested](#how-its-tested).
 
 <p align="center"><img src="./assets/demo.gif" alt="immich-photo-manager demo" width="800"></p>
 
@@ -200,7 +200,7 @@ RESULT: Zero cloud dependency — fully self-hosted stack.
 - **Library cleanup** — detect screenshots, duplicates, and low-quality images with multi-signal analysis
 - **Duplicate detection** — cross-source analysis using perceptual hashing (finds re-encoded copies across Apple Photos, Google Photos, and other imports)
 - **Bulk rotation** — rotate entire albums or selections at once (90°/180°/270°); non-destructive, accumulates across calls, one-click revert
-- **PDF reports** — album or selection to a PDF with metadata, video frames and Claude's captions, built on your machine
+- **PDF reports** — album or selection to a PDF with metadata, video frames and Claude's captions, built on your machine; the photobook layout gives each chosen video moment a full page with its own caption, and the cover/index/places pages are optional
 - **Video frames** — cut evenly spaced frames out of any clip, or a segment (`start`/`end`) down to one frame per second (`interval`), so Claude can describe what happens in it; Immich itself keeps one poster per video
 - **People & face management** — list, search, merge, and organize recognized people; reassign misidentified faces; view face thumbnails
 - **Trash & asset lifecycle** — safely delete assets to trash, permanently remove, restore from trash; complete asset lifecycle management
@@ -234,7 +234,7 @@ Immich is excellent at storing and viewing your photos. But managing a large lib
 ## How it's tested
 
 - **Unit suite, every push**: 88 pytest cases on Python 3.10 and 3.13 (HTTP mocked), plus ruff. Releases are tagged only when this gate is green.
-- **Live, every tool, two Immich versions**: [`tests/live/`](tests/live/) starts real Immich **2.7.5** and **3.1.0** in Docker, fills them with a small library, and drives all 57 tools over the MCP protocol, re-reading state after each write. Run before every release; last full run 2026-08-31, 84/84 checks on both.
+- **Live, every tool, two Immich versions**: [`tests/live/`](tests/live/) starts real Immich **2.7.5** and **3.1.0** in Docker, fills them with a small library, and drives all 57 tools over the MCP protocol, re-reading state after each write. Run before every release; last full run 2026-08-31, 86/86 checks on both.
 - **In use**: [PyPI](https://pypi.org/project/immich-photo-manager/) downloads, merged PRs from four outside contributors, and the demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions.
 
 ## Built with Claude

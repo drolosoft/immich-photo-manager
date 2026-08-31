@@ -91,6 +91,7 @@ class AssetEntry:
     caption: str = ""
     images: list[bytes] = field(default_factory=list)  # 1 for a photo, N frames for a video
     timestamps: list[float] = field(default_factory=list)  # one per frame, seconds
+    frame_captions: list[str] = field(default_factory=list)  # photobook: one caption per frame
     lat: float | None = None
     lon: float | None = None
 
@@ -108,6 +109,10 @@ class Document:
     assets: list[AssetEntry] = field(default_factory=list)
     places: list[tuple[str, str, int]] = field(default_factory=list)
     map_png: bytes | None = None
+    # Front matter is on by default; a photobook meant for printing may want none of it.
+    with_cover: bool = True
+    with_index: bool = True
+    with_places: bool = True
 
 
 def _fpdf_available() -> bool:
@@ -331,38 +336,61 @@ def _detail(writer: _Pdf, asset: AssetEntry, link):
 
 
 
-def _photobook(writer: _Pdf, asset: AssetEntry, link):
-    """One asset per page, the image as large as the page allows, one line of metadata and the caption.
+def _photobook_page(writer: _Pdf, image: bytes, header: str, caption: str, link):
+    """One full page: the image as large as it fits, a small metadata line, the caption.
 
     The image is fitted, never cropped (letterbox/pillarbox), so nothing at the
     edges is lost; a photobook of cars must not cut off wheels or plates.
     """
     writer.pdf.add_page()
-    writer.pdf.set_link(link, page=writer.pdf.page)
+    # Only the asset's first page is an index target; frame pages pass link=None.
+    if link is not None:
+        writer.pdf.set_link(link, page=writer.pdf.page)
     caption_space = 34.0
     image_height = A4_H - 2 * MARGIN - caption_space
     drawn = 0.0
     offset = 0.0
-    if asset.images:
+    if image:
         # A width-bound (landscape) image is much shorter than the area; centre
         # it vertically instead of gluing it to the top with a white gap below.
         import io as io_module
 
         from PIL import Image as PILImage
 
-        with PILImage.open(io_module.BytesIO(asset.images[0])) as measured:
+        with PILImage.open(io_module.BytesIO(image)) as measured:
             width, height = measured.size
         scale = min(CONTENT_W / width, image_height / height)
         offset = max(0.0, (image_height - height * scale) / 2)
-        drawn = writer.image(asset.images[0], MARGIN, MARGIN + offset, CONTENT_W, image_height)
+        drawn = writer.image(image, MARGIN, MARGIN + offset, CONTENT_W, image_height)
     top = MARGIN + offset + min(drawn, image_height) + 4
     writer.pdf.set_xy(MARGIN, top)
     writer.font(8)
-    header = "  ·  ".join(part for part in (asset.filename, asset.taken_at[:10], asset.place) if part)
     writer.pdf.cell(CONTENT_W, 4, writer.text(header), new_x="LMARGIN", new_y="NEXT")
-    if asset.caption:
+    if caption:
         writer.font(11)
-        writer.pdf.multi_cell(CONTENT_W, 6, writer.text(asset.caption))
+        writer.pdf.multi_cell(CONTENT_W, 6, writer.text(caption))
+
+
+def _photobook(writer: _Pdf, asset: AssetEntry, link):
+    """One asset per page — except a video with several chosen frames, which unfolds
+    into one full page per frame, each with its timestamp and (optionally) its own
+    caption. That is what #15 asked for: full frames like photos, not a thumbnail strip.
+    """
+    base_header = "  ·  ".join(part for part in (asset.filename, asset.taken_at[:10], asset.place) if part)
+    if asset.kind == "VIDEO" and len(asset.images) > 1:
+        for position, frame in enumerate(asset.images):
+            timestamp = asset.timestamps[position] if position < len(asset.timestamps) else 0.0
+            header = f"{base_header}  ·  {timestamp:.1f} s"
+            if position < len(asset.frame_captions):
+                # Per-frame captions replace the asset caption entirely.
+                caption = asset.frame_captions[position]
+            else:
+                # Without per-frame captions the asset caption opens the sequence once.
+                caption = asset.caption if position == 0 else ""
+            _photobook_page(writer, frame, header, caption, link if position == 0 else None)
+        return
+    first_image = asset.images[0] if asset.images else b""
+    _photobook_page(writer, first_image, base_header, asset.caption, link)
 
 
 def _grid(writer: _Pdf, assets: list[AssetEntry], links: list):
@@ -394,9 +422,13 @@ def build(doc: Document) -> bytes:
             "PDF export needs fpdf2: `pip install fpdf2` (it ships with immich-photo-manager since 1.7.1)."
         )
     writer = _Pdf(doc)
-    _cover(writer)
-    links = _index(writer)
-    _places(writer)
+    if doc.with_cover:
+        _cover(writer)
+    # Without an index page there is nothing to click, but the asset pages still
+    # expect one link each, so dangling links stand in for the real ones.
+    links = _index(writer) if doc.with_index else [writer.pdf.add_link() for _ in doc.assets]
+    if doc.with_places:
+        _places(writer)
     if doc.layout == "grid":
         _grid(writer, doc.assets, links)
     elif doc.layout == "photobook":

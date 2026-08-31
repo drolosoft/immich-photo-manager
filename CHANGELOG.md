@@ -6,6 +6,14 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.12.0] — 2026-08-31
+
+### Added
+- **Photobook: one full page per chosen video frame**: with `layout="photobook"`, a video with several extracted frames unfolds into one full page per frame — each with its timestamp in the metadata line — instead of a single page with a thumbnail strip. Photos and single-frame videos keep the one-page look. Asked for in #15 ("full frames like photos"). The `detail` layout keeps the compact frame strip with timestamps.
+- **`frame_captions` in `export_pdf`**: `{asset_id: [text, ...]}`, one caption per chosen frame in `frame_times` order; the photobook prints each caption on its frame's page. Without it, the asset caption opens the sequence on the first frame page.
+- **Optional front matter**: `cover`, `index` and `places` booleans in `export_pdf` (all default true) turn each opening page off — a print-ready photobook can now be bare pages only.
+- **`options` in `get_export_preview`**: the preview now lists every `export_pdf` choice with its default, so the model can ask the user how they want their PDF (layout, cover pages, video moments, captions) before building it — or skip straight to defaults when the user already said.
+
 ## [v1.11.0] — 2026-08-31
 
 ### Added
@@ -170,6 +178,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.12.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.0
 [v1.11.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.11.0
 [v1.10.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.10.0
 [v1.9.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.9.0

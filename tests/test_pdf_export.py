@@ -177,10 +177,11 @@ def test_render_map_returns_none_when_tiles_fail():
 
 
 def test_photobook_layout_one_full_page_per_asset():
-    """Photobook: one asset per page, the image as large as the page allows, caption under it."""
+    """Photobook: one page per photo — and one page per frame for a multi-frame video."""
     doc = _doc(layout="photobook")
     reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
-    assert len(reader.pages) == 3 + 4
+    # 3 front-matter pages, 3 photo pages, and the 6-frame video unfolds into 6 pages.
+    assert len(reader.pages) == 3 + 3 + 6
     page_text = reader.pages[3].extract_text()
     assert "Caption 0" in page_text
     # The metadata block shrinks to one line in a photobook; no field labels.
@@ -256,3 +257,59 @@ def test_photobook_centers_a_landscape_image_vertically():
     image_center = bottom + drawn_h / 2
     area_center = (area_top + area_bottom) / 2
     assert abs(image_center - area_center) < 15  # within ~5 mm of the area's middle
+
+
+# ── v1.12.0: photobook explodes a video into one page per chosen frame ──
+
+
+def _video_doc(frame_count, frame_captions=None):
+    from PIL import Image as PILImage
+    frames = []
+    for position in range(frame_count):
+        buffer = io.BytesIO()
+        PILImage.new("RGB", (64, 40), "navy").save(buffer, format="PNG")
+        frames.append(buffer.getvalue())
+    video = AssetEntry(
+        id="v1", kind="VIDEO", filename="clip.mp4", taken_at="2026-01-09", place="", camera="",
+        caption="The whole story.", images=frames, timestamps=[float(position * 10) for position in range(frame_count)],
+        frame_captions=frame_captions or [],
+    )
+    return Document(title="T", subtitle="s", source_url="http://immich", version="1.12.0",
+                    layout="photobook", assets=[video], places=[], map_png=None)
+
+
+def test_photobook_gives_each_video_frame_its_own_page():
+    reader = PdfReader(io.BytesIO(pdf_export.build(_video_doc(3))))
+    assert len(reader.pages) == 3 + 3  # cover, index, places, one page per frame
+    assert "The whole story." in reader.pages[3].extract_text()  # asset caption on the first frame page
+    assert "20.0 s" in reader.pages[5].extract_text()  # each page carries its timestamp
+
+
+def test_photobook_frame_captions_go_one_per_page():
+    captions = ["Sunset over the sea.", "Dusk lights.", "The moon leaves."]
+    reader = PdfReader(io.BytesIO(pdf_export.build(_video_doc(3, captions))))
+    assert "Dusk lights." in reader.pages[4].extract_text()
+    assert "The moon leaves." in reader.pages[5].extract_text()
+    assert "Dusk lights." not in reader.pages[3].extract_text()
+
+
+# ── v1.12.0: cover, index and places pages are optional ─────
+
+
+def test_front_matter_pages_can_be_turned_off():
+    doc = _doc(layout="photobook", photo_count=1, with_video=False)
+    doc.with_cover = False
+    doc.with_index = False
+    doc.with_places = False
+    reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
+    assert len(reader.pages) == 1  # just the photo page, nothing else
+    assert "Caption 0" in reader.pages[0].extract_text()
+
+
+def test_index_off_keeps_cover_and_places():
+    doc = _doc(photo_count=2, with_video=False)
+    doc.with_index = False
+    reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
+    assert len(reader.pages) == 2 + 2  # cover, places, two detail pages
+    assert "Lab Album" in reader.pages[0].extract_text()
+    assert "Barcelona" in reader.pages[1].extract_text()

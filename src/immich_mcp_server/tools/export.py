@@ -196,9 +196,11 @@ async def _photo_bytes(client, entry: AssetEntry, image_size: str, notes: list[s
 
 
 async def _asset_entry(client, raw: dict, image_size: str, frames: int, interval: float,
-                       frame_size: str, times: list[float], notes: list[str], captions: dict) -> AssetEntry:
+                       frame_size: str, times: list[float], notes: list[str], captions: dict,
+                       per_frame: list[str]) -> AssetEntry:
     """Build the entry for one asset: metadata, then frames for a video or the poster/preview."""
     entry = _entry_from_asset(raw, captions)
+    entry.frame_captions = per_frame
     wants_frames = entry.kind == "VIDEO" and (frames > 0 or interval > 0 or bool(times))
     if wants_frames and await _attach_video_frames(client, entry, frames, interval, frame_size, times, notes):
         return entry
@@ -262,11 +264,41 @@ def _count_pages(pdf: bytes) -> int:
         return pdf.count(b"/Type /Page") - pdf.count(b"/Type /Pages")
 
 
+# Every export_pdf choice, phrased so the model can relay them as questions when
+# the user asked for "a PDF" without saying how they want it.
+EXPORT_OPTIONS = {
+    "layout": "detail (one asset per page with metadata; videos show a frame strip), "
+              "grid (six per page), photobook (full-page image; a video with several "
+              "chosen frames gets one full page per frame). Default: detail.",
+    "cover": "Cover page with title and first image. Default: on.",
+    "index": "Clickable index page, one line per asset. Default: on.",
+    "places": "Places page (countries/cities table, optional map). Default: on.",
+    "title": "Cover title. Default: album name or 'Immich export <date>'.",
+    "captions": "One text per asset, written after looking at the images. Default: none.",
+    "frames_per_video": "Evenly spaced frames per video, 0-120. Default: 4.",
+    "frame_interval": "One frame every N seconds instead. Default: off.",
+    "frame_times": "Exact seconds per video, for hand-picked moments. Default: none.",
+    "frame_captions": "One caption per chosen frame (photobook prints each on its page). Default: none.",
+    "image_size": "preview (1440px), thumbnail, or original for photos (print quality). Default: preview.",
+    "frame_size": "auto, preview or thumbnail for video frames in the PDF. Default: auto.",
+    "language": "en or es for the fixed page labels. Default: en.",
+    "map": "OpenStreetMap map on the Places page (needs GPS data). Default: off.",
+    "output_path": "Where to write the file. Default: ~/Desktop/<title>.pdf, never overwritten.",
+    "return_base64": "Also return the PDF bytes into the conversation. Default: off (expensive).",
+}
+
+
 @mcp.tool()
 async def get_export_preview(ctx: Context, album_id: str = "", asset_ids: list[str] = [], limit: int = 100) -> str:
     """List what export_pdf would include (id, type, filename, date, place, people,
     video duration) so you know which assets exist before looking at images and
     writing captions. Pass exactly one of album_id / asset_ids. Read-only.
+
+    The result also carries `options`: every choice export_pdf accepts, with its
+    default. When the user asked for a PDF without saying how they want it, show
+    them these choices and ask (layout, cover pages, which video moments, captions)
+    before exporting; when they did give specs, or just want "a PDF, defaults are
+    fine", export directly.
 
     Args:
         album_id: Album UUID, or
@@ -283,6 +315,7 @@ async def get_export_preview(ctx: Context, album_id: str = "", asset_ids: list[s
         "title": title,
         "count": len(raw),
         "assets": [_summary(asset) for asset in raw],
+        "options": EXPORT_OPTIONS,
         "warnings": notes,
     })
 
@@ -291,8 +324,10 @@ async def get_export_preview(ctx: Context, album_id: str = "", asset_ids: list[s
 async def export_pdf(
     ctx: Context, album_id: str = "", asset_ids: list[str] = [], output_path: str = "",
     title: str = "", captions: dict = {}, layout: str = "detail", frames_per_video: int = 4,
-    frame_interval: float = 0.0, frame_times: dict = {}, image_size: str = "preview",
-    frame_size: str = "auto", language: str = "en", map: bool = False, limit: int = 100,
+    frame_interval: float = 0.0, frame_times: dict = {}, frame_captions: dict = {},
+    image_size: str = "preview",
+    frame_size: str = "auto", language: str = "en", map: bool = False,
+    cover: bool = True, index: bool = True, places: bool = True, limit: int = 100,
     return_base64: bool = False,
 ) -> str:
     """Build a PDF (cover, index, places, one section per asset) from an album or a
@@ -300,7 +335,8 @@ async def export_pdf(
     camera, people, tags) is always included; pass `captions` {asset_id: text} with
     what you saw to add your analysis. Video frames go straight into the PDF and cost
     no tokens (up to 120 per video). The PDF never enters the conversation unless
-    return_base64=True.
+    return_base64=True. If the user asked for a PDF without saying how they want
+    it, call get_export_preview first and ask them about the choices it lists.
 
     Args:
         album_id: Album UUID, or asset_ids: explicit asset UUIDs (exactly one of the two).
@@ -308,13 +344,15 @@ async def export_pdf(
         title: Cover title (default: album name or "Immich export <date>").
         captions: {asset_id: text} written after looking at the images.
         layout: 'detail' (one asset per page with its data, default), 'grid' (six per page)
-            or 'photobook' (one asset per page, image as large as it fits, caption under it;
-            pair it with frames_per_video=1 so a video reads like a photo).
+            or 'photobook' (one asset per page, image as large as it fits, caption under
+            it; a video with several chosen frames unfolds into one full page per frame).
         frames_per_video: Frames per video, evenly spaced (0-120, default 4; 0 = poster only).
         frame_interval: One frame every N seconds instead of frames_per_video (same 120 cap).
         frame_times: {asset_id: [seconds, ...]} exact moments for specific videos, chosen
             after looking at their frames ("the representative frame"). Wins over
             frames_per_video/frame_interval for the listed videos; others keep the spread.
+        frame_captions: {asset_id: [text, ...]} one caption per extracted frame, in frame
+            order (photobook prints each on its frame's page; other layouts ignore them).
         image_size: 'preview' (default, 1440px), 'thumbnail', or 'original' for photos:
             the stored file, print quality, re-encoded to at most 3000px (a format
             the server cannot decode, like some HEIC, falls back to preview with a note).
@@ -323,6 +361,8 @@ async def export_pdf(
         language: 'en' (default) or 'es' for the fixed labels on the pages (Index,
             Places, Camera, page numbers); captions stay in whatever language you wrote.
         map: Add an OpenStreetMap map to the Places page (fetches tiles from tile.openstreetmap.org).
+        cover, index, places: Include each front-matter page (all default True;
+            turn them off for a print-ready photobook of bare pages).
         limit: Max assets (1-500, default 100).
         return_base64: Also return the PDF bytes (skipped above 2 MB; every MB is
             roughly 350k tokens in the conversation).
@@ -356,7 +396,9 @@ async def export_pdf(
     for asset in raw:
         try:
             times = [float(moment) for moment in (frame_times or {}).get(asset.get("id"), [])]
-            entries.append(await _asset_entry(client, asset, image_size, frames, interval, frame_size, times, notes, captions or {}))
+            per_frame = [str(text) for text in (frame_captions or {}).get(asset.get("id"), [])]
+            entries.append(await _asset_entry(client, asset, image_size, frames, interval,
+                                              frame_size, times, notes, captions or {}, per_frame))
         except Exception as exc:
             skipped.append({"id": asset.get("id"), "reason": str(exc)[:200]})
     if not entries:
@@ -381,6 +423,9 @@ async def export_pdf(
         assets=entries,
         places=pdf_export.places_table(entries),
         map_png=map_png,
+        with_cover=cover,
+        with_index=index,
+        with_places=places,
     )
     try:
         pdf = await asyncio.to_thread(pdf_export.build, doc)

@@ -300,6 +300,9 @@ class LiveHarness:
         """PDF export."""
         data, _, failed, _ = await self.call("get_export_preview", album_id=ALB)
         rec("get_export_preview", self.okj(data, failed) and data.get("count") == 5, f"count={data.get('count') if isinstance(data, dict) else data}")
+        options = data.get("options") if isinstance(data, dict) else {}
+        rec("get_export_preview(options)", isinstance(options, dict) and "layout" in options and "cover" in options,
+            f"{len(options or {})} export choices listed")
         out = os.path.join(cache, f"lab-{TAG}.pdf")
         data, _, failed, _ = await self.call("export_pdf", album_id=ALB, output_path=out, frames_per_video=3,
                                 captions={PHOTO1: "harness caption"})
@@ -338,6 +341,17 @@ class LiveHarness:
             "export_pdf(frame_times)",
             self.okj(data, failed) and data.get("assets_included") == 1 and not data.get("warnings"),
             f"pages={data.get('pages') if isinstance(data, dict) else 0} warnings={data.get('warnings') if isinstance(data, dict) else '?'}",
+        )
+        data, _, failed, _ = await self.call(
+            "export_pdf", asset_ids=[VIDEO], output_path=out,
+            layout="photobook", frame_times={VIDEO: [0.5, 1.5, 2.5]},
+            frame_captions={VIDEO: ["one", "two", "three"]},
+            cover=False, index=False, places=False,
+        )
+        rec(
+            "export_pdf(frame pages, no front matter)",
+            self.okj(data, failed) and data.get("pages") == 3 and not data.get("warnings"),
+            f"pages={data.get('pages') if isinstance(data, dict) else 0} (3 chosen frames, front matter off)",
         )
         data, images, failed, _ = await self.call(
             "get_video_frames", asset_id=VIDEO, interval=1.0, sheet=True,
