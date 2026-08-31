@@ -171,3 +171,49 @@ def test_render_map_returns_none_when_tiles_fail():
     def fetch(zoom, tile_x, tile_y): raise RuntimeError("offline")
     assert pdf_export.render_map([(41.4, 2.2)], fetch) is None
     assert pdf_export.render_map([], fetch) is None
+
+
+# ── v1.8.0: photobook layout ────────────────────────────────
+
+
+def test_photobook_layout_one_full_page_per_asset():
+    """Photobook: one asset per page, the image as large as the page allows, caption under it."""
+    doc = _doc(layout="photobook")
+    reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
+    assert len(reader.pages) == 3 + 4
+    page_text = reader.pages[3].extract_text()
+    assert "Caption 0" in page_text
+    # The metadata block shrinks to one line in a photobook; no field labels.
+    assert "Camera:" not in page_text
+
+
+def test_photobook_image_larger_than_detail_image():
+    """A portrait image must be drawn taller on a photobook page than on a detail page.
+
+    Landscape images are width-bound on both layouts; the photobook's gain is
+    the vertical room (detail caps the image at 150 mm for the metadata block).
+    """
+    import re
+
+    from PIL import Image as PILImage
+
+    buffer = io.BytesIO()
+    PILImage.new("RGB", (40, 64), "red").save(buffer, format="PNG")
+    portrait = AssetEntry(
+        id="p1", kind="IMAGE", filename="p.jpg", taken_at="2026-01-01", place="", camera="",
+        caption="tall one", images=[buffer.getvalue()], timestamps=[], lat=None, lon=None,
+    )
+
+    def drawn_height(layout):
+        document = Document(
+            title="T", subtitle="s", source_url="http://immich", version="1.8.0",
+            layout=layout, assets=[portrait], places=[], map_png=None,
+        )
+        reader = PdfReader(io.BytesIO(pdf_export.build(document)))
+        content = reader.pages[3].get_contents().get_data().decode("latin-1")
+        heights = [float(match.group(2)) for match in
+                   re.finditer(r"([\d.]+) 0 0 ([\d.]+) [\d.-]+ [\d.-]+ cm", content)]
+        assert heights, "no image transform on the asset page"
+        return max(heights)
+
+    assert drawn_height("photobook") > drawn_height("detail")

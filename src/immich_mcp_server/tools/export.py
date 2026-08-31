@@ -115,7 +115,8 @@ def _entry_from_asset(raw: dict, captions: dict) -> AssetEntry:
     )
 
 
-async def _attach_video_frames(client, entry: AssetEntry, frames: int, interval: float, notes: list[str]) -> bool:
+async def _attach_video_frames(client, entry: AssetEntry, frames: int, interval: float,
+                               frame_size: str, notes: list[str]) -> bool:
     """Cut frames for a video entry into `entry.images`; True when at least one frame landed.
 
     Any failure degrades to the poster (the caller fetches it) and leaves a
@@ -124,7 +125,7 @@ async def _attach_video_frames(client, entry: AssetEntry, frames: int, interval:
     try:
         data = await client.get_video_playback(entry.id)
         result = await asyncio.to_thread(
-            video_frames.extract_frames, data, frames, "thumbnail", None, 0.0, 0.0, interval
+            video_frames.extract_frames, data, frames, frame_size, None, 0.0, 0.0, interval
         )
     except video_frames.TooManyFrames as exc:
         notes.append(f"{entry.filename}: {exc}; poster used")
@@ -146,11 +147,11 @@ async def _attach_video_frames(client, entry: AssetEntry, frames: int, interval:
 
 
 async def _asset_entry(client, raw: dict, image_size: str, frames: int, interval: float,
-                       notes: list[str], captions: dict) -> AssetEntry:
+                       frame_size: str, notes: list[str], captions: dict) -> AssetEntry:
     """Build the entry for one asset: metadata, then frames for a video or the poster/preview."""
     entry = _entry_from_asset(raw, captions)
     wants_frames = entry.kind == "VIDEO" and (frames > 0 or interval > 0)
-    if wants_frames and await _attach_video_frames(client, entry, frames, interval, notes):
+    if wants_frames and await _attach_video_frames(client, entry, frames, interval, frame_size, notes):
         return entry
     thumb = await client.get_asset_thumbnail(entry.id, image_size)
     entry.images = [base64.b64decode(thumb["data"])]
@@ -242,8 +243,8 @@ async def get_export_preview(ctx: Context, album_id: str = "", asset_ids: list[s
 async def export_pdf(
     ctx: Context, album_id: str = "", asset_ids: list[str] = [], output_path: str = "",
     title: str = "", captions: dict = {}, layout: str = "detail", frames_per_video: int = 4,
-    frame_interval: float = 0.0, image_size: str = "preview", map: bool = False,
-    limit: int = 100, return_base64: bool = False,
+    frame_interval: float = 0.0, image_size: str = "preview", frame_size: str = "auto",
+    map: bool = False, limit: int = 100, return_base64: bool = False,
 ) -> str:
     """Build a PDF (cover, index, places, one section per asset) from an album or a
     list of assets, on the machine running this server. Immich metadata (date, place,
@@ -257,10 +258,14 @@ async def export_pdf(
         output_path: Where to write (default ~/Desktop/<title>.pdf). Existing files are never overwritten.
         title: Cover title (default: album name or "Immich export <date>").
         captions: {asset_id: text} written after looking at the images.
-        layout: 'detail' (one asset per page, default) or 'grid' (six per page).
+        layout: 'detail' (one asset per page with its data, default), 'grid' (six per page)
+            or 'photobook' (one asset per page, image as large as it fits, caption under it;
+            pair it with frames_per_video=1 so a video reads like a photo).
         frames_per_video: Frames per video, evenly spaced (0-120, default 4; 0 = poster only).
         frame_interval: One frame every N seconds instead of frames_per_video (same 120 cap).
         image_size: 'preview' (default) or 'thumbnail' for photos.
+        frame_size: video frame size in the PDF: 'auto' (default: preview up to 4 frames
+            per video, thumbnail above), 'preview' or 'thumbnail'.
         map: Add an OpenStreetMap map to the Places page (fetches tiles from tile.openstreetmap.org).
         limit: Max assets (1-500, default 100).
         return_base64: Also return the PDF bytes (skipped above 2 MB; every MB is
@@ -279,10 +284,14 @@ async def export_pdf(
     # Arguments come from the model: clamp and default them rather than fail.
     frames = max(0, min(int(frames_per_video or 0), video_frames.MAX_FRAMES))
     interval = float(frame_interval or 0)
-    if layout not in ("detail", "grid"):
+    if layout not in ("detail", "grid", "photobook"):
         layout = "detail"
     if image_size not in ("thumbnail", "preview"):
         image_size = "preview"
+    # Few frames end up large on the page, so they deserve preview quality; a
+    # long strip stays at thumbnail size to keep the file reasonable.
+    if frame_size not in ("thumbnail", "preview"):
+        frame_size = "preview" if (0 < frames <= 4 and not interval) else "thumbnail"
     title = title or album_title or f"Immich export {datetime.date.today().isoformat()}"
 
     # One asset failing (a 404 preview, a broken file) is reported, not fatal.
@@ -290,7 +299,7 @@ async def export_pdf(
     skipped: list[dict] = []
     for asset in raw:
         try:
-            entries.append(await _asset_entry(client, asset, image_size, frames, interval, notes, captions or {}))
+            entries.append(await _asset_entry(client, asset, image_size, frames, interval, frame_size, notes, captions or {}))
         except Exception as exc:
             skipped.append({"id": asset.get("id"), "reason": str(exc)[:200]})
     if not entries:

@@ -87,7 +87,7 @@ class Document:
     subtitle: str
     source_url: str
     version: str
-    layout: str = "detail"  # "detail" | "grid"
+    layout: str = "detail"  # "detail" | "grid" | "photobook"
     assets: list[AssetEntry] = field(default_factory=list)
     places: list[tuple[str, str, int]] = field(default_factory=list)
     map_png: bytes | None = None
@@ -311,6 +311,30 @@ def _detail(writer: _Pdf, asset: AssetEntry, link):
         writer.pdf.multi_cell(CONTENT_W, 6, writer.text(asset.caption))
 
 
+
+def _photobook(writer: _Pdf, asset: AssetEntry, link):
+    """One asset per page, the image as large as the page allows, one line of metadata and the caption.
+
+    The image is fitted, never cropped (letterbox/pillarbox), so nothing at the
+    edges is lost; a photobook of cars must not cut off wheels or plates.
+    """
+    writer.pdf.add_page()
+    writer.pdf.set_link(link, page=writer.pdf.page)
+    caption_space = 34.0
+    image_height = A4_H - 2 * MARGIN - caption_space
+    drawn = 0.0
+    if asset.images:
+        drawn = writer.image(asset.images[0], MARGIN, MARGIN, CONTENT_W, image_height)
+    top = MARGIN + min(drawn, image_height) + 4
+    writer.pdf.set_xy(MARGIN, top)
+    writer.font(8)
+    header = "  ·  ".join(part for part in (asset.filename, asset.taken_at[:10], asset.place) if part)
+    writer.pdf.cell(CONTENT_W, 4, writer.text(header), new_x="LMARGIN", new_y="NEXT")
+    if asset.caption:
+        writer.font(11)
+        writer.pdf.multi_cell(CONTENT_W, 6, writer.text(asset.caption))
+
+
 def _grid(writer: _Pdf, assets: list[AssetEntry], links: list):
     """Six assets per page: a thumbnail, the filename and date, the caption's first line."""
     per_page = GRID_COLS * GRID_ROWS
@@ -345,6 +369,9 @@ def build(doc: Document) -> bytes:
     _places(writer)
     if doc.layout == "grid":
         _grid(writer, doc.assets, links)
+    elif doc.layout == "photobook":
+        for asset, link in zip(doc.assets, links):
+            _photobook(writer, asset, link)
     else:
         for asset, link in zip(doc.assets, links):
             _detail(writer, asset, link)

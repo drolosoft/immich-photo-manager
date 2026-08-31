@@ -245,3 +245,35 @@ async def test_export_pdf_no_fpdf(fake_ctx, tmp_path, monkeypatch):
     monkeypatch.setattr(pdf_export, "_fpdf_available", lambda: False)
     data = json.loads(await server.export_pdf(fake_ctx(StubClient()), asset_ids=["a1"], output_path=str(tmp_path / "n.pdf")))
     assert "fpdf2" in data["error"]
+
+
+# ── v1.8.0: frame size in the PDF and the photobook layout ──
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_single_frame_uses_preview_size(fake_ctx, tmp_path, monkeypatch):
+    """With few frames per video the PDF gets preview-sized frames, not 250px thumbnails."""
+    from immich_mcp_server import video_frames
+    seen_sizes = []
+
+    def fake_frames(data, count=6, size="thumbnail", backend=None, start=0.0, end=0.0, interval=0.0):
+        seen_sizes.append(size)
+        return _fake_frames(data, count, size, backend, start, end, interval)
+
+    monkeypatch.setattr(video_frames, "extract_frames", fake_frames)
+    await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "a.pdf"),
+                            frames_per_video=1)
+    await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "b.pdf"),
+                            frames_per_video=12)
+    await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "c.pdf"),
+                            frames_per_video=12, frame_size="preview")
+    assert seen_sizes == ["preview", "thumbnail", "preview"]
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_accepts_photobook_layout(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    data = json.loads(await server.export_pdf(fake_ctx(StubClient()), album_id="alb",
+                                              output_path=str(tmp_path / "p.pdf"), layout="photobook"))
+    assert data["assets_included"] == 3 and data["pages"] == 3 + 3  # cover, index, places, one page each
