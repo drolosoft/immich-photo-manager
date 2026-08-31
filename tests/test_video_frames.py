@@ -141,6 +141,23 @@ def test_no_backend_names_both_options(monkeypatch):
 
 # ── the tools ───────────────────────────────────────────────
 
+def _real_jpeg():
+    from PIL import Image as PILImage
+
+    buffer = io.BytesIO()
+    PILImage.new("RGB", (250, 140), "navy").save(buffer, format="JPEG")
+    return buffer.getvalue()
+
+
+JPEG_REAL = _real_jpeg()
+
+
+def _fake_extract_real_jpeg(data, count=6, size="thumbnail", backend=None, start=0.0, end=0.0, interval=0.0):
+    total = int(60 / interval) if interval else count
+    return {"duration": 60.0, "backend": "stub",
+            "frames": [video_frames._entry(float(position), JPEG_REAL) for position in range(total)]}
+
+
 JPEG = b"\xff\xd8\xff\xe0FAKE"
 JPEG_B64 = base64.b64encode(JPEG).decode("ascii")
 
@@ -332,3 +349,28 @@ def test_extract_frames_at_clamps_to_the_video(clip):
 def test_extract_frames_at_refuses_more_than_the_cap(clip):
     with pytest.raises(video_frames.TooManyFrames):
         video_frames.extract_frames_at(clip, [0.1] * 121, size="thumbnail")
+
+
+# ── v1.11.0: contact sheets ─────────────────────────────────
+
+
+def test_contact_sheet_packs_frames_into_grids():
+    frames = [video_frames._entry(float(position), JPEG_REAL) for position in range(35)]
+    sheets = video_frames.contact_sheets(frames, columns=6, per_sheet=30)
+    assert len(sheets) == 2  # 30 + 5
+    from PIL import Image
+    first = Image.open(io.BytesIO(base64.b64decode(sheets[0]["data"])))
+    assert first.size[0] > first.size[1]  # six columns of small frames: wider than tall
+    assert sheets[0]["type"] == "image/jpeg"
+    assert sheets[0]["timestamps"] == [float(position) for position in range(30)]
+
+
+@pytest.mark.asyncio
+async def test_get_video_frames_sheet_returns_one_image_and_skips_the_gate(fake_ctx, monkeypatch):
+    """sheet=true: many frames, one composed image, no confirmation below the cap."""
+    monkeypatch.setattr(video_frames, "probe_duration", lambda data: 60.0)
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_extract_real_jpeg)
+    result = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1",
+                                           interval=1.0, sheet=True)
+    assert isinstance(result, list) and len(result) == 2  # 60 frames → two sheets of 30
+    assert all(isinstance(item, Image) for item in result)

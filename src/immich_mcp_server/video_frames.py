@@ -268,6 +268,41 @@ def probe_duration(data: bytes) -> float:
         os.unlink(path)
 
 
+def contact_sheets(frames: list[dict], columns: int = 6, per_sheet: int = 30) -> list[dict]:
+    """Pack frame entries into contact-sheet images, the timestamp burned under each cell.
+
+    Sixty frames become two images instead of sixty, which is the difference
+    between a model being able to skim a long video and not affording to.
+    Returns entries shaped like frames plus a `timestamps` list per sheet.
+    """
+    import io
+
+    from PIL import Image, ImageDraw
+
+    cell_w, cell_h, label_h = 250, 141, 16
+    sheets = []
+    for start in range(0, len(frames), per_sheet):
+        batch = frames[start:start + per_sheet]
+        rows = (len(batch) + columns - 1) // columns
+        canvas = Image.new("RGB", (columns * cell_w, rows * (cell_h + label_h)), "white")
+        draw = ImageDraw.Draw(canvas)
+        for position, frame in enumerate(batch):
+            image = Image.open(io.BytesIO(base64.b64decode(frame["data"]))).convert("RGB")
+            image.thumbnail((cell_w, cell_h))
+            left = (position % columns) * cell_w
+            top = (position // columns) * (cell_h + label_h)
+            canvas.paste(image, (left, top))
+            draw.text((left + 4, top + cell_h + 2), f"{frame['timestamp']:.1f}s", fill="black")
+        buffer = io.BytesIO()
+        canvas.save(buffer, format="JPEG", quality=85)
+        sheets.append({
+            "data": base64.b64encode(buffer.getvalue()).decode("ascii"),
+            "type": "image/jpeg",
+            "timestamps": [frame["timestamp"] for frame in batch],
+        })
+    return sheets
+
+
 def extract_frames_at(data: bytes, times: list[float], size: str = "thumbnail",
                       backend: str | None = None) -> dict:
     """Decode frames at exact moments (seconds), for a caller that already chose them.

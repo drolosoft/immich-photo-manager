@@ -3,6 +3,8 @@
 import argparse
 import os
 
+from immich_mcp_server import __version__
+
 
 def _resolve_transport(cli_value: str | None, default_transport: str) -> str:
     """Resolve the transport with CLI flag > env var > default precedence."""
@@ -15,6 +17,13 @@ def _run(default_transport: str = "http"):
     Precedence: --transport CLI flag > MCP_TRANSPORT env var > default_transport.
     """
     parser = argparse.ArgumentParser(description="Immich MCP Server")
+    # uvx keeps its environments under content-hashed paths, so "which version is
+    # this?" cannot be answered from outside; this flag answers it in one call.
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"immich-photo-manager {__version__}",
+    )
     parser.add_argument(
         "--transport",
         choices=("stdio", "http"),

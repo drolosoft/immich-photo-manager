@@ -45,6 +45,7 @@ async def _video_plan(ctx: Context, asset_id: str, count: int, size: str,
 async def get_video_frames(
     ctx: Context, asset_id: str, count: int = 6, size: str = "thumbnail",
     start: float = 0.0, end: float = 0.0, interval: float = 0.0, confirm: bool = False,
+    sheet: bool = False,
 ) -> list[Image] | str:
     """Get frames of a video as image blocks, to "watch" a clip. Immich keeps one
     poster per video; this downloads the video and cuts frames locally (PyAV, a
@@ -63,15 +64,21 @@ async def get_video_frames(
         end: Segment end in seconds (0 = to the end).
         interval: One frame every N seconds instead of count (1 = one per second, the maximum granularity).
         confirm: Required (true) when more than 12 frames would be produced; ask the user first.
+        sheet: Pack the frames into contact sheets (30 per image, timestamps burned in):
+            a long video becomes one or two images instead of dozens, so no
+            confirmation is needed. Use it to skim, then cut the moments that matter.
 
     Returns: JPEG image blocks in time order, or JSON (confirmation plan / error).
     """
     try:
-        result, gate = await _video_plan(ctx, asset_id, count, size, start, end, interval, confirm)
+        result, gate = await _video_plan(ctx, asset_id, count, size, start, end, interval,
+                                         confirm or sheet)
     except video_frames.NoVideoBackend as exc:
         return json.dumps({"error": str(exc)})
     if gate is not None:
         return json.dumps(gate)
+    if sheet:
+        return [_entry_to_image(entry) for entry in video_frames.contact_sheets(result["frames"])]
     return [_entry_to_image(frame) for frame in result["frames"]]
 
 
