@@ -1,0 +1,63 @@
+# 🎬 Video frames and a PDF photobook, from one real clip
+
+> **"With the upload of the files, Claude works through the videos frame by frame. Is there a way to make this work similar as well?"** Someone asked this in [issue #15](https://github.com/drolosoft/immich-photo-manager/issues/15), and versions 1.6.0 to 1.11.0 came out of that conversation. This page runs the whole flow on one real video, prompt by prompt, against Immich 2.7.5 and 3.1.0 with the same lab that lives in [`tests/live/`](../../tests/live/).
+
+## The test video
+
+[`luna.mov`](assets/12/luna.mov) (1.7 MB, 24 seconds, shot on an iPad from a balcony in Barcelona): a time-lapse that starts at sunset, goes dark, and then the moon rises between clouds over the sea. Short, but it changes completely from start to end, which is exactly what a single poster thumbnail cannot show. Immich keeps one poster per video and no per-frame previews; the plugin downloads the file through the Immich API and cuts the frames on your machine.
+
+## 1. Look at the video
+
+```
+What happens in the video luna.mov?
+```
+
+Claude finds the asset and calls `get_video_frames` with the default 6 frames. Each frame is one image in the conversation (~1.6k tokens as a thumbnail), so the default stays small. These are the kind of frames it gets, evenly spaced, never the black frame at second zero:
+
+<p align="center">
+<img src="assets/12/01_001.0s.jpg" width="160"> <img src="assets/12/05_008.8s.jpg" width="160"> <img src="assets/12/08_014.7s.jpg" width="160"> <img src="assets/12/10_018.7s.jpg" width="160">
+</p>
+
+> A time-lapse from a balcony over a beach: sunset with pink clouds, then dusk, then the moon rises between clouds and lights a path on the sea before leaving the frame at the top.
+
+## 2. Skim a long video cheaply
+
+For a five-minute video, sixty frames as sixty images would flood the context. Ask for a contact sheet instead:
+
+```
+Skim that video: one frame every 2 seconds, as a contact sheet
+```
+
+`get_video_frames(interval=2, sheet=true)` packs everything into grid images, 30 frames per sheet with the timestamp burned under each, so the whole skim costs one or two images:
+
+<p align="center"><img src="assets/12/contact-sheet.jpg" width="700"></p>
+
+## 3. Zoom into a moment
+
+```
+Cut 8 frames between second 8 and 12
+```
+
+`start`/`end` narrow the segment; `interval=1` goes down to one frame per second. Above 12 frames the tool answers with a plan (`frames_planned`, `estimated_tokens`) instead of extracting, so the user decides before the tokens are spent. The hard cap is 120 frames per call. Vertical phone videos come out upright: phones store them sideways with a rotation flag, and the plugin applies it (1.8.0).
+
+## 4. The PDF photobook
+
+```
+Make a PDF photobook of this video. Pick the best moment for the page.
+```
+
+Claude looks at the frames, chooses the moment (`frame_times`), writes a caption, and `export_pdf` builds the file on your machine — the PDF never enters the conversation:
+
+- `layout="photobook"`: one asset per page, the image as large as the page allows, fitted without cropping (letterbox, never a crop that cuts edges off), the caption under it.
+- Frames that go into the PDF cost no tokens, up to 120 per video; photos can go in at `image_size="original"` (print quality, capped at 3000px).
+- Live Photos count once, `language="es"` prints the page labels in Spanish, and the Places page draws an OpenStreetMap map when the assets carry GPS.
+
+The result for this clip: [`luna-photobook.pdf`](assets/12/luna-photobook.pdf) — cover, index, places (the video's EXIF says Barcelona), and the moon page with its caption.
+
+## What leaves your network
+
+The video goes from Immich to the machine running the plugin, where the frames are cut. Only the frames the model looks at reach the Claude API, like any photo it already handles. The PDF stays on disk unless you ask for it in base64, and the map tiles are fetched from tile.openstreetmap.org only with `map=true`.
+
+---
+
+*Every claim above runs in the live kit: [`tests/live/`](../../tests/live/) drives all 57 tools against real Immich 2.7.5 and 3.1.0 before each release.*
