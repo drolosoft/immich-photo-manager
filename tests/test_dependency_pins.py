@@ -8,7 +8,7 @@ of truth per dependency keeps the two install routes from drifting apart again.
 """
 
 import pathlib
-import tomllib
+import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -22,9 +22,12 @@ def _requirement_name(line):
 
 
 def test_requirements_match_pyproject_bounds():
-    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    # Textual parse instead of tomllib, which is stdlib only from Python 3.11
+    # and this suite still runs on 3.10.
+    pyproject = (ROOT / "pyproject.toml").read_text()
+    block = re.search(r"^dependencies = \[(.*?)^\]", pyproject, re.S | re.M).group(1)
     declared = {_requirement_name(dep): dep.replace(" ", "")
-                for dep in pyproject["project"]["dependencies"]}
+                for dep in re.findall(r'"([^"]+)"', block)}
 
     lines = [line.strip() for line in (ROOT / "src" / "requirements.txt").read_text().splitlines()
              if line.strip() and not line.strip().startswith("#")]
