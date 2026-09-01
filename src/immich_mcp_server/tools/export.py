@@ -275,6 +275,7 @@ EXPORT_OPTIONS = {
     "places": "Places page (countries/cities table, optional map). Default: on.",
     "footer": "full (plugin name, server and page number), pages (just the page number), or none. Default: full.",
     "header": "Repeat the title at the top of every page except the cover. Default: off.",
+    "videos_position": "Where the video pages go: mixed with the photos (default), first, or last.",
     "title": "Cover title. Default: album name or 'Immich export <date>'.",
     "captions": "One text per asset, written after looking at the images. Default: none.",
     "frames_per_video": "Evenly spaced frames per video, 0-120. Default: 4.",
@@ -330,7 +331,7 @@ async def export_pdf(
     image_size: str = "preview",
     frame_size: str = "auto", language: str = "en", map: bool = False,
     cover: bool = True, index: bool = True, places: bool = True, footer: str = "full",
-    header: bool = False, limit: int = 100,
+    header: bool = False, videos_position: str = "mixed", limit: int = 100,
     return_base64: bool = False,
 ) -> str:
     """Build a PDF (cover, index, places, one section per asset) from an album or a
@@ -370,6 +371,8 @@ async def export_pdf(
             (just the page number) or 'none'.
         header: Repeat the title at the top of every page except the cover
             (default False).
+        videos_position: Where the video pages (frame strips or frame pages) go:
+            'mixed' with the photos in the general order (default), 'first' or 'last'.
         limit: Max assets (1-500, default 100).
         return_base64: Also return the PDF bytes (skipped above 2 MB; every MB is
             roughly 350k tokens in the conversation).
@@ -410,6 +413,13 @@ async def export_pdf(
             skipped.append({"id": asset.get("id"), "reason": str(exc)[:200]})
     if not entries:
         return json.dumps({"error": "No asset could be fetched.", "assets_skipped": skipped})
+
+    # The video pages (frame strips, frame pages) can open or close the PDF
+    # instead of sitting wherever the general order drops them.
+    if videos_position in ("first", "last"):
+        videos = [entry for entry in entries if entry.kind == "VIDEO"]
+        photos_only = [entry for entry in entries if entry.kind != "VIDEO"]
+        entries = videos + photos_only if videos_position == "first" else photos_only + videos
 
     map_png = await _render_places_map(client, entries, notes) if map else None
 

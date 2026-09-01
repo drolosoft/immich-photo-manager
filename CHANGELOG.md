@@ -6,6 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.12.3] — 2026-09-01
+
+### Added
+- **`videos_position` in `export_pdf`**: where the video pages (the frame strip in `detail`, the frame pages in `photobook`) go — `"mixed"` with the photos in the general order (default, the previous behaviour), `"first"` or `"last"`. Offered in `get_export_preview`'s options, so the model asks instead of always dropping the video at the end.
+
 ## [v1.12.2] — 2026-09-01
 
 ### Added
@@ -192,6 +197,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.12.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.3
 [v1.12.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.2
 [v1.12.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.1
 [v1.12.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.0

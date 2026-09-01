@@ -445,3 +445,39 @@ async def test_export_pdf_footer_and_header_reach_the_pages(fake_ctx, tmp_path):
     page_text = PdfReader(str(tmp_path / "f.pdf")).pages[0].extract_text()
     assert "immich-photo-manager" not in page_text and "page" not in page_text
     assert "Bare book" in page_text
+
+
+# ── v1.12.3: where the video pages go ───────────────────────
+
+
+@pytest.mark.asyncio
+async def test_videos_position_first_puts_the_strip_page_before_the_photos(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    data = json.loads(await server.export_pdf(
+        fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "v.pdf"),
+        videos_position="first",
+    ))
+    from pypdf import PdfReader
+    reader = PdfReader(str(tmp_path / "v.pdf"))
+    assert data["assets_included"] == 3
+    assert "3.jpg" in reader.pages[3].extract_text()  # first asset page is the video (the stub names it 3.jpg)
+
+
+@pytest.mark.asyncio
+async def test_videos_position_last_and_default_mixed(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    json.loads(await server.export_pdf(
+        fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "w.pdf"),
+        videos_position="last",
+    ))
+    from pypdf import PdfReader
+    reader = PdfReader(str(tmp_path / "w.pdf"))
+    assert "3.jpg" in reader.pages[-1].extract_text()  # video page closes the document
+
+
+@pytest.mark.asyncio
+async def test_options_catalogue_offers_videos_position(fake_ctx):
+    data = json.loads(await server.get_export_preview(fake_ctx(StubClient()), album_id="alb"))
+    assert "videos_position" in data["options"]
