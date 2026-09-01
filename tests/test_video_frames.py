@@ -15,7 +15,7 @@ import subprocess
 import httpx
 import pytest
 import respx
-from mcp.server.fastmcp import Image
+from mcp.server.mcpserver import Image
 
 from immich_mcp_server import server, video_frames
 from immich_mcp_server.immich_client import ImmichClient
@@ -219,7 +219,7 @@ async def test_get_video_frames_returns_image_blocks(fake_ctx, monkeypatch):
     result = await server.get_video_frames(fake_ctx(StubClient()), asset_id="vid1", count=4)
     assert [type(item) for item in result] == [Image] * 4
     assert result[0].data == JPEG
-    assert result[0].to_image_content().mimeType == "image/jpeg"
+    assert result[0].to_image_content().mime_type == "image/jpeg"
 
 
 @pytest.mark.asyncio

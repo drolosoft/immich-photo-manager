@@ -36,6 +36,11 @@ def rec(tool, ok, note=""):
     print(("✅" if ok else "❌"), f"{tool:26s}", str(note)[:160], flush=True)
 
 
+def image_mime(block):
+    """Mime type of an image content block; SDK v2 renamed mimeType to mime_type."""
+    return getattr(block, "mime_type", None) or getattr(block, "mimeType", None)
+
+
 class LiveHarness:
     """Drives every tool over one MCP session, one method per area, recording results with `rec`.
 
@@ -58,7 +63,9 @@ class LiveHarness:
             data = json.loads(txt) if txt else None
         except Exception:
             data = txt
-        err = res.isError or (isinstance(data, dict) and "error" in data)
+        # SDK v2 renamed CallToolResult.isError to is_error; accept both eras.
+        is_error = getattr(res, "is_error", None) or getattr(res, "isError", None)
+        err = bool(is_error) or (isinstance(data, dict) and "error" in data)
         return data, imgs, err, txt
 
     @staticmethod
@@ -246,14 +253,14 @@ class LiveHarness:
         data, imgs, failed, _ = await self.call("get_asset_image", asset_id=PHOTO1, size="thumbnail")
         rec(
             "get_asset_image",
-            (not failed) and len(imgs) == 1 and imgs[0].mimeType.startswith("image/"),
-            f"{len(imgs)} image block mime={imgs[0].mimeType if imgs else None} bytes={len(base64.b64decode(imgs[0].data)) if imgs else 0}",
+            (not failed) and len(imgs) == 1 and image_mime(imgs[0]).startswith("image/"),
+            f"{len(imgs)} image block mime={image_mime(imgs[0]) if imgs else None} bytes={len(base64.b64decode(imgs[0].data)) if imgs else 0}",
         )
         data, imgs, failed, _ = await self.call("get_album_images", album_id=ALB, size="preview", limit=50)
         rec(
             "get_album_images",
             (not failed) and len(imgs) == 5,
-            f"{len(imgs)} image blocks mimes={sorted(set(i.mimeType for i in imgs))}",
+            f"{len(imgs)} image blocks mimes={sorted(set(image_mime(i) for i in imgs))}",
         )
         data, imgs, failed, _ = await self.call(
             "get_images_batch", asset_ids=[PHOTO1, PHOTO2, VIDEO], size="thumbnail"

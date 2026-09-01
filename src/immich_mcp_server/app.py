@@ -1,5 +1,5 @@
 """
-Immich MCP app: FastMCP instance, lifespan and transport settings.
+Immich MCP app: MCPServer instance, lifespan and transport settings.
 
 Part of the immich-photo-manager plugin.
 License: MIT
@@ -7,30 +7,16 @@ License: MIT
 
 import os
 import sys
-import warnings
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.mcpserver import MCPServer, Context
 from mcp.server.transport_security import TransportSecuritySettings
 
 from .immich_client import ImmichClient
 
-# FastMCP's Settings model declares `lifespan` using a forward reference to the
-# FastMCP class (defined later in the SDK), which pydantic-settings reports as an
-# incomplete definition at startup. The field is never populated from environment
-# variables, so this is harmless — silence it to keep startup logs clean.
-try:
-    from pydantic_settings.sources.utils import IncompleteFieldDefinitionWarning
-except ImportError:  # pragma: no cover
-    IncompleteFieldDefinitionWarning = None
-
-if IncompleteFieldDefinitionWarning is not None:
-    warnings.filterwarnings("ignore", category=IncompleteFieldDefinitionWarning)
-
-
 @asynccontextmanager
-async def app_lifespan(server: FastMCP) -> AsyncIterator[dict]:
+async def app_lifespan(server: MCPServer) -> AsyncIterator[dict]:
     """Initialize the Immich client on server startup."""
     client = ImmichClient()
     # Verify connection at startup. Diagnostics go to stderr — under the
@@ -46,11 +32,13 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[dict]:
 
 
 # When served over HTTP behind a reverse proxy, the proxied Host header (e.g.
-# photos-mcp.example.com) must be allowed explicitly: FastMCP auto-enables DNS
+# photos-mcp.example.com) must be allowed explicitly: the SDK auto-enables DNS
 # rebinding protection that accepts only 127.0.0.1/localhost Hosts, answering
 # 421 Misdirected Request otherwise. MCP_ALLOWED_HOSTS is a comma-separated
 # list of additional allowed Host values; localhost stays allowed and
-# protection stays ON. Unset = SDK default behavior, unchanged.
+# protection stays ON. Unset = SDK default behavior, unchanged. In mcp v2 the
+# setting is a transport concern, passed to streamable_http_app() in server.py
+# rather than to the server constructor.
 _extra_hosts = [host.strip() for host in os.environ.get("MCP_ALLOWED_HOSTS", "").split(",") if host.strip()]
 _transport_security = None
 if _extra_hosts:
@@ -71,11 +59,10 @@ if _extra_hosts:
         allowed_origins=_allowed_origins,
     )
 
-mcp = FastMCP(
+mcp = MCPServer(
     "immich-photo-manager",
     instructions="Intelligent photo management for Immich. Search, curate albums, and publish galleries.",
     lifespan=app_lifespan,
-    transport_security=_transport_security,
 )
 
 

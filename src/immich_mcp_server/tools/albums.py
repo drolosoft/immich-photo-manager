@@ -6,7 +6,7 @@ module is imported; `server.py` imports all tool modules and re-exports the func
 
 import json
 
-from mcp.server.fastmcp import Context
+from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
 from ._common import _album_assets

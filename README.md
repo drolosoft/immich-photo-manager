@@ -250,6 +250,7 @@ This is a Claude plugin, and Claude is a collaborator on the code: the design, t
 | **[Skills Reference](doc/SKILLS.md)** | All 13 skills — workflows, triggers, parameters, output formats |
 | **[MCP Tools Reference](doc/MCP-TOOLS.md)** | All 57 MCP tools — parameters, return types, examples |
 | **[Architecture](doc/ARCHITECTURE.md)** | How base64-embedded thumbnails solve the Cowork sandbox restriction |
+| **[MCP 2026-07-28](doc/MCP-2026-07-28.md)** | Dual-era support: legacy handshake and the stateless revision from one server, and how it is verified |
 | **[CORS Setup Guide](doc/CORS-SETUP.md)** | Optional — enable direct URL thumbnail loading for browser-viewed galleries |
 
 ---
