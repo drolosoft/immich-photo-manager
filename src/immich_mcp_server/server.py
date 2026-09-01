@@ -9,6 +9,9 @@ its tools on import. This module wires them together and re-exports the tool
 functions (tests and scripts call them as `server.<tool>`).
 """
 
+from starlette.responses import JSONResponse
+
+from . import __version__
 from .app import app_lifespan, mcp, _client, _transport_security  # noqa: F401
 from .tools import (
     health,
@@ -56,3 +59,13 @@ del _module, _name, _obj
 # stateless 2026-07-28 clients.
 
 app = mcp.streamable_http_app(transport_security=_transport_security)
+
+
+async def _health(request):
+    """Liveness probe for Docker HEALTHCHECK and orchestrators. No credentials,
+    no MCP handshake, no Immich call: healthy means the server process serves
+    HTTP, not that the photo library is reachable."""
+    return JSONResponse({"status": "ok", "version": __version__})
+
+
+app.add_route("/health", _health, methods=["GET"])
