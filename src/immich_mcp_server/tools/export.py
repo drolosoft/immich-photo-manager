@@ -212,7 +212,8 @@ async def _render_places_map(client, entries: list[AssetEntry], notes: list[str]
     """The OpenStreetMap image for the Places page, or None with a note explaining why."""
     points = [(entry.lat, entry.lon) for entry in entries if entry.lat is not None and entry.lon is not None]
     if not points:
-        notes.append("map requested but no asset has GPS data")
+        # The map is on by default now, so assets without GPS are the normal
+        # case, not a problem worth a warning: the page just keeps the table.
         return None
 
     # `render_map` is synchronous and runs in a worker thread, while the tile
@@ -285,7 +286,7 @@ EXPORT_OPTIONS = {
     "image_size": "preview (1440px), thumbnail, or original for photos (print quality). Default: preview.",
     "frame_size": "auto, preview or thumbnail for video frames in the PDF. Default: auto.",
     "language": "en or es for the fixed page labels. Default: en.",
-    "map": "OpenStreetMap map on the Places page (needs GPS data). Default: off.",
+    "map": "OpenStreetMap map on the Places page when assets carry GPS. Default: on; map=false keeps everything inside your network.",
     "output_path": "Where to write the file. Default: ~/Desktop/<title>.pdf, never overwritten.",
     "return_base64": "Also return the PDF bytes into the conversation. Default: off (expensive).",
 }
@@ -329,7 +330,7 @@ async def export_pdf(
     title: str = "", captions: dict = {}, layout: str = "detail", frames_per_video: int = 4,
     frame_interval: float = 0.0, frame_times: dict = {}, frame_captions: dict = {},
     image_size: str = "preview",
-    frame_size: str = "auto", language: str = "en", map: bool = False,
+    frame_size: str = "auto", language: str = "en", map: bool = True,
     cover: bool = True, index: bool = True, places: bool = True, footer: str = "full",
     header: bool = False, videos_position: str = "mixed", limit: int = 100,
     return_base64: bool = False,
@@ -364,7 +365,9 @@ async def export_pdf(
             per video, thumbnail above), 'preview' or 'thumbnail'.
         language: 'en' (default) or 'es' for the fixed labels on the pages (Index,
             Places, Camera, page numbers); captions stay in whatever language you wrote.
-        map: Add an OpenStreetMap map to the Places page (fetches tiles from tile.openstreetmap.org).
+        map: Draw an OpenStreetMap map on the Places page when assets carry GPS
+            (default True; tiles come from tile.openstreetmap.org, the only
+            third-party call this server makes — pass map=False to skip it).
         cover, index, places: Include each front-matter page (all default True;
             turn them off for a print-ready photobook of bare pages).
         footer: 'full' (plugin name, server and page number, default), 'pages'
@@ -421,7 +424,9 @@ async def export_pdf(
         photos_only = [entry for entry in entries if entry.kind != "VIDEO"]
         entries = videos + photos_only if videos_position == "first" else photos_only + videos
 
-    map_png = await _render_places_map(client, entries, notes) if map else None
+    # The map lives on the Places page, so without that page there is nothing
+    # to fetch; without GPS the render returns None silently.
+    map_png = await _render_places_map(client, entries, notes) if (map and places) else None
 
     photos = sum(1 for entry in entries if entry.kind == "IMAGE")
     exported_on = datetime.date.today().isoformat()

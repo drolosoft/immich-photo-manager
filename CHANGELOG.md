@@ -6,6 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.12.4] — 2026-09-01
+
+### Changed
+- **The Places map comes out by default when the assets carry GPS.** A Places page with a bare table and no map served nobody; if there is GPS, everything shows. `map=false` skips the tile fetch (tile.openstreetmap.org stays the only third-party call) for anyone who wants the export fully local, and assets without GPS simply keep the table, with no warning noise.
+
 ## [v1.12.3] — 2026-09-01
 
 ### Added
@@ -197,6 +202,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.12.4]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.4
 [v1.12.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.3
 [v1.12.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.2
 [v1.12.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.1

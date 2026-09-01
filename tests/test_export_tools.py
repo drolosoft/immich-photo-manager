@@ -481,3 +481,43 @@ async def test_videos_position_last_and_default_mixed(fake_ctx, tmp_path, monkey
 async def test_options_catalogue_offers_videos_position(fake_ctx):
     data = json.loads(await server.get_export_preview(fake_ctx(StubClient()), album_id="alb"))
     assert "videos_position" in data["options"]
+
+
+# ── v1.12.4: the map comes out by default when there is GPS ─
+
+
+@pytest.mark.asyncio
+async def test_map_is_drawn_by_default_when_assets_have_gps(fake_ctx, tmp_path):
+    json.loads(await server.export_pdf(
+        fake_ctx(StubClient(assets=[_asset(1)])), asset_ids=["a1"],
+        output_path=str(tmp_path / "m.pdf"),
+    ))
+    from pypdf import PdfReader
+    assert len(PdfReader(str(tmp_path / "m.pdf")).pages[2].images) >= 1
+
+
+@pytest.mark.asyncio
+async def test_no_gps_means_no_map_and_no_warning_noise(fake_ctx, tmp_path):
+    asset = _asset(1)
+    asset["exifInfo"] = {"city": "Barcelona", "country": "Spain", "make": "Apple", "model": "iPhone"}
+    data = json.loads(await server.export_pdf(
+        fake_ctx(StubClient(assets=[asset])), asset_ids=["a1"],
+        output_path=str(tmp_path / "n.pdf"),
+    ))
+    from pypdf import PdfReader
+    assert data["warnings"] == []
+    assert len(PdfReader(str(tmp_path / "n.pdf")).pages[2].images) == 0
+
+
+@pytest.mark.asyncio
+async def test_map_false_keeps_everything_local(fake_ctx, tmp_path):
+    class NoTiles(StubClient):
+        async def fetch_tile(self, zoom, tile_x, tile_y):
+            raise AssertionError("map=False must not fetch tiles")
+
+    json.loads(await server.export_pdf(
+        fake_ctx(NoTiles(assets=[_asset(1)])), asset_ids=["a1"],
+        output_path=str(tmp_path / "o.pdf"), map=False,
+    ))
+    from pypdf import PdfReader
+    assert len(PdfReader(str(tmp_path / "o.pdf")).pages[2].images) == 0

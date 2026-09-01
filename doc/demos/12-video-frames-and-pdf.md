@@ -54,13 +54,13 @@ Then Claude looks at the frames, chooses the moments (`frame_times`), writes the
 - `layout="detail"` keeps the compact look instead: one page per asset with a frame strip (timestamps under each frame) and the metadata block.
 - The `cover`, `index` and `places` pages can each be turned off, the footer can shrink to just the page number or disappear (`footer="pages"` / `"none"`), and a small title header on every page is available (`header=true`) — a print-ready photobook can be bare pages only.
 - Frames that go into the PDF cost no tokens, up to 120 per video; photos can go in at `image_size="original"` (print quality, capped at 3000px).
-- Live Photos count once, `language="es"` prints the page labels in Spanish, and the Places page draws an OpenStreetMap map when the assets carry GPS.
+- Live Photos count once, `language="es"` prints the page labels in Spanish, and the Places page draws an OpenStreetMap map on its own whenever the assets carry GPS (`map=false` to keep everything local).
 
 The result for this clip: [`luna-photobook.pdf`](assets/12/luna-photobook.pdf) — the five moon pages, each with its caption.
 
 ## What leaves your network
 
-The video goes from Immich to the machine running the plugin, where the frames are cut. Only the frames the model looks at reach the Claude API, like any photo it already handles. The PDF stays on disk unless you ask for it in base64, and the map tiles are fetched from tile.openstreetmap.org only with `map=true`.
+The video goes from Immich to the machine running the plugin, where the frames are cut. Only the frames the model looks at reach the Claude API, like any photo it already handles. The PDF stays on disk unless you ask for it in base64. When the assets carry GPS, the Places page fetches map tiles from tile.openstreetmap.org (the only third-party call); `map=false` turns that off.
 
 ---
 
