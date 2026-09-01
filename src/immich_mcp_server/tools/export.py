@@ -16,7 +16,7 @@ import io
 import json
 import os
 
-from mcp.server.fastmcp import Context
+from mcp.server.mcpserver import Context
 
 from .. import __version__, pdf_export, video_frames
 from ..app import mcp, _client

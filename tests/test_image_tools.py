@@ -11,7 +11,7 @@ import base64
 import json
 
 import pytest
-from mcp.server.fastmcp import Image
+from mcp.server.mcpserver import Image
 
 from immich_mcp_server import server
 
@@ -50,7 +50,7 @@ async def test_get_asset_image_returns_image_block(fake_ctx):
 
     assert isinstance(result, Image)
     assert result.data == PNG  # base64 decoded back to the raw bytes
-    assert result.to_image_content().mimeType == "image/png"
+    assert result.to_image_content().mime_type == "image/png"
 
 
 @pytest.mark.asyncio

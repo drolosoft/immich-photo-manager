@@ -1,0 +1,6 @@
+{
+  "name": "immich-mcp-crosscheck-ts-client",
+  "private": true,
+  "type": "module",
+  "dependencies": { "@modelcontextprotocol/client": "2.0.0" }
+}

@@ -7,7 +7,7 @@ module is imported; `server.py` imports all tool modules and re-exports the func
 import asyncio
 import json
 
-from mcp.server.fastmcp import Context, Image
+from mcp.server.mcpserver import Context, Image
 
 from .. import video_frames
 from ..app import mcp, _client

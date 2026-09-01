@@ -5,7 +5,7 @@ import base64
 import json
 
 import httpx
-from mcp.server.fastmcp import Image
+from mcp.server.mcpserver import Image
 
 
 def _api_error(exc: httpx.HTTPStatusError) -> str:

@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
   "httpx>=0.24.0,<1.0",
-  "mcp>=1.9.0,<2.0",
+  "mcp>=2.0.0,<3.0",
   "uvicorn>=0.24.0,<1.0",
   # Video frames (PyAV) and PDF export (fpdf2) ship with the package since
   # 1.7.1: one install, no extras to remember, at the price of ~60 MB more.
