@@ -2,8 +2,42 @@
 
 import argparse
 import os
+import sys
 
 from immich_mcp_server import __version__
+
+
+def _check_sdk_version():
+    """Fail with one clear message when the environment's mcp SDK cannot run us.
+
+    The plugin route runs on whatever python the machine has; another install
+    can silently downgrade or upgrade the shared `mcp` package there. Without
+    this check the failure is a ModuleNotFoundError from deep inside the
+    import chain, which tells the user nothing about the fix.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        sdk_version = version("mcp")
+    except PackageNotFoundError:
+        print(
+            "immich-photo-manager: the 'mcp' package is not installed in this "
+            "python. Install the server's dependencies: "
+            "pip3 install -r src/requirements.txt",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
+    major = int(sdk_version.split(".")[0])
+    if not 2 <= major < 3:
+        print(
+            f"immich-photo-manager {__version__} needs mcp>=2.0.0,<3.0 but this "
+            f"python has mcp {sdk_version}. Another install likely changed the "
+            "shared environment. Fix: pip3 install -r src/requirements.txt "
+            "(or run via 'uvx immich-photo-manager' for an isolated environment).",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
 
 
 def _resolve_transport(cli_value: str | None, default_transport: str) -> str:
@@ -31,6 +65,8 @@ def _run(default_transport: str = "http"):
         help="Transport to use: 'stdio' or 'http'. Overrides MCP_TRANSPORT.",
     )
     args, _ = parser.parse_known_args()
+
+    _check_sdk_version()
 
     transport = _resolve_transport(args.transport, default_transport)
 

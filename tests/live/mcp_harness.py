@@ -10,6 +10,12 @@ import tempfile
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+# The tool-name manifest lives in tests/ next to this kit; a standalone lab
+# copy keeps tool_manifest.py alongside the harness instead.
+_here = os.path.dirname(os.path.abspath(__file__))
+sys.path[:0] = [_here, os.path.dirname(_here)]
+from tool_manifest import TOOL_NAMES  # noqa: E402
+
 creds = json.load(open(sys.argv[1]))
 TAG = sys.argv[2]
 BIN = sys.argv[3]
@@ -36,11 +42,6 @@ def rec(tool, ok, note=""):
     print(("✅" if ok else "❌"), f"{tool:26s}", str(note)[:160], flush=True)
 
 
-def image_mime(block):
-    """Mime type of an image content block; SDK v2 renamed mimeType to mime_type."""
-    return getattr(block, "mime_type", None) or getattr(block, "mimeType", None)
-
-
 class LiveHarness:
     """Drives every tool over one MCP session, one method per area, recording results with `rec`.
 
@@ -63,9 +64,9 @@ class LiveHarness:
             data = json.loads(txt) if txt else None
         except Exception:
             data = txt
-        # SDK v2 renamed CallToolResult.isError to is_error; accept both eras.
-        is_error = getattr(res, "is_error", None) or getattr(res, "isError", None)
-        err = bool(is_error) or (isinstance(data, dict) and "error" in data)
+        # Direct attribute access on purpose: if the SDK renames is_error this
+        # must crash, not report every call as clean.
+        err = bool(res.is_error) or (isinstance(data, dict) and "error" in data)
         return data, imgs, err, txt
 
     @staticmethod
@@ -253,14 +254,14 @@ class LiveHarness:
         data, imgs, failed, _ = await self.call("get_asset_image", asset_id=PHOTO1, size="thumbnail")
         rec(
             "get_asset_image",
-            (not failed) and len(imgs) == 1 and image_mime(imgs[0]).startswith("image/"),
-            f"{len(imgs)} image block mime={image_mime(imgs[0]) if imgs else None} bytes={len(base64.b64decode(imgs[0].data)) if imgs else 0}",
+            (not failed) and len(imgs) == 1 and imgs[0].mime_type.startswith("image/"),
+            f"{len(imgs)} image block mime={imgs[0].mime_type if imgs else None} bytes={len(base64.b64decode(imgs[0].data)) if imgs else 0}",
         )
         data, imgs, failed, _ = await self.call("get_album_images", album_id=ALB, size="preview", limit=50)
         rec(
             "get_album_images",
             (not failed) and len(imgs) == 5,
-            f"{len(imgs)} image blocks mimes={sorted(set(image_mime(i) for i in imgs))}",
+            f"{len(imgs)} image blocks mimes={sorted(set(i.mime_type for i in imgs))}",
         )
         data, imgs, failed, _ = await self.call(
             "get_images_batch", asset_ids=[PHOTO1, PHOTO2, VIDEO], size="thumbnail"
@@ -743,7 +744,7 @@ async def main():
             await session.initialize()
             tools = await session.list_tools()
             names = sorted(tool.name for tool in tools.tools)
-            rec("list_tools", len(names) == 57, f"{len(names)} tools")
+            rec("list_tools", set(names) == set(TOOL_NAMES), f"{len(names)} tools, manifest match")
             harness = LiveHarness(session)
             await harness.check_health()
             await harness.check_assets_read()

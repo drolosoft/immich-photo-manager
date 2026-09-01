@@ -27,13 +27,13 @@ echo "Python: $(python3 --version) ($PYTHON_PATH)"
 echo ""
 echo "Installing Python dependencies..."
 if [ -f "$SRC_DIR/requirements.txt" ]; then
-  pip3 install -r "$SRC_DIR/requirements.txt" --break-system-packages 2>/dev/null \
-    || pip3 install -r "$SRC_DIR/requirements.txt" 2>/dev/null \
-    || echo "WARNING: pip install failed. Please install dependencies manually: pip3 install mcp httpx"
+  pip3 install -r "$SRC_DIR/requirements.txt" --break-system-packages \
+    || pip3 install -r "$SRC_DIR/requirements.txt" \
+    || echo "WARNING: pip install failed. Please install dependencies manually: pip3 install -r $SRC_DIR/requirements.txt"
 else
-  pip3 install mcp httpx --break-system-packages 2>/dev/null \
-    || pip3 install mcp httpx 2>/dev/null \
-    || echo "WARNING: pip install failed. Please install manually: pip3 install mcp httpx"
+  pip3 install "mcp>=2.0.0,<3.0" "httpx>=0.24.0,<1.0" --break-system-packages \
+    || pip3 install "mcp>=2.0.0,<3.0" "httpx>=0.24.0,<1.0" \
+    || echo "WARNING: pip install failed. Please install manually: pip3 install 'mcp>=2.0.0,<3.0' 'httpx>=0.24.0,<1.0'"
 fi
 echo ""
 

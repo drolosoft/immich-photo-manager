@@ -6,6 +6,22 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.1] — 2026-09-01
+
+### Added
+
+- **The dual-era guarantee, made permanent** — a raw-wire test suite (`tests/test_raw_wire_eras.py`) drives the server with hand-written JSON-RPC and no SDK on the client side: all four legacy handshake revisions (2024-11-05 through 2025-11-25) with exact version echo, the unknown-version counter-offer, and the stateless 2026-07-28 era (`server/discover`, the `_meta` envelope, the required-key error) — plus full tool-definition equality across eras. These tests are the arbiter for any future SDK migration: they must pass unchanged.
+- **Tool manifest** (`tests/tool_manifest.py`) — every era check now asserts the exact tool-name set instead of a count, so swapping one tool for another can no longer pass unnoticed.
+- **CI: floor, plugin route, weekly schedule** — a job pins `mcp==2.0.0` so the declared minimum is actually exercised; another installs from `src/requirements.txt` with `PYTHONPATH=src` exactly like the Claude plugin route; a weekly scheduled run catches new SDK releases early, and a non-blocking radar job tries `mcp>=3` for advance warning.
+- **Startup preflight** — when the running python has an incompatible `mcp` package (a shared environment changed by another install), the server now prints one clear line naming the fix instead of a deep import traceback.
+
+### Fixed
+
+- `serverInfo.version` was empty on both eras; it now reports the package version.
+- The TypeScript cross-check (`scripts/crosscheck-ts-client`) now exits non-zero on failure.
+- `scripts/setup-mcp.sh` no longer discards pip's error output, and its fallback install is bounded to `mcp>=2.0.0,<3.0`.
+- `.mcp.http.json.example` named a wrong package (`immich-mcp`).
+
 ## [v2.0.0] — 2026-09-01
 
 ### Changed
@@ -233,6 +249,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.1
 [v2.0.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.0
 [v1.12.8]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.8
 [v1.12.7]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.7

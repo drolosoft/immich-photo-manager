@@ -10,6 +10,7 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const PY = process.env.PYTHON || REPO + '/.venv/bin/python';
 const env = { ...process.env, PYTHONPATH: REPO + '/src', IMMICH_BASE_URL: process.env.IMMICH_BASE_URL || process.env.FAKE_IMMICH, IMMICH_API_KEY: process.env.IMMICH_API_KEY || 'fake-immich-key-0123456789abcdef' };
 const modes = [ 'legacy', 'auto', { pin: '2026-07-28' } ];
+let allOk = true;
 
 async function exercise(label, mkTransport, mode) {
   const client = new Client({ name: 'ts-v2-crosscheck', version: '1.0.0' }, { versionNegotiation: { mode } });
@@ -21,7 +22,10 @@ async function exercise(label, mkTransport, mode) {
   const b64ok = parsed.thumbnails.length === 2 && parsed.thumbnails.every(t => t.data === process.env.PNG_B64 && t.originalFileName && t.fileCreatedAt);
   const img = await client.callTool({ name: 'get_asset_image', arguments: { asset_id: 'a1' } });
   const imgok = img.content.some(b => b.type === 'image' && b.mimeType === 'image/png');
-  console.log(`  ${label.padEnd(6)} mode=${JSON.stringify(mode).padEnd(20)} -> negotiated=${client.getNegotiatedProtocolVersion()} tools=${tools.tools.length} info=${JSON.parse(info.content[0].text).base_url ? 'ok' : 'FAIL'} b64batch=${b64ok?'ok':'FAIL'} imageblock=${imgok?'ok':'FAIL'}`);
+  const infook = Boolean(JSON.parse(info.content[0].text).base_url);
+  const toolsok = tools.tools.length > 0;
+  if (!(b64ok && imgok && infook && toolsok)) allOk = false;
+  console.log(`  ${label.padEnd(6)} mode=${JSON.stringify(mode).padEnd(20)} -> negotiated=${client.getNegotiatedProtocolVersion()} tools=${tools.tools.length} info=${infook ? 'ok' : 'FAIL'} b64batch=${b64ok?'ok':'FAIL'} imageblock=${imgok?'ok':'FAIL'}`);
   await client.close();
 }
 
@@ -31,3 +35,5 @@ for (const mode of modes) {
 for (const mode of modes) {
   await exercise('http', () => new StreamableHTTPClientTransport(new URL(process.env.MCP_URL)), mode);
 }
+
+process.exit(allOk ? 0 : 1);

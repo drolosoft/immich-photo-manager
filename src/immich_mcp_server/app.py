@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from mcp.server.mcpserver import MCPServer, Context
 from mcp.server.transport_security import TransportSecuritySettings
 
+from . import __version__
 from .immich_client import ImmichClient
 
 @asynccontextmanager
@@ -61,6 +62,7 @@ if _extra_hosts:
 
 mcp = MCPServer(
     "immich-photo-manager",
+    version=__version__,
     instructions="Intelligent photo management for Immich. Search, curate albums, and publish galleries.",
     lifespan=app_lifespan,
 )
