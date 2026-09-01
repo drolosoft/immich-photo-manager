@@ -860,6 +860,189 @@ class LiveHarness:
             f"deleted={memory_id} still_listed={memory_id in remaining}",
         )
 
+    async def check_stacks(self):
+        """Stacks: create, list, get, re-cover, dissolve — assets must survive."""
+        data, _, failed, _ = await self.call("create_stack", asset_ids=[PHOTO1, PHOTO2])
+        stack_id = data.get("id") if isinstance(data, dict) else None
+        rec(
+            "create_stack",
+            self.okj(data, failed) and bool(stack_id) and data.get("asset_count") == 2,
+            f"id={stack_id} primary={data.get('primary_asset_id')}",
+        )
+        data, _, failed, _ = await self.call("list_stacks")
+        listed = [stack.get("id") for stack in data.get("stacks", [])] if isinstance(data, dict) else []
+        rec(
+            "list_stacks",
+            self.okj(data, failed) and stack_id in listed,
+            f"total={data.get('total')} contains_created={stack_id in listed}",
+        )
+        data, _, failed, _ = await self.call("get_stack", stack_id=stack_id)
+        rec(
+            "get_stack",
+            self.okj(data, failed) and data.get("id") == stack_id,
+            f"assets={data.get('asset_count')}",
+        )
+        data, _, failed, _ = await self.call(
+            "update_stack", stack_id=stack_id, primary_asset_id=PHOTO2
+        )
+        rec(
+            "update_stack",
+            self.okj(data, failed) and data.get("primary_asset_id") == PHOTO2,
+            f"primary={data.get('primary_asset_id')}",
+        )
+        data, _, failed, _ = await self.call("delete_stack", stack_id=stack_id)
+        survivor, _, _, _ = await self.call("get_asset_info", asset_id=PHOTO1)
+        rec(
+            "delete_stack",
+            self.okj(data, failed) and data.get("success") is True
+            and survivor.get("isTrashed") is False,
+            f"deleted={stack_id} asset_survived={survivor.get('isTrashed') is False}",
+        )
+
+    async def check_partners(self):
+        """Partners: needs a second user; the lab key is admin, so create one."""
+        import httpx
+
+        # The harness drives everything else over MCP; user creation is admin
+        # territory the plugin deliberately does not cover, so it goes straight
+        # to the API. Idempotent: a 400 means the partner user already exists.
+        headers = {"x-api-key": creds["key"]}
+        response = httpx.post(
+            f"{creds['base']}/api/admin/users",
+            headers=headers,
+            json={"email": "partner@example.com", "name": "Lab Partner",
+                  "password": "labpartner1"},
+            timeout=30,
+        )
+        assert response.status_code in (200, 201, 400), response.text
+
+        # update_partner (inTimeline) only applies to partners who share WITH
+        # this account, so the reverse share partner->lab must exist too. Log
+        # in as the partner and create it; 400 means it already does.
+        login = httpx.post(
+            f"{creds['base']}/api/auth/login",
+            json={"email": "partner@example.com", "password": "labpartner1"},
+            timeout=30,
+        )
+        assert login.status_code in (200, 201), login.text
+        bearer = {"Authorization": f"Bearer {login.json()['accessToken']}"}
+        me = httpx.get(f"{creds['base']}/api/users/me", headers=headers, timeout=30)
+        lab_user_id = me.json()["id"]
+        reverse = httpx.post(
+            f"{creds['base']}/api/partners",
+            headers=bearer,
+            json={"sharedWithId": lab_user_id},
+            timeout=30,
+        )
+        assert reverse.status_code in (200, 201, 400), reverse.text
+
+        data, _, failed, _ = await self.call("list_users")
+        users = data.get("users", []) if isinstance(data, dict) else []
+        partner = next((user for user in users if user.get("email") == "partner@example.com"), None)
+        rec(
+            "list_users",
+            self.okj(data, failed) and partner is not None,
+            f"{len(users)} users, partner_found={partner is not None}",
+        )
+        partner_id = (partner or {}).get("id")
+
+        # A crashed earlier run can leave the lab->partner share behind, which
+        # would turn create_partner into a duplicate error. Clear it first.
+        httpx.delete(f"{creds['base']}/api/partners/{partner_id}", headers=headers, timeout=30)
+
+        data, _, failed, _ = await self.call("create_partner", user_id=partner_id)
+        created_id = data.get("id") if isinstance(data, dict) else None
+        rec(
+            "create_partner",
+            self.okj(data, failed) and created_id == partner_id,
+            f"id={created_id}",
+        )
+        data, _, failed, _ = await self.call("list_partners")
+        shared_by_me = [entry.get("id") for entry in data.get("shared_by_me", [])] if isinstance(data, dict) else []
+        shared_with_me = [entry.get("id") for entry in data.get("shared_with_me", [])] if isinstance(data, dict) else []
+        rec(
+            "list_partners",
+            self.okj(data, failed) and partner_id in shared_by_me and partner_id in shared_with_me,
+            f"shared_by_me={len(shared_by_me)} shared_with_me={len(shared_with_me)}",
+        )
+        data, _, failed, _ = await self.call(
+            "update_partner", user_id=partner_id, in_timeline=True
+        )
+        timeline_flag = data.get("in_timeline") if isinstance(data, dict) else None
+        rec(
+            "update_partner",
+            self.okj(data, failed) and timeline_flag is True,
+            f"in_timeline={timeline_flag}",
+        )
+        data, _, failed, _ = await self.call("remove_partner", user_id=partner_id)
+        removed = data.get("success") if isinstance(data, dict) else None
+        after, _, _, _ = await self.call("list_partners")
+        still = [entry.get("id") for entry in after.get("shared_by_me", [])] if isinstance(after, dict) else []
+        rec(
+            "remove_partner",
+            self.okj(data, failed) and removed is True and partner_id not in still,
+            f"removed={partner_id} still_shared={partner_id in still}",
+        )
+
+    async def check_activities_download(self):
+        """Activities on the lab album, then the album as a real zip."""
+        data, _, failed, _ = await self.call(
+            "create_activity", album_id=ALB, comment="Harness was here"
+        )
+        activity_id = data.get("id") if isinstance(data, dict) else None
+        rec(
+            "create_activity",
+            self.okj(data, failed) and bool(activity_id) and data.get("type") == "comment",
+            f"id={activity_id}",
+        )
+        data, _, failed, _ = await self.call("list_activities", album_id=ALB)
+        listed = {activity.get("id"): activity for activity in data.get("activities", [])} if isinstance(data, dict) else {}
+        found = listed.get(activity_id, {})
+        rec(
+            "list_activities",
+            self.okj(data, failed) and found.get("comment") == "Harness was here" and found.get("user"),
+            f"total={data.get('total')} user={found.get('user')}",
+        )
+        data, _, failed, _ = await self.call("delete_activity", activity_id=activity_id)
+        after, _, _, _ = await self.call("list_activities", album_id=ALB)
+        remaining = [activity.get("id") for activity in after.get("activities", [])] if isinstance(after, dict) else []
+        rec(
+            "delete_activity",
+            self.okj(data, failed) and data.get("success") is True and activity_id not in remaining,
+            f"deleted={activity_id} still_listed={activity_id in remaining}",
+        )
+
+        data, _, failed, _ = await self.call("get_download_info", album_id=ALB)
+        rec(
+            "get_download_info",
+            self.okj(data, failed) and data.get("total_size_mb", 0) > 0 and data.get("asset_count") == 5,
+            f"size_mb={data.get('total_size_mb')} assets={data.get('asset_count')} (album has 5)",
+        )
+        import tempfile
+        import zipfile
+        zip_path = os.path.join(tempfile.mkdtemp(), "lab-album.zip")
+        data, _, failed, _ = await self.call(
+            "download_archive", album_id=ALB, output_path=zip_path
+        )
+        names = []
+        if os.path.exists(zip_path):
+            with zipfile.ZipFile(zip_path) as archive:
+                names = archive.namelist()
+        rec(
+            "download_archive",
+            self.okj(data, failed) and data.get("bytes", 0) > 0 and len(names) == 5,
+            f"bytes={data.get('bytes')} files_in_zip={len(names)}",
+        )
+        data, _, failed, _ = await self.call(
+            "download_archive", album_id=ALB, output_path=zip_path
+        )
+        rec(
+            "  download_archive(no overwrite)",
+            isinstance(data, dict) and "error" in data,
+            f"second write refused={isinstance(data, dict) and 'error' in data}",
+        )
+        os.remove(zip_path)
+
     async def check_credentials(self):
         """Credentials (same creds, must keep working)."""
         data, _, failed, _ = await self.call(
@@ -901,6 +1084,9 @@ async def main():
             await harness.check_ml_smart_search_people()
             await harness.check_timeline_and_discovery()
             await harness.check_memories()
+            await harness.check_stacks()
+            await harness.check_partners()
+            await harness.check_activities_download()
             await harness.check_credentials()
 
     covered = {reader["tool"].split("(")[0].strip() for reader in results}

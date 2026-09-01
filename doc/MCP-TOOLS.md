@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-The Immich Photo Manager MCP server exposes 72 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
+The Immich Photo Manager MCP server exposes 87 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
 
 ---
 
@@ -72,6 +72,47 @@ The Immich Photo Manager MCP server exposes 72 tools that Claude can use to inte
 | `ocr` | string | "Renfe" (text recognized inside the image, combined with the visual query) |
 | `page` | number | 1 |
 | `size` | number | 50 (max 200) |
+
+### Stacks (5)
+
+Group near-identical shots (bursts, retries of the same scene) under one cover asset — a gentler cleanup than deleting.
+
+| Tool | Description | Modifies? |
+|------|-------------|-----------|
+| `create_stack` | Group assets into a stack; the first id becomes the cover | Yes |
+| `list_stacks` | List every stack with its assets | No |
+| `get_stack` | One stack with its assets | No |
+| `update_stack` | Change which asset fronts the stack | Yes |
+| `delete_stack` | Dissolve a stack (the assets stay in the library) | Yes |
+
+### Partners (5)
+
+Immich's family sharing: each side keeps its own library but can see the other's.
+
+| Tool | Description | Modifies? |
+|------|-------------|-----------|
+| `list_users` | Users visible on the server (to find the partner's id) | No |
+| `list_partners` | Who shares with this account and who it shares with | No |
+| `create_partner` | Share this library with another user | Yes |
+| `update_partner` | Mix a partner's photos into the timeline, or keep them separate | Yes |
+| `remove_partner` | Stop sharing (their photos are not touched) | Yes |
+
+### Activities (3)
+
+Comments and likes on shared albums.
+
+| Tool | Description | Modifies? |
+|------|-------------|-----------|
+| `list_activities` | Comments and likes on an album (or one asset in it) | No |
+| `create_activity` | Post a comment or a like | Yes |
+| `delete_activity` | Remove one comment or like | Yes |
+
+### Download (2)
+
+| Tool | Description | Returns |
+|------|-------------|---------|
+| `get_download_info` | Size of the zip an album/selection would make, before building it | {total_size_mb, asset_count} |
+| `download_archive` | Album or selection as one zip, streamed to a local path, never overwrites | JSON {path, bytes, assets} |
 
 ### Memories (4)
 

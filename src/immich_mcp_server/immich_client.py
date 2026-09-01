@@ -23,6 +23,10 @@ from .client.upload import UploadApi
 from .client.maps import MapsApi
 from .client.memories import MemoriesApi
 from .client.timeline import TimelineApi
+from .client.stacks import StacksApi
+from .client.partners import PartnersApi
+from .client.activities import ActivitiesApi
+from .client.download import DownloadApi
 
 
 class ImmichClient(
@@ -42,6 +46,10 @@ class ImmichClient(
     MapsApi,
     MemoriesApi,
     TimelineApi,
+    StacksApi,
+    PartnersApi,
+    ActivitiesApi,
+    DownloadApi,
     ImmichClientBase,
 ):
     """Async HTTP client for the Immich REST API."""

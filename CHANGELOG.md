@@ -6,6 +6,17 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.4] — 2026-09-02
+
+### Added
+
+- **Stacks** — `create_stack`, `list_stacks`, `get_stack`, `update_stack`, `delete_stack`: group near-identical shots (bursts, retries) under one cover asset. A gentler cleanup than deleting: every shot stays, the clutter goes. Dissolving a stack never touches the assets.
+- **Partners** — `list_partners`, `create_partner`, `update_partner`, `remove_partner`, plus `list_users` to find the id: Immich's family sharing, managed from the model. `update_partner` controls whether a partner's photos mix into the timeline.
+- **Activities** — `list_activities`, `create_activity`, `delete_activity`: comments and likes on shared albums, on the album or on a single asset.
+- **Download archive** — `download_archive` writes an album or a selection as one zip, streamed to disk (safe for big albums, never overwrites); `get_download_info` tells the size before building it.
+
+All 15 tools exist identically on Immich 2.x and 3.x.
+
 ## [v2.0.3] — 2026-09-01
 
 ### Added
@@ -268,6 +279,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.4]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.4
 [v2.0.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.3
 [v2.0.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.2
 [v2.0.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.1
