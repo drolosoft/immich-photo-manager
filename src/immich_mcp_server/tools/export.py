@@ -343,6 +343,11 @@ async def export_pdf(
     return_base64=True. If the user asked for a PDF without saying how they want
     it, call get_export_preview first and ask them about the choices it lists.
 
+    Keep the selection coherent: one story per PDF. Never mix unrelated assets
+    (two videos about different things, photos from different events) just to
+    show more; if the user's material spans several stories, offer one PDF per
+    story instead.
+
     Args:
         album_id: Album UUID, or asset_ids: explicit asset UUIDs (exactly one of the two).
         output_path: Where to write (default ~/Desktop/<title>.pdf). Existing files are never overwritten.
