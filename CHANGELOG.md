@@ -6,6 +6,13 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.5] — 2026-09-02
+
+### Added
+
+- **Official Docker image** — `ghcr.io/drolosoft/immich-photo-manager`, multi-arch (amd64 + arm64), published on every release tag. Serves MCP over Streamable HTTP on port 8626, both protocol eras, all 87 tools; PDFs and zips land in `/data` for volume mounting. Verified live: the container was run against a real Immich and driven through both eras before shipping.
+- **`/health` endpoint** on the HTTP app — liveness for Docker HEALTHCHECK and orchestrators. Answers without credentials and without touching Immich, so a missing API key never flaps the container.
+
 ## [v2.0.4] — 2026-09-02
 
 ### Added
@@ -279,6 +286,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.5]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.5
 [v2.0.4]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.4
 [v2.0.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.3
 [v2.0.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.2

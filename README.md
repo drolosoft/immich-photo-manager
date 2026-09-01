@@ -14,7 +14,7 @@
 </p>
 <p align="center">
   <a href="tests/live/"><img src="https://img.shields.io/badge/tested_live_on_Immich-2.7.5_%7C_3.1.0-2ea44f" alt="Tested live on Immich 2.7.5 and 3.1.0"></a>
-  <a href="tests/"><img src="https://img.shields.io/badge/unit_tests-88_on_every_push-2ea44f" alt="88 unit tests on every push"></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/unit_tests-243_on_every_push-2ea44f" alt="243 unit tests on every push"></a>
   <a href="doc/demos/"><img src="https://img.shields.io/badge/demos-12_real_sessions-blue" alt="12 demos from real sessions"></a>
 </p>
 
@@ -22,7 +22,7 @@
 
 If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance — search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally and talks only to your Immich; your originals stay on your server (see [what leaves your network](#what-leaves-your-network)).
 
-> **Tested, not assumed.** Every push runs 241 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 87 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras — the legacy handshake and stateless 2026-07-28 — are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Details: [How it's tested](#how-its-tested).
+> **Tested, not assumed.** Every push runs 243 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 87 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras — the legacy handshake and stateless 2026-07-28 — are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Details: [How it's tested](#how-its-tested).
 
 <p align="center"><img src="./assets/demo.gif" alt="immich-photo-manager demo" width="800"></p>
 
@@ -145,6 +145,20 @@ Use the package entry point directly with `uvx`:
 ```
 
 `immich-photo-manager` defaults to MCP stdio transport. Set `MCP_TRANSPORT=http` when you want to run the server as a Streamable HTTP service.
+
+### 🐳 Run as a Docker container
+
+The server also ships as a multi-arch image (amd64 + arm64) on GitHub Container Registry, serving MCP over HTTP on port 8626 — both protocol eras, same 87 tools:
+
+```sh
+docker run -d -p 8626:8626 \
+  -e IMMICH_BASE_URL=https://your-immich-server.com \
+  -e IMMICH_API_KEY=your-api-key \
+  -v ./exports:/data \
+  ghcr.io/drolosoft/immich-photo-manager
+```
+
+Point any Streamable HTTP client at `http://localhost:8626/mcp`. Liveness is at `/health` (no credentials needed, wired as the image's `HEALTHCHECK`). The tools that write files (`export_pdf`, `download_archive`) drop them in `/data`, so mount a volume there. Reaching the container under a name other than localhost (a reverse proxy, another container) needs that name in `-e MCP_ALLOWED_HOSTS=...` — DNS-rebinding protection stays on.
 
 **Claude Desktop on macOS:** the app does not see your shell's PATH, so write the full path to `uvx` in `"command"` (run `which uvx` in a terminal; typically `/Users/<you>/.local/bin/uvx` or `/opt/homebrew/bin/uvx`). Run `uvx immich-photo-manager --help` once in a terminal so the first download is done, then quit Claude Desktop with Cmd+Q and reopen it. If it still does not show up, the reason is in `~/Library/Logs/Claude/mcp-server-immich.log`.
 
