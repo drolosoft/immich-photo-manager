@@ -58,6 +58,17 @@ Then Claude looks at the frames, chooses the moments (`frame_times`), writes the
 
 The result for this clip: [`luna-photobook.pdf`](assets/12/luna-photobook.pdf) — the five moon pages, each with its caption.
 
+## 5. The complete album report
+
+```
+Make a complete PDF of the album "A moon evening": the video first with its frames,
+then every photo in order, one caption each, title on every page.
+```
+
+The everything-on use case: the same clip plus eight stills of the evening in one album, exported with the defaults doing the work. The video opens the document as a six-frame strip (`videos_position="first"`), each slot picking the liveliest frame of its neighbourhood; the photos follow oldest to newest, at the stored file's quality, each with its caption; the Places page draws the map on its own from the GPS; the title repeats on every page (`header=true`).
+
+The result: [`moon-evening-report.pdf`](assets/12/moon-evening-report.pdf) — 12 pages, built by the published package against a real Immich, untouched.
+
 ## What leaves your network
 
 The video goes from Immich to the machine running the plugin, where the frames are cut. Only the frames the model looks at reach the Claude API, like any photo it already handles. The PDF stays on disk unless you ask for it in base64. When the assets carry GPS, the Places page fetches map tiles from tile.openstreetmap.org (the only third-party call); `map=false` turns that off.
