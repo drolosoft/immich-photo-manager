@@ -6,6 +6,17 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.3] — 2026-09-01
+
+### Added
+
+- **Memories** — `list_memories`, `create_memory`, `update_memory`, `delete_memory`: Immich's "on this day" collections, ready to feed a 'tal día como hoy' album or PDF. The full lifecycle is exercised live against both Immich majors.
+- **Timeline** — `get_timeline_buckets` (one bucket per month with its asset count, the cheap way to map a library) and `get_timeline_bucket` (that month's assets). Immich answers the bucket columnar; the tool hands rows to the model.
+- **Search extras** — `search_cities` (every city, one representative asset, no threshold), `search_places` (Immich's offline gazetteer), `search_suggestions` (the exact spellings search_metadata expects), `search_random` (sampling with filters), `search_statistics` (count without fetching — one integer instead of pages), `search_large_assets` (biggest files first, sizes in MB).
+- **`reverse_geocode`** — coordinates to city/state/country using Immich's own geodata, no external service.
+
+All 13 tools exist identically on Immich 2.x and 3.x.
+
 ## [v2.0.2] — 2026-09-01
 
 ### Added
@@ -257,6 +268,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.3
 [v2.0.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.2
 [v2.0.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.1
 [v2.0.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.0
