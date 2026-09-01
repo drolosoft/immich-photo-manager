@@ -113,6 +113,10 @@ class Document:
     with_cover: bool = True
     with_index: bool = True
     with_places: bool = True
+    # "full" (plugin, server and page number), "pages" (page number only) or "none".
+    footer: str = "full"
+    # Repeat the title at the top of every page but the cover; off by default.
+    with_header: bool = False
 
 
 def _fpdf_available() -> bool:
@@ -209,21 +213,35 @@ class _Pdf:
         self.pdf.image(io.BytesIO(data), x=left + (max_w - drawn_w) / 2, y=top, w=drawn_w, h=drawn_h)
         return drawn_h
 
-    def footer_all(self):
-        """Write "immich-photo-manager vX · url · page n/N" at the bottom of every page."""
-        # The footer sits below the auto-page-break trigger (A4_H - MARGIN), so
-        # writing there with auto page break enabled would make fpdf2 slide the
-        # text onto the next page and append a blank page at the end. This pass
-        # runs after all content exists, so the break can be switched off.
+    def decorate_pages(self):
+        """The final pass over every page: the footer (by mode) and the optional title header.
+
+        The footer sits below the auto-page-break trigger (A4_H - MARGIN), so
+        writing there with auto page break enabled would make fpdf2 slide the
+        text onto the next page and append a blank page at the end. This pass
+        runs after all content exists, so the break can be switched off.
+        """
         total = self.pdf.pages_count
         self.pdf.set_auto_page_break(False)
         for page_number in range(1, total + 1):
             self.pdf.page = page_number
             self.font(8)
-            self.pdf.set_xy(MARGIN, A4_H - FOOTER_H)
-            footer = (f"immich-photo-manager v{self.doc.version} · {self.doc.source_url}"
-                      f" · {self.labels['page']} {page_number}/{total}")
-            self.pdf.cell(CONTENT_W, 5, self.text(footer), align="C")
+            if self.doc.footer == "pages":
+                footer = f"{self.labels['page']} {page_number}/{total}"
+            elif self.doc.footer == "full":
+                footer = (f"immich-photo-manager v{self.doc.version} · {self.doc.source_url}"
+                          f" · {self.labels['page']} {page_number}/{total}")
+            else:
+                footer = ""
+            if footer:
+                self.pdf.set_xy(MARGIN, A4_H - FOOTER_H)
+                self.pdf.cell(CONTENT_W, 5, self.text(footer), align="C")
+            # The cover already carries the title large; every other page can
+            # repeat it small at the top when the header is on.
+            on_cover = self.doc.with_cover and page_number == 1
+            if self.doc.with_header and not on_cover:
+                self.pdf.set_xy(MARGIN, 6)
+                self.pdf.cell(CONTENT_W, 5, self.text(self.doc.title), align="C")
 
 
 def _cover(writer: _Pdf):
@@ -437,7 +455,7 @@ def build(doc: Document) -> bytes:
     else:
         for asset, link in zip(doc.assets, links):
             _detail(writer, asset, link)
-    writer.footer_all()
+    writer.decorate_pages()
     return bytes(writer.pdf.output())
 
 
@@ -460,6 +478,13 @@ def _tile_bounds(points: list[tuple[float, float]]) -> tuple[int, int, int, int,
         east_x, north_y = _tile_xy(max(lats), max(lons), zoom)
         first_col, last_col = sorted((int(math.floor(west_x)), int(math.floor(east_x))))
         first_row, last_row = sorted((int(math.floor(north_y)), int(math.floor(south_y))))
+        # One tile of margin on every side, so the crop in render_map can put
+        # the points at the centre of the image instead of wherever they fall
+        # inside their own tile (a single point near a tile corner used to end
+        # up in the corner of the map).
+        tiles_per_side = 2 ** zoom
+        first_col, last_col = max(0, first_col - 1), min(tiles_per_side - 1, last_col + 1)
+        first_row, last_row = max(0, first_row - 1), min(tiles_per_side - 1, last_row + 1)
         if (last_col - first_col + 1) * (last_row - first_row + 1) <= MAX_TILES:
             return zoom, first_col, last_col, first_row, last_row
     # Zoom 1 is four tiles for the whole world, which always fits.
@@ -493,6 +518,16 @@ def render_map(points: list[tuple[float, float]], fetch_tile) -> bytes | None:
                 [pixel_x - DOT_RADIUS, pixel_y - DOT_RADIUS, pixel_x + DOT_RADIUS, pixel_y + DOT_RADIUS],
                 fill="#d33", outline="white", width=2,
             )
+        # Crop symmetrically around the points' centre so it lands in the middle
+        # of the final image; the tile margin guarantees room on every side.
+        centres = [_tile_xy(lat, lon, zoom) for lat, lon in points]
+        centre_x = (sum(x for x, _y in centres) / len(centres) - first_col) * TILE
+        centre_y = (sum(y for _x, y in centres) / len(centres) - first_row) * TILE
+        half_w = min(centre_x, canvas.width - centre_x)
+        half_h = min(centre_y, canvas.height - centre_y)
+        if half_w >= TILE / 2 and half_h >= TILE / 2:
+            canvas = canvas.crop((int(centre_x - half_w), int(centre_y - half_h),
+                                  int(centre_x + half_w), int(centre_y + half_h)))
         out = io.BytesIO()
         canvas.save(out, format="PNG")
         return out.getvalue()

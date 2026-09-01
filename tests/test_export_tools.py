@@ -427,3 +427,21 @@ async def test_preview_lists_every_export_option(fake_ctx):
                  "frame_captions", "image_size", "frame_size", "language", "map", "captions"):
         assert name in options, name
     assert "photobook" in options["layout"]
+
+
+# ── v1.12.2: footer modes and the title header ──────────────
+
+
+@pytest.mark.asyncio
+async def test_export_pdf_footer_and_header_reach_the_pages(fake_ctx, tmp_path):
+    result = json.loads(await server.export_pdf(
+        fake_ctx(StubClient(assets=[_asset(1, "IMAGE")])), asset_ids=["a1"],
+        output_path=str(tmp_path / "f.pdf"), title="Bare book",
+        layout="photobook", cover=False, index=False, places=False,
+        footer="none", header=True,
+    ))
+    assert result["pages"] == 1
+    from pypdf import PdfReader
+    page_text = PdfReader(str(tmp_path / "f.pdf")).pages[0].extract_text()
+    assert "immich-photo-manager" not in page_text and "page" not in page_text
+    assert "Bare book" in page_text

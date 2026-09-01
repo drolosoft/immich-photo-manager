@@ -273,6 +273,8 @@ EXPORT_OPTIONS = {
     "cover": "Cover page with title and first image. Default: on.",
     "index": "Clickable index page, one line per asset. Default: on.",
     "places": "Places page (countries/cities table, optional map). Default: on.",
+    "footer": "full (plugin name, server and page number), pages (just the page number), or none. Default: full.",
+    "header": "Repeat the title at the top of every page except the cover. Default: off.",
     "title": "Cover title. Default: album name or 'Immich export <date>'.",
     "captions": "One text per asset, written after looking at the images. Default: none.",
     "frames_per_video": "Evenly spaced frames per video, 0-120. Default: 4.",
@@ -327,7 +329,8 @@ async def export_pdf(
     frame_interval: float = 0.0, frame_times: dict = {}, frame_captions: dict = {},
     image_size: str = "preview",
     frame_size: str = "auto", language: str = "en", map: bool = False,
-    cover: bool = True, index: bool = True, places: bool = True, limit: int = 100,
+    cover: bool = True, index: bool = True, places: bool = True, footer: str = "full",
+    header: bool = False, limit: int = 100,
     return_base64: bool = False,
 ) -> str:
     """Build a PDF (cover, index, places, one section per asset) from an album or a
@@ -363,6 +366,10 @@ async def export_pdf(
         map: Add an OpenStreetMap map to the Places page (fetches tiles from tile.openstreetmap.org).
         cover, index, places: Include each front-matter page (all default True;
             turn them off for a print-ready photobook of bare pages).
+        footer: 'full' (plugin name, server and page number, default), 'pages'
+            (just the page number) or 'none'.
+        header: Repeat the title at the top of every page except the cover
+            (default False).
         limit: Max assets (1-500, default 100).
         return_base64: Also return the PDF bytes (skipped above 2 MB; every MB is
             roughly 350k tokens in the conversation).
@@ -426,6 +433,8 @@ async def export_pdf(
         with_cover=cover,
         with_index=index,
         with_places=places,
+        footer=footer if footer in ("full", "pages", "none") else "full",
+        with_header=header,
     )
     try:
         pdf = await asyncio.to_thread(pdf_export.build, doc)

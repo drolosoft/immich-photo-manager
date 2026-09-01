@@ -154,17 +154,10 @@ def test_render_map_uses_at_most_16_tiles_and_draws_points():
     assert png[:8] == b"\x89PNG\r\n\x1a\n" and 1 <= len(calls) <= 16
     assert len({call[0] for call in calls}) == 1   # single zoom level
 
-    # Verify a dot was drawn at the first point
-    zoom = calls[0][0]
-    min_tx = min(call[1] for call in calls)
-    min_ty = min(call[2] for call in calls)
-    lat, lon = 41.4, 2.2
-    tile_x, tile_y = pdf_export._tile_xy(lat, lon, zoom)
-    pixel_x, pixel_y = (tile_x - min_tx) * pdf_export.TILE, (tile_y - min_ty) * pdf_export.TILE
-    img = PILImage.open(io.BytesIO(png))
-    pixel = img.getpixel((int(pixel_x), int(pixel_y)))
-    # "#d33" is (221, 51, 51) or similar red; white is (255, 255, 255)
-    assert pixel[0] > 150 and pixel[1] < 120  # red channel high, green low
+    # The exact dot positions depend on the centring crop; it is enough that
+    # some red dot pixels survived it ("#d33": red high, green low).
+    data = PILImage.open(io.BytesIO(png)).convert("RGB").tobytes()
+    assert any(data[i] > 150 and data[i + 1] < 120 for i in range(0, len(data), 3))
 
 
 def test_render_map_returns_none_when_tiles_fail():
@@ -313,3 +306,48 @@ def test_index_off_keeps_cover_and_places():
     assert len(reader.pages) == 2 + 2  # cover, places, two detail pages
     assert "Lab Album" in reader.pages[0].extract_text()
     assert "Barcelona" in reader.pages[1].extract_text()
+
+
+# ── v1.12.2: footer modes, optional title header, centred map ─
+
+
+def test_footer_pages_mode_drops_the_plugin_line():
+    doc = _doc(photo_count=1, with_video=False)
+    doc.footer = "pages"
+    reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
+    last_page = reader.pages[-1].extract_text()
+    assert "page 4/4" in last_page
+    assert "immich-photo-manager" not in last_page
+
+
+def test_footer_none_leaves_the_bottom_clean():
+    doc = _doc(photo_count=1, with_video=False)
+    doc.footer = "none"
+    reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
+    text = reader.pages[-1].extract_text()
+    assert "page" not in text and "immich-photo-manager" not in text
+
+
+def test_header_repeats_the_title_except_on_the_cover():
+    doc = _doc(photo_count=1, with_video=False)
+    doc.with_header = True
+    reader = PdfReader(io.BytesIO(pdf_export.build(doc)))
+    assert reader.pages[3].extract_text().count("Lab Album") == 1  # asset page gets the header
+    assert reader.pages[0].extract_text().count("Lab Album") == 1  # cover keeps its big title only
+
+
+def test_header_defaults_off():
+    reader = PdfReader(io.BytesIO(pdf_export.build(_doc(photo_count=1, with_video=False))))
+    assert "Lab Album" not in reader.pages[3].extract_text()
+
+
+def test_render_map_centres_a_single_point():
+    from PIL import Image as PILImage
+
+    def fetch(zoom, tile_x, tile_y):
+        return _png("white")
+
+    png = pdf_export.render_map([(41.3766, 2.1963)], fetch)  # Barceloneta
+    image = PILImage.open(io.BytesIO(png))
+    pixel = image.getpixel((image.width // 2, image.height // 2))
+    assert pixel[0] > 150 and pixel[1] < 120  # the dot sits at the image centre

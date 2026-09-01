@@ -6,6 +6,15 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.12.2] — 2026-09-01
+
+### Added
+- **`footer` in `export_pdf`**: `"full"` (plugin name, server and page number, the previous behaviour and still the default), `"pages"` (just the page number) or `"none"` — a print-ready photobook can now have a clean bottom edge.
+- **`header` in `export_pdf`**: repeats the title at the top of every page except the cover; off by default. Both switches appear in `get_export_preview`'s options, so the model offers them when asking how you want your PDF.
+
+### Fixed
+- **The Places map centres on the photos now.** A single location used to land wherever it fell inside its map tile, corners included; the map is stitched with a tile of margin and cropped so the points sit in the middle of the image.
+
 ## [v1.12.1] — 2026-08-31
 
 ### Fixed
@@ -183,6 +192,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.12.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.2
 [v1.12.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.1
 [v1.12.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.0
 [v1.11.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.11.0

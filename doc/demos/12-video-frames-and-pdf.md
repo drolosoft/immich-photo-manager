@@ -52,7 +52,7 @@ Then Claude looks at the frames, chooses the moments (`frame_times`), writes the
 
 - `layout="photobook"`: full-page images, fitted without cropping (letterbox, never a crop that cuts edges off). A video with several chosen frames unfolds into **one full page per frame**, each with its timestamp and its own caption (`frame_captions`) — the clip reads like a photo story. For [`luna.mov`](assets/12/luna.mov) that is five pages: sunset, dusk, the moon appearing, the moon high over the water, and gone.
 - `layout="detail"` keeps the compact look instead: one page per asset with a frame strip (timestamps under each frame) and the metadata block.
-- The `cover`, `index` and `places` pages can each be turned off — a print-ready photobook can be bare pages only.
+- The `cover`, `index` and `places` pages can each be turned off, the footer can shrink to just the page number or disappear (`footer="pages"` / `"none"`), and a small title header on every page is available (`header=true`) — a print-ready photobook can be bare pages only.
 - Frames that go into the PDF cost no tokens, up to 120 per video; photos can go in at `image_size="original"` (print quality, capped at 3000px).
 - Live Photos count once, `language="es"` prints the page labels in Spanish, and the Places page draws an OpenStreetMap map when the assets carry GPS.
 
