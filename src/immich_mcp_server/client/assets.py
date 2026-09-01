@@ -80,3 +80,9 @@ class AssetsApi:
         if file_created_before:
             params["fileCreatedBefore"] = file_created_before
         return await self._request("GET", "/map/markers", params=params)
+
+    async def reverse_geocode(self, lat: float, lon: float) -> list[dict]:
+        """Resolve coordinates to city/state/country using Immich's own geodata."""
+        return await self._request(
+            "GET", "/map/reverse-geocode", params={"lat": lat, "lon": lon}
+        )

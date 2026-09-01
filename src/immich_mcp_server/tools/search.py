@@ -94,6 +94,196 @@ async def search_explore(ctx: Context) -> str:
 
 
 @mcp.tool()
+async def search_cities(ctx: Context) -> str:
+    """Every city that appears in the library, one representative asset each.
+    Unlike search_explore this has no minimum-asset threshold, so it is the
+    reliable way to answer 'which places are in this library?'. Read-only.
+
+    Returns: JSON with a cities array of {city, country, asset_id, date}.
+    """
+    result = await _client(ctx).search_cities()
+
+    cities = []
+    for asset in result:
+        exif = asset.get("exifInfo") or {}
+        cities.append({
+            "city": exif.get("city"),
+            "country": exif.get("country"),
+            "asset_id": asset.get("id"),
+            "date": asset.get("fileCreatedAt"),
+        })
+    return json.dumps({"total": len(cities), "cities": cities}, default=str)
+
+
+@mcp.tool()
+async def search_places(ctx: Context, name: str) -> str:
+    """Look a place name up in Immich's built-in gazetteer (no assets involved).
+    Use this to resolve a spelling or get coordinates for a place before a
+    geographic search. Read-only.
+
+    Args:
+        name: Place name to look for (e.g. 'Lisbon').
+
+    Returns: JSON with a places array of {name, admin1name, admin2name, latitude,
+    longitude}.
+    """
+    result = await _client(ctx).search_places(name)
+    return json.dumps({"total": len(result), "places": result}, default=str)
+
+
+@mcp.tool()
+async def search_suggestions(
+    ctx: Context,
+    type: str,
+    country: str = "",
+    state: str = "",
+    make: str = "",
+    model: str = "",
+) -> str:
+    """Distinct values present in the library for one field — the exact spellings
+    search_metadata expects. Use this before filtering by city or camera to avoid
+    guessing (e.g. 'iPhone 14 Pro' vs 'iPhone14,3'). Read-only.
+
+    Args:
+        type: One of 'country', 'state', 'city', 'camera-make', 'camera-model',
+            'camera-lens-model'.
+        country: Narrow city/state suggestions to this country.
+        state: Narrow city suggestions to this state.
+        make: Narrow model suggestions to this camera make.
+        model: Narrow lens suggestions to this camera model.
+
+    Returns: JSON with a suggestions array of strings.
+    """
+    result = await _client(ctx).search_suggestions(
+        type,
+        country=country or None,
+        state=state or None,
+        make=make or None,
+        model=model or None,
+    )
+    return json.dumps({"suggestions": result}, default=str)
+
+
+@mcp.tool()
+async def search_random(
+    ctx: Context,
+    size: int = 10,
+    city: str = "",
+    country: str = "",
+    make: str = "",
+    model: str = "",
+    is_favorite: bool | None = None,
+    ocr: str = "",
+) -> str:
+    """Random assets from the library, optionally filtered. Use this for sampling —
+    a quick feel of what a filter matches, a surprise pick for a story, or spot
+    checks over a big library. Read-only.
+
+    Args:
+        size: How many random assets to return (default 10, max 100).
+        city: Only assets from this city.
+        country: Only assets from this country.
+        make: Only assets from this camera make.
+        model: Only assets from this camera model.
+        is_favorite: If true, only favorites.
+        ocr: Only assets whose recognized text matches (needs OCR on the server).
+
+    Returns: JSON with the matching assets array.
+    """
+    result = await _client(ctx).search_random(
+        size=min(size, 100),
+        city=city or None,
+        country=country or None,
+        make=make or None,
+        model=model or None,
+        is_favorite=is_favorite,
+        ocr=ocr or None,
+    )
+    return json.dumps({"total": len(result), "assets": result}, default=str)
+
+
+@mcp.tool()
+async def search_statistics(
+    ctx: Context,
+    city: str = "",
+    country: str = "",
+    state: str = "",
+    make: str = "",
+    model: str = "",
+    is_favorite: bool | None = None,
+    ocr: str = "",
+    created_after: str = "",
+    created_before: str = "",
+) -> str:
+    """Count how many assets match a filter WITHOUT fetching them. Use this instead
+    of search_metadata whenever only the number matters ('how many photos from
+    Spain?') — it costs one integer instead of pages of assets. Read-only.
+
+    Args:
+        city: Count assets from this city.
+        country: Count assets from this country.
+        state: Count assets from this state/region.
+        make: Count assets from this camera make.
+        model: Count assets from this camera model.
+        is_favorite: If true, count only favorites.
+        ocr: Count assets whose recognized text matches (needs OCR on the server).
+        created_after: ISO date lower bound on upload date.
+        created_before: ISO date upper bound on upload date.
+
+    Returns: JSON {total}.
+    """
+    result = await _client(ctx).search_statistics(
+        city=city or None,
+        country=country or None,
+        state=state or None,
+        make=make or None,
+        model=model or None,
+        is_favorite=is_favorite,
+        ocr=ocr or None,
+        created_after=created_after or None,
+        created_before=created_before or None,
+    )
+    return json.dumps({"total": result.get("total", 0)})
+
+
+@mcp.tool()
+async def search_large_assets(
+    ctx: Context,
+    min_size_mb: int = 0,
+    size: int = 20,
+    asset_type: str = "",
+) -> str:
+    """The biggest files in the library, largest first. Use this to find what is
+    eating storage before a cleanup — videos and originals show up immediately.
+    Read-only.
+
+    Args:
+        min_size_mb: Only assets at least this many megabytes (0 = no minimum).
+        size: How many assets to return (default 20).
+        asset_type: 'IMAGE' or 'VIDEO'. Omit for both.
+
+    Returns: JSON with an assets array of {asset_id, filename, size_mb, date},
+    largest first.
+    """
+    result = await _client(ctx).search_large_assets(
+        min_file_size=min_size_mb * 1024 * 1024 if min_size_mb else None,
+        size=size or None,
+        asset_type=asset_type or None,
+    )
+
+    assets = []
+    for asset in result:
+        size_bytes = (asset.get("exifInfo") or {}).get("fileSizeInByte") or 0
+        assets.append({
+            "asset_id": asset.get("id"),
+            "filename": asset.get("originalFileName"),
+            "size_mb": round(size_bytes / 1024 / 1024, 1),
+            "date": asset.get("fileCreatedAt"),
+        })
+    return json.dumps({"total": len(assets), "assets": assets}, default=str)
+
+
+@mcp.tool()
 async def search_smart(
     ctx: Context,
     query: str,

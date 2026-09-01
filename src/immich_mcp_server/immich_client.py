@@ -21,6 +21,8 @@ from .client.duplicates import DuplicatesApi
 from .client.tags import TagsApi
 from .client.upload import UploadApi
 from .client.maps import MapsApi
+from .client.memories import MemoriesApi
+from .client.timeline import TimelineApi
 
 
 class ImmichClient(
@@ -38,6 +40,8 @@ class ImmichClient(
     TagsApi,
     UploadApi,
     MapsApi,
+    MemoriesApi,
+    TimelineApi,
     ImmichClientBase,
 ):
     """Async HTTP client for the Immich REST API."""

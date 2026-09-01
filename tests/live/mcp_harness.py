@@ -753,6 +753,113 @@ class LiveHarness:
         else:
             rec("resolve_duplicates", False, "SKIPPED: no duplicate groups")
 
+    async def check_timeline_and_discovery(self):
+        """Timeline buckets, search extras, reverse geocode."""
+        # Compare against list_assets at the same moment, not the start-of-run
+        # statistics: an earlier check (resolve_duplicates) trashes an asset, and
+        # the timeline excludes trash while /server/statistics does not.
+        listed, _, _, _ = await self.call("list_assets", page=1, size=100)
+        listed_total = listed.get("total", -1) if isinstance(listed, dict) else -1
+        data, _, failed, _ = await self.call("get_timeline_buckets")
+        buckets = data.get("buckets", []) if isinstance(data, dict) else []
+        bucket_total = sum(bucket.get("count", 0) for bucket in buckets)
+        rec(
+            "get_timeline_buckets",
+            self.okj(data, failed) and bucket_total == listed_total,
+            f"{len(buckets)} buckets, {bucket_total} assets (list_assets says {listed_total})",
+        )
+        first_bucket = buckets[0]["timeBucket"] if buckets else ""
+        data, _, failed, _ = await self.call("get_timeline_bucket", time_bucket=first_bucket)
+        rows = data.get("assets", []) if isinstance(data, dict) else []
+        rec(
+            "get_timeline_bucket",
+            self.okj(data, failed) and len(rows) > 0 and rows[0].get("asset_id") and rows[0].get("date"),
+            f"bucket={first_bucket} rows={len(rows)}",
+        )
+        data, _, failed, _ = await self.call("search_cities")
+        cities = [entry.get("city") for entry in data.get("cities", [])] if isinstance(data, dict) else []
+        rec(
+            "search_cities",
+            self.okj(data, failed) and "Lisbon" in cities,
+            f"cities={cities}",
+        )
+        data, _, failed, _ = await self.call("search_places", name="Lisbon")
+        places = data.get("places", []) if isinstance(data, dict) else []
+        rec(
+            "search_places",
+            self.okj(data, failed) and len(places) > 0,
+            f"total={data.get('total')} first={places[0].get('name') if places else None}",
+        )
+        data, _, failed, _ = await self.call("search_suggestions", type="city")
+        suggestions = data.get("suggestions", []) if isinstance(data, dict) else []
+        rec(
+            "search_suggestions",
+            self.okj(data, failed) and "Lisbon" in suggestions,
+            f"suggestions={suggestions}",
+        )
+        data, _, failed, _ = await self.call("search_random", size=3)
+        rec(
+            "search_random",
+            self.okj(data, failed) and data.get("total") == 3,
+            f"total={data.get('total')} (asked 3)",
+        )
+        data, _, failed, _ = await self.call("search_statistics", make="LabCam")
+        rec(
+            "search_statistics",
+            self.okj(data, failed) and data.get("total") == 4,
+            f"total={data.get('total')} (expected 4, same as search_metadata make=LabCam)",
+        )
+        data, _, failed, _ = await self.call("search_large_assets", size=5)
+        sizes = [asset.get("size_mb") for asset in data.get("assets", [])] if isinstance(data, dict) else []
+        rec(
+            "search_large_assets",
+            self.okj(data, failed) and len(sizes) > 0 and sizes == sorted(sizes, reverse=True),
+            f"sizes_mb={sizes}",
+        )
+        data, _, failed, _ = await self.call("reverse_geocode", lat=38.7223, lon=-9.1393)
+        places = data.get("places", []) if isinstance(data, dict) else []
+        rec(
+            "reverse_geocode",
+            self.okj(data, failed) and any(place.get("country") == "Portugal" for place in places),
+            f"places={places}",
+        )
+
+    async def check_memories(self):
+        """Memories: create, list, update, delete on the real server."""
+        data, _, failed, _ = await self.call(
+            "create_memory",
+            memory_at="2026-09-01T00:00:00Z",
+            year=2020,
+            asset_ids=[PHOTO2],
+        )
+        memory_id = data.get("id") if isinstance(data, dict) else None
+        rec(
+            "create_memory",
+            self.okj(data, failed) and bool(memory_id) and data.get("asset_count") == 1,
+            f"id={memory_id} assets={data.get('asset_count')}",
+        )
+        data, _, failed, _ = await self.call("list_memories")
+        listed = [memory.get("id") for memory in data.get("memories", [])] if isinstance(data, dict) else []
+        rec(
+            "list_memories",
+            self.okj(data, failed) and memory_id in listed,
+            f"total={data.get('total')} contains_created={memory_id in listed}",
+        )
+        data, _, failed, _ = await self.call("update_memory", memory_id=memory_id, is_saved=True)
+        rec(
+            "update_memory",
+            self.okj(data, failed) and data.get("is_saved") is True,
+            f"is_saved={data.get('is_saved')}",
+        )
+        data, _, failed, _ = await self.call("delete_memory", memory_id=memory_id)
+        listed_after, _, _, _ = await self.call("list_memories")
+        remaining = [memory.get("id") for memory in listed_after.get("memories", [])] if isinstance(listed_after, dict) else []
+        rec(
+            "delete_memory",
+            self.okj(data, failed) and data.get("success") is True and memory_id not in remaining,
+            f"deleted={memory_id} still_listed={memory_id in remaining}",
+        )
+
     async def check_credentials(self):
         """Credentials (same creds, must keep working)."""
         data, _, failed, _ = await self.call(
@@ -792,6 +899,8 @@ async def main():
             await harness.check_upload_trash_lifecycle()
             await harness.check_edits()
             await harness.check_ml_smart_search_people()
+            await harness.check_timeline_and_discovery()
+            await harness.check_memories()
             await harness.check_credentials()
 
     covered = {reader["tool"].split("(")[0].strip() for reader in results}

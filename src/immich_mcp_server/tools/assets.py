@@ -228,3 +228,19 @@ async def get_map_markers(
         is_favorite=is_favorite,
     )
     return json.dumps({"total": len(result), "markers": result[:500]}, default=str)
+
+
+@mcp.tool()
+async def reverse_geocode(ctx: Context, lat: float, lon: float) -> str:
+    """Resolve GPS coordinates to a place name using Immich's own offline geodata.
+    Use this to name the location of a marker from get_map_markers or of an asset's
+    EXIF coordinates — no external service is contacted. Read-only.
+
+    Args:
+        lat: Latitude in decimal degrees.
+        lon: Longitude in decimal degrees.
+
+    Returns: JSON with a places array of {city, state, country} candidates.
+    """
+    result = await _client(ctx).reverse_geocode(lat, lon)
+    return json.dumps({"places": result}, default=str)

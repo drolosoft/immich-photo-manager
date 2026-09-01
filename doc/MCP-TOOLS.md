@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-The Immich Photo Manager MCP server exposes 59 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
+The Immich Photo Manager MCP server exposes 72 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
 
 ---
 
@@ -15,11 +15,12 @@ The Immich Photo Manager MCP server exposes 59 tools that Claude can use to inte
 | `get_capabilities` | What this server can do: version, feature flags (OCR, smart search...), known 2.x/3.x quirks | Capability report |
 | `get_statistics` | Get library-wide statistics | Photo count, video count, storage used |
 
-### Assets (7)
+### Assets (8)
 
 | Tool | Description | Returns |
 |------|-------------|---------|
 | `get_asset_info` | Get full metadata for a specific asset | EXIF data, GPS, dates, dimensions, file info |
+| `reverse_geocode` | Resolve GPS coordinates to city/state/country (Immich's offline geodata) | Place candidates |
 | `update_asset_metadata` | Update asset metadata (dates, GPS, description, favorites, rating) | Updated asset object |
 | `rotate_assets` | Rotate assets by album or IDs (90°, 180°, 270°) — non-destructive | Count of rotated/failed assets |
 | `revert_asset_edits` | Remove all edits (rotation, crop, mirror) from assets — revert to original | Count of reverted/failed assets |
@@ -27,13 +28,19 @@ The Immich Photo Manager MCP server exposes 59 tools that Claude can use to inte
 | `upload_asset` | Upload a local file to Immich (25MB limit, extension filter, optional album) | Uploaded asset object with ID |
 | `list_assets` | List assets with filters (favorites, archived, trashed, type) | Paginated asset list |
 
-### Search (3)
+### Search (9)
 
 | Tool | Description | Returns |
 |------|-------------|---------|
 | `search_metadata` | Search by EXIF metadata: location, camera, dates, type, OCR text | Paginated asset list |
 | `search_smart` | AI-powered visual search via CLIP embeddings | Ranked asset list by visual similarity |
 | `search_explore` | Library overview: one representative asset per city and concept | Explore fields with value + asset id |
+| `search_cities` | Every city in the library, one representative asset each (no threshold) | {city, country, asset_id, date} rows |
+| `search_places` | Look a place name up in Immich's built-in gazetteer | Place names with coordinates |
+| `search_suggestions` | Distinct values present in the library for one field (city, camera-make...) | String list |
+| `search_random` | Random assets, optionally filtered (city, camera, favorite, OCR) | Asset list (max 100) |
+| `search_statistics` | Count matching assets WITHOUT fetching them | {total} |
+| `search_large_assets` | Biggest files first — what is eating storage | {asset_id, filename, size_mb, date} rows |
 
 **`search_metadata` parameters:**
 
@@ -65,6 +72,26 @@ The Immich Photo Manager MCP server exposes 59 tools that Claude can use to inte
 | `ocr` | string | "Renfe" (text recognized inside the image, combined with the visual query) |
 | `page` | number | 1 |
 | `size` | number | 50 (max 200) |
+
+### Memories (4)
+
+Immich's "on this day" collections — photos from the same date in past years.
+
+| Tool | Description | Modifies? |
+|------|-------------|-----------|
+| `list_memories` | List memories, optionally the ones shown on a given day | No |
+| `create_memory` | Create an "on this day" memory from chosen assets (needs the past year) | Yes |
+| `update_memory` | Save/unsave a memory, move its date, mark it seen | Yes |
+| `delete_memory` | Delete a memory (the photos stay in the library) | Yes |
+
+### Timeline (2)
+
+The cheap way to browse by date: one call maps the whole library month by month.
+
+| Tool | Description | Returns |
+|------|-------------|---------|
+| `get_timeline_buckets` | One bucket per month with its asset count (filterable by album, person, tag) | {timeBucket, count} rows |
+| `get_timeline_bucket` | The assets of one month bucket | {asset_id, date, is_image, city...} rows |
 
 ### Albums (7)
 

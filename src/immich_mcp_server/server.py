@@ -27,12 +27,15 @@ from .tools import (
     upload,
     asset_list,
     export,
+    memories,
+    timeline,
 )
 from .tools._common import _album_assets, _entry_to_image, _image_format_from_mime  # noqa: F401
 
 _TOOL_MODULES = (
     health, credentials, assets, search, albums, thumbnails, images, video,
     sharing, people, trash, duplicates, tags, upload, asset_list, export,
+    memories, timeline,
 )
 
 # Re-export every tool function as `server.<name>` (tests and the live harness use it).
