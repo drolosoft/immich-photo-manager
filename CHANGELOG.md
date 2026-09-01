@@ -6,6 +6,8 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.0] — 2026-09-01
+
 ### Changed
 
 - **MCP 2026-07-28 support (dual-era)** — the server now speaks the new stateless protocol revision (no `initialize` handshake, per-request `_meta`) **and** keeps answering the legacy handshake from the same process and endpoint. Claude Desktop, Cowork, and Claude Code (still on the legacy handshake today) connect exactly as before; new stateless clients negotiate `2026-07-28`. Verified over stdio and Streamable HTTP with both eras; a contract test (`tests/test_dual_era.py`) pins the same 57-tool surface on both. Built on the MCP Python SDK v2 (`FastMCP` → `MCPServer`).
@@ -231,6 +233,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.0
 [v1.12.8]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.8
 [v1.12.7]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.7
 [v1.12.6]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.6
