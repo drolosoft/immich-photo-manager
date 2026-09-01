@@ -6,6 +6,14 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.12.5] — 2026-09-01
+
+### Changed
+- **Albums export oldest to newest.** Immich returns albums newest first, and the PDF used to keep that: frame strips told the story forward while the photos ran backward. Album exports now read chronologically, like the frames; `order` ('oldest', 'newest', 'given') overrides, and explicit `asset_ids` keep the order you passed.
+
+### Added
+- **Unrelated videos never mix silently.** Two or more videos further apart than 90 days look like different stories, and one PDF tells one story: `export_pdf` answers with `confirm_required` (reason, the videos and their dates) instead of exporting. The model must ask the user and either split into one export per story or call again with `confirm=true`. Same pattern as the video-frames token gate.
+
 ## [v1.12.4] — 2026-09-01
 
 ### Changed
@@ -202,6 +210,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.12.5]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.5
 [v1.12.4]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.4
 [v1.12.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.3
 [v1.12.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.2

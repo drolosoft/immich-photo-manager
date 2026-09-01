@@ -521,3 +521,77 @@ async def test_map_false_keeps_everything_local(fake_ctx, tmp_path):
     ))
     from pypdf import PdfReader
     assert len(PdfReader(str(tmp_path / "o.pdf")).pages[2].images) == 0
+
+
+# ── v1.12.5: chronological order and the mixed-stories gate ─
+
+
+def _dated_asset(i, kind, day):
+    asset = _asset(i, kind)
+    asset["fileCreatedAt"] = day
+    return asset
+
+
+@pytest.mark.asyncio
+async def test_album_export_reads_oldest_to_newest(fake_ctx, tmp_path):
+    newest_first = [_dated_asset(1, "IMAGE", "2026-01-03T10:00:00Z"),
+                    _dated_asset(2, "IMAGE", "2026-01-02T10:00:00Z"),
+                    _dated_asset(3, "IMAGE", "2026-01-01T10:00:00Z")]
+    json.loads(await server.export_pdf(
+        fake_ctx(StubClient(assets=newest_first)), album_id="alb",
+        output_path=str(tmp_path / "o.pdf"),
+    ))
+    from pypdf import PdfReader
+    reader = PdfReader(str(tmp_path / "o.pdf"))
+    assert "3.jpg" in reader.pages[3].extract_text()  # oldest opens the story
+    assert "1.jpg" in reader.pages[5].extract_text()  # newest closes it
+
+
+@pytest.mark.asyncio
+async def test_order_newest_overrides_the_default(fake_ctx, tmp_path):
+    newest_first = [_dated_asset(1, "IMAGE", "2026-01-03T10:00:00Z"),
+                    _dated_asset(2, "IMAGE", "2026-01-01T10:00:00Z")]
+    json.loads(await server.export_pdf(
+        fake_ctx(StubClient(assets=newest_first)), album_id="alb",
+        output_path=str(tmp_path / "n.pdf"), order="newest",
+    ))
+    from pypdf import PdfReader
+    assert "1.jpg" in PdfReader(str(tmp_path / "n.pdf")).pages[3].extract_text()
+
+
+@pytest.mark.asyncio
+async def test_two_videos_years_apart_require_confirmation(fake_ctx, tmp_path):
+    stories = [_dated_asset(1, "VIDEO", "2019-02-03T18:00:00Z"),
+               _dated_asset(2, "VIDEO", "2026-03-01T12:00:00Z")]
+    data = json.loads(await server.export_pdf(
+        fake_ctx(StubClient(assets=stories)), album_id="alb",
+        output_path=str(tmp_path / "g.pdf"),
+    ))
+    assert data["confirm_required"] is True
+    assert not (tmp_path / "g.pdf").exists()  # nothing was written
+
+
+@pytest.mark.asyncio
+async def test_confirm_true_exports_the_mixed_videos_anyway(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    stories = [_dated_asset(1, "VIDEO", "2019-02-03T18:00:00Z"),
+               _dated_asset(2, "VIDEO", "2026-03-01T12:00:00Z")]
+    data = json.loads(await server.export_pdf(
+        fake_ctx(StubClient(assets=stories)), album_id="alb",
+        output_path=str(tmp_path / "y.pdf"), confirm=True,
+    ))
+    assert data["assets_included"] == 2 and (tmp_path / "y.pdf").exists()
+
+
+@pytest.mark.asyncio
+async def test_videos_from_the_same_trip_pass_without_confirmation(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    trip = [_dated_asset(1, "VIDEO", "2026-03-01T12:00:00Z"),
+            _dated_asset(2, "VIDEO", "2026-03-15T12:00:00Z")]
+    data = json.loads(await server.export_pdf(
+        fake_ctx(StubClient(assets=trip)), album_id="alb",
+        output_path=str(tmp_path / "t.pdf"),
+    ))
+    assert data["assets_included"] == 2 and data.get("confirm_required") is None

@@ -277,6 +277,7 @@ EXPORT_OPTIONS = {
     "footer": "full (plugin name, server and page number), pages (just the page number), or none. Default: full.",
     "header": "Repeat the title at the top of every page except the cover. Default: off.",
     "videos_position": "Where the video pages go: mixed with the photos (default), first, or last.",
+    "order": "auto (albums read oldest to newest; asset_ids keep your order), oldest, newest, or given.",
     "title": "Cover title. Default: album name or 'Immich export <date>'.",
     "captions": "One text per asset, written after looking at the images. Default: none.",
     "frames_per_video": "Evenly spaced frames per video, 0-120. Default: 4.",
@@ -324,6 +325,35 @@ async def get_export_preview(ctx: Context, album_id: str = "", asset_ids: list[s
     })
 
 
+# Two videos further apart than this stop looking like one story: a themed
+# album (a trip, a car-spotting season) stays within it, a beach time-lapse
+# plus an exhibition years later does not.
+STORY_SPAN_DAYS = 90
+
+
+def _mixed_stories(raw: list[dict]) -> dict | None:
+    """The confirm gate for unrelated videos: a payload when the selection's
+    videos span more than STORY_SPAN_DAYS, None when they read as one story."""
+    videos = [asset for asset in raw if asset.get("type") == "VIDEO"]
+    if len(videos) < 2:
+        return None
+    try:
+        taken = sorted(datetime.datetime.fromisoformat((asset.get("fileCreatedAt") or "").replace("Z", "+00:00"))
+                       for asset in videos)
+    except ValueError:
+        return None
+    span = (taken[-1] - taken[0]).days
+    if span <= STORY_SPAN_DAYS:
+        return None
+    return {
+        "confirm_required": True,
+        "reason": f"The selection has {len(videos)} videos {span} days apart; they look like different stories, and one PDF tells one story.",
+        "videos": [{"id": asset.get("id"), "filename": asset.get("originalFileName"),
+                    "taken_at": asset.get("fileCreatedAt")} for asset in videos],
+        "hint": "Ask the user: split into one export per story (recommended), or call again with confirm=true to mix them anyway.",
+    }
+
+
 @mcp.tool()
 async def export_pdf(
     ctx: Context, album_id: str = "", asset_ids: list[str] = [], output_path: str = "",
@@ -332,7 +362,8 @@ async def export_pdf(
     image_size: str = "preview",
     frame_size: str = "auto", language: str = "en", map: bool = True,
     cover: bool = True, index: bool = True, places: bool = True, footer: str = "full",
-    header: bool = False, videos_position: str = "mixed", limit: int = 100,
+    header: bool = False, videos_position: str = "mixed", order: str = "auto",
+    confirm: bool = False, limit: int = 100,
     return_base64: bool = False,
 ) -> str:
     """Build a PDF (cover, index, places, one section per asset) from an album or a
@@ -381,6 +412,10 @@ async def export_pdf(
             (default False).
         videos_position: Where the video pages (frame strips or frame pages) go:
             'mixed' with the photos in the general order (default), 'first' or 'last'.
+        order: 'auto' (albums read oldest to newest, like the frames inside a video;
+            asset_ids keep the order you passed), 'oldest', 'newest' or 'given'.
+        confirm: Required (as True) to export videos more than 90 days apart, which
+            look like different stories; ask the user before confirming.
         limit: Max assets (1-500, default 100).
         return_base64: Also return the PDF bytes (skipped above 2 MB; every MB is
             roughly 350k tokens in the conversation).
@@ -407,6 +442,18 @@ async def export_pdf(
     if frame_size not in ("thumbnail", "preview"):
         frame_size = "preview" if (0 < frames <= 4 and not interval) else "thumbnail"
     title = title or album_title or f"Immich export {datetime.date.today().isoformat()}"
+
+    # Unrelated videos never mix silently: the gate answers instead of exporting.
+    if not confirm:
+        gate = _mixed_stories(raw)
+        if gate:
+            return json.dumps(gate)
+
+    # A book reads oldest to newest, matching the frame strips; Immich hands
+    # albums back newest first, so albums get re-sorted by default.
+    effective_order = ("oldest" if album_id else "given") if order == "auto" else order
+    if effective_order in ("oldest", "newest"):
+        raw.sort(key=lambda asset: asset.get("fileCreatedAt") or "", reverse=(effective_order == "newest"))
 
     # One asset failing (a 404 preview, a broken file) is reported, not fatal.
     entries: list[AssetEntry] = []
