@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Weekly run so a new mcp 2.x that breaks us is found by CI, not by a user's
+  # fresh uvx install. Monday 06:00 UTC.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 jobs:
   test:
@@ -18,7 +23,67 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install
         run: pip install -e ".[dev]"
+      # Name the resolved SDK in the log so a scheduled failure points at the
+      # culprit release immediately.
+      - name: Show resolved mcp
+        run: pip show mcp | head -2
       - name: Lint
         run: ruff check src/ tests/
       - name: Test
         run: pytest -q
+
+  # The declared floor. Everything else in CI resolves the newest mcp 2.x, so
+  # without this job the minimum in pyproject would be a promise nobody runs.
+  floor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install at the minimum supported SDK
+        run: |
+          pip install -e ".[dev]"
+          pip install "mcp==2.0.0"
+      - name: Show resolved mcp
+        run: pip show mcp | head -2
+      - name: Era tests on the floor
+        run: pytest -q tests/test_raw_wire_eras.py tests/test_dual_era.py tests/test_e2e_both_eras.py tests/test_sdk_contract.py
+
+  # The plugin route as documented: dependencies from src/requirements.txt on
+  # a plain python, the package reached via PYTHONPATH, no editable install.
+  plugin-route:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install like the plugin does
+        run: |
+          pip install -r src/requirements.txt
+          pip install pytest pytest-asyncio respx
+      - name: Show resolved mcp
+        run: pip show mcp | head -2
+      - name: Era tests over the plugin layout
+        run: PYTHONPATH=src pytest -q tests/test_raw_wire_eras.py tests/test_sdk_contract.py
+
+  # Early warning only: does a future mcp 3.x break us? The <3.0 cap keeps it
+  # away from users either way, so this job never blocks anything.
+  next-sdk-radar:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install with the next major, if it exists
+        run: |
+          pip install -e ".[dev]"
+          pip install "mcp>=3.0.0" || echo "no mcp 3.x published yet"
+      - name: Show resolved mcp
+        run: pip show mcp | head -2
+      - name: Era tests against the next major
+        run: pytest -q tests/test_raw_wire_eras.py tests/test_dual_era.py

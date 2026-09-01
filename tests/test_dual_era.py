@@ -16,8 +16,9 @@ import pytest
 from mcp.client import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
+from tool_manifest import TOOL_NAMES
+
 MODERN = "2026-07-28"
-EXPECTED_TOOL_COUNT = 57
 # Tools whose presence Claude clients depend on: JSON base64 thumbnails stay.
 LOAD_BEARING_TOOLS = {
     "get_asset_thumbnail",
@@ -64,7 +65,7 @@ async def test_legacy_client_initialize_handshake_still_works():
     version, names, info = await _exercise("legacy")
 
     assert version != MODERN, "legacy mode must negotiate a pre-2026 revision"
-    assert len(names) == EXPECTED_TOOL_COUNT
+    assert set(names) == set(TOOL_NAMES)
     assert LOAD_BEARING_TOOLS <= names
     assert info["base_url"] == "http://127.0.0.1:1"
 
@@ -74,7 +75,7 @@ async def test_modern_client_stateless_2026_07_28_works():
     version, names, info = await _exercise(MODERN)
 
     assert version == MODERN
-    assert len(names) == EXPECTED_TOOL_COUNT
+    assert set(names) == set(TOOL_NAMES)
     assert LOAD_BEARING_TOOLS <= names
     assert info["base_url"] == "http://127.0.0.1:1"
 

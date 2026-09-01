@@ -22,12 +22,17 @@ import base64
 import json
 import os
 import sys
+from pathlib import Path
 
 from mcp.client import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-MODES = ["legacy", "2026-07-28"]
-EXPECTED_TOOLS = 57
+# "auto" probes server/discover for real; without it the smoke would never
+# send a discover over stdio.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tests"))
+from tool_manifest import TOOL_NAMES  # noqa: E402
+
+MODES = ["legacy", "2026-07-28", "auto"]
 SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src")
 
 
@@ -53,7 +58,8 @@ async def check(client, label):
         print(f"  [{label}] {'✅' if passed else '❌'} {name} {detail}")
 
     tools = await client.list_tools()
-    report("tools/list", len(tools.tools) == EXPECTED_TOOLS, f"({len(tools.tools)} tools)")
+    names = {tool.name for tool in tools.tools}
+    report("tools/list", names == set(TOOL_NAMES), f"({len(names)} tools, manifest match)")
 
     ping = await _json(client, "ping")
     report("ping", ping.get("res") == "pong", json.dumps(ping))
@@ -98,7 +104,7 @@ async def main():
             print(f"\nstdio  mode={mode!r} -> negotiated {c.protocol_version}")
             all_ok &= await check(c, f"stdio/{mode}")
     if args.http:
-        for mode in MODES + ["auto"]:
+        for mode in MODES:
             async with Client(args.http, mode=mode) as c:
                 print(f"\nhttp   mode={mode!r} -> negotiated {c.protocol_version}")
                 all_ok &= await check(c, f"http/{mode}")

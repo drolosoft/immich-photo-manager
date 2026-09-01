@@ -2,7 +2,7 @@
   "mcpServers": {
     "immich": {
       "command": "uvx",
-      "args": ["immich-mcp"],
+      "args": ["immich-photo-manager"],
       "env": {
         "IMMICH_BASE_URL": "https://your-immich-instance.com",
         "IMMICH_API_KEY": "your-api-key-here"

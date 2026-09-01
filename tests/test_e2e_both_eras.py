@@ -22,10 +22,14 @@ import pytest
 from mcp.client import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
+from tool_manifest import TOOL_NAMES
+
 from fake_immich import API_KEY, PNG, FakeImmich
 
 SRC = os.path.join(os.path.dirname(__file__), "..", "src")
-MODES = ["legacy", "2026-07-28"]
+# "auto" probes server/discover for real before falling back, so keeping it
+# here is the only SDK-driven discover exercised over stdio.
+MODES = ["legacy", "2026-07-28", "auto"]
 PNG_B64 = base64.b64encode(PNG).decode("ascii")
 
 
@@ -132,14 +136,14 @@ async def exercise_skill_flows(client):
 
     # tool surface
     tools = await client.list_tools()
-    assert len(tools.tools) == 57
+    assert {tool.name for tool in tools.tools} == set(TOOL_NAMES)
 
 
 @pytest.mark.parametrize("mode", MODES)
 @pytest.mark.asyncio
 async def test_stdio_skill_flows(immich, mode):
     async with Client(_stdio(immich.base_url), mode=mode) as client:
-        expected = "2026-07-28" if mode == "2026-07-28" else "2025-11-25"
+        expected = "2025-11-25" if mode == "legacy" else "2026-07-28"
         assert client.protocol_version == expected
         await exercise_skill_flows(client)
 
@@ -148,7 +152,7 @@ async def test_stdio_skill_flows(immich, mode):
 @pytest.mark.asyncio
 async def test_http_skill_flows(http_server, mode):
     async with Client(http_server.url, mode=mode) as client:
-        expected = "2026-07-28" if mode == "2026-07-28" else "2025-11-25"
+        expected = "2025-11-25" if mode == "legacy" else "2026-07-28"
         assert client.protocol_version == expected
         await exercise_skill_flows(client)
 
@@ -181,4 +185,4 @@ async def test_bad_api_key_surfaces_as_tool_error_not_crash(immich):
             r = await client.call_tool("get_statistics", {})
             assert r.is_error or "401" in json.dumps([b.model_dump() for b in r.content])
             # server still alive afterwards
-            assert len((await client.list_tools()).tools) == 57
+            assert {tool.name for tool in (await client.list_tools()).tools} == set(TOOL_NAMES)
