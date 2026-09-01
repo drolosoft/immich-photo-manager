@@ -1,17 +1,18 @@
 # MCP Tools Reference
 
-The Immich Photo Manager MCP server exposes 57 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
+The Immich Photo Manager MCP server exposes 59 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
 
 ---
 
 ## Tool Categories
 
-### Health & Info (3)
+### Health & Info (4)
 
 | Tool | Description | Returns |
 |------|-------------|---------|
 | `ping` | Check if the Immich server is reachable | Connection status |
 | `get_server_version` | Get Immich server version | Version string |
+| `get_capabilities` | What this server can do: version, feature flags (OCR, smart search...), known 2.x/3.x quirks | Capability report |
 | `get_statistics` | Get library-wide statistics | Photo count, video count, storage used |
 
 ### Assets (7)
@@ -26,12 +27,13 @@ The Immich Photo Manager MCP server exposes 57 tools that Claude can use to inte
 | `upload_asset` | Upload a local file to Immich (25MB limit, extension filter, optional album) | Uploaded asset object with ID |
 | `list_assets` | List assets with filters (favorites, archived, trashed, type) | Paginated asset list |
 
-### Search (2)
+### Search (3)
 
 | Tool | Description | Returns |
 |------|-------------|---------|
-| `search_metadata` | Search by EXIF metadata: location, camera, dates, type | Paginated asset list |
+| `search_metadata` | Search by EXIF metadata: location, camera, dates, type, OCR text | Paginated asset list |
 | `search_smart` | AI-powered visual search via CLIP embeddings | Ranked asset list by visual similarity |
+| `search_explore` | Library overview: one representative asset per city and concept | Explore fields with value + asset id |
 
 **`search_metadata` parameters:**
 
@@ -46,6 +48,7 @@ The Immich Photo Manager MCP server exposes 57 tools that Claude can use to inte
 | `taken_before` | ISO date | "2023-06-30" |
 | `asset_type` | string | "IMAGE" or "VIDEO" |
 | `is_favorite` | boolean | true |
+| `ocr` | string | "boarding pass" (text recognized inside the image; needs OCR enabled on the server) |
 | `page` | number | 1 |
 | `size` | number | 50 (max 200) |
 
@@ -59,6 +62,7 @@ The Immich Photo Manager MCP server exposes 57 tools that Claude can use to inte
 | `country` | string | "Spain" (optional filter) |
 | `taken_after` | ISO date | "2023-06-01" |
 | `taken_before` | ISO date | "2023-06-30" |
+| `ocr` | string | "Renfe" (text recognized inside the image, combined with the visual query) |
 | `page` | number | 1 |
 | `size` | number | 50 (max 200) |
 

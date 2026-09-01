@@ -23,6 +23,7 @@ async def search_metadata(
     taken_before: str = "",
     is_favorite: bool | None = None,
     asset_type: str = "",
+    ocr: str = "",
     page: int = 1,
     size: int = 50,
 ) -> str:
@@ -41,6 +42,8 @@ async def search_metadata(
         taken_before: ISO date — return only assets captured before this date.
         is_favorite: If true, only return favorites.
         asset_type: 'IMAGE' or 'VIDEO'. Omit for both.
+        ocr: Text recognized inside the image (tickets, signs, documents). Needs
+            OCR enabled on the server — check with get_capabilities.
         page: Page number, starting from 1 (default 1).
         size: Results per page (1-200, default 50).
 
@@ -56,6 +59,7 @@ async def search_metadata(
         taken_before=taken_before or None,
         is_favorite=is_favorite,
         asset_type=asset_type or None,
+        ocr=ocr or None,
         page=page,
         size=min(size, 200),
     )
@@ -63,6 +67,30 @@ async def search_metadata(
     assets = result.get("assets", {}).get("items", [])
     total = result.get("assets", {}).get("total", 0)
     return json.dumps({"total": total, "page": page, "assets": assets}, default=str)
+
+
+@mcp.tool()
+async def search_explore(ctx: Context) -> str:
+    """Overview of what the library contains, grouped by explore field: one
+    representative asset per city and per detected concept (Immich's Explore page).
+    Use this to get oriented in an unknown library before searching for anything
+    specific — it answers 'what is in here?' in one call. A city only appears once
+    it holds at least 5 assets (Immich's own threshold), so small libraries can
+    come back empty. Read-only.
+
+    Returns: JSON with a fields array; each field has its name (e.g. 'exifInfo.city')
+    and items pairing each value with one representative asset_id.
+    """
+    result = await _client(ctx).search_explore()
+
+    # Each item carries a full AssetResponseDto; only the id is worth the tokens
+    # here — the caller can fetch details or a thumbnail for any id that interests it.
+    fields = []
+    for field in result:
+        items = [{"value": item.get("value"), "asset_id": item.get("data", {}).get("id")}
+                 for item in field.get("items", [])]
+        fields.append({"field": field.get("fieldName"), "items": items})
+    return json.dumps({"fields": fields}, default=str)
 
 
 @mcp.tool()
@@ -74,6 +102,7 @@ async def search_smart(
     country: str = "",
     taken_after: str = "",
     taken_before: str = "",
+    ocr: str = "",
     page: int = 1,
     size: int = 50,
 ) -> str:
@@ -89,6 +118,8 @@ async def search_smart(
         country: Optional country filter.
         taken_after: ISO date — only assets captured after this date.
         taken_before: ISO date — only assets captured before this date.
+        ocr: Text recognized inside the image, combined with the visual query.
+            Needs OCR enabled on the server — check with get_capabilities.
         page: Page number, starting from 1 (default 1).
         size: Results per page (1-200, default 50).
 
@@ -102,6 +133,7 @@ async def search_smart(
             country=country or None,
             taken_after=taken_after or None,
             taken_before=taken_before or None,
+            ocr=ocr or None,
             page=page,
             size=min(size, 200),
         )

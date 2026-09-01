@@ -33,6 +33,51 @@ async def get_server_version(ctx: Context) -> str:
 
 
 @mcp.tool()
+async def get_capabilities(ctx: Context) -> str:
+    """What this Immich server can do: version, feature flags and known quirks.
+    Use this once at the start of a session to learn whether OCR, smart search or
+    facial recognition are available before offering them, and which behaviours
+    differ between Immich 2.x and 3.x. Read-only.
+
+    Returns: JSON with server_version, immich_major, features (the server's own
+    flags: ocr, smartSearch, facialRecognition, map, trash...) and quirks (plain
+    sentences about version-specific behaviour the caller should know).
+    """
+    version = await _client(ctx).get_server_version()
+    features = await _client(ctx).get_server_features()
+
+    major = version.get("major", 0)
+    version_string = "%s.%s.%s" % (
+        version.get("major"), version.get("minor"), version.get("patch"))
+
+    # Behaviour verified live on 2.7.5 and 3.1.0 — these are Immich facts the
+    # model cannot discover from the feature flags alone.
+    quirks = [
+        "The edits API (rotate_assets, revert_asset_edits) applies to images only.",
+        "Tags can change color but never be renamed.",
+        "Videos expose a single thumbnail; use get_video_frames for more moments.",
+    ]
+    if major >= 3:
+        quirks.append(
+            "Fetching an album does not include its assets; the plugin already "
+            "works around this, so album tools behave normally.")
+        quirks.append(
+            "list_people hides people below a face-count threshold; the total "
+            "still counts them.")
+    else:
+        quirks.append(
+            "Searching by asset ids is ignored by this server; the plugin "
+            "falls back to fetching each asset individually.")
+
+    return json.dumps({
+        "server_version": version_string,
+        "immich_major": major,
+        "features": features,
+        "quirks": quirks,
+    })
+
+
+@mcp.tool()
 async def get_statistics(ctx: Context) -> str:
     """Get library statistics. Use this for a quick overview of library size
     without listing individual assets. Read-only.

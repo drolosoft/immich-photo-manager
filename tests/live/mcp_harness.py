@@ -89,6 +89,16 @@ class LiveHarness:
         )
         data, _, failed, _ = await self.call("get_connection_info")
         rec("get_connection_info", self.okj(data, failed), data)
+        data, _, failed, _ = await self.call("get_capabilities")
+        expected_major = 2 if TAG == "v2" else 3
+        rec(
+            "get_capabilities",
+            self.okj(data, failed)
+            and data.get("immich_major") == expected_major
+            and "ocr" in data.get("features", {})
+            and len(data.get("quirks", [])) > 0,
+            f"version={data.get('server_version')} ocr={data.get('features', {}).get('ocr')} quirks={len(data.get('quirks', []))}",
+        )
 
     async def check_assets_read(self):
         """Assets read."""
@@ -592,6 +602,28 @@ class LiveHarness:
             "search_smart(+city filter)",
             self.okj(data, failed),
             f"total={data.get('total') if isinstance(data, dict) else data}",
+        )
+        # The ocr filter must be accepted by the wire on both versions; whether the
+        # lab has OCR results depends on the server's OCR job, so only the shape counts.
+        data, _, failed, _ = await self.call("search_metadata", ocr="ticket")
+        rec(
+            "search_metadata(ocr)",
+            self.okj(data, failed) and isinstance(data.get("total"), int),
+            f"total={data.get('total') if isinstance(data, dict) else data}",
+        )
+        # Immich only lists a city in explore once it holds minAssetsPerField=5
+        # assets and the lab has 2 per city, so cities stay empty here. Immich 3.x
+        # adds a recents field (createdAt) that always carries items, so only
+        # there can populated items be demanded.
+        data, _, failed, _ = await self.call("search_explore")
+        fields = data.get("fields", []) if isinstance(data, dict) else []
+        explored = {field.get("field"): len(field.get("items", [])) for field in fields}
+        shape_ok = self.okj(data, failed) and "exifInfo.city" in explored
+        populated_ok = TAG == "v2" or any(explored.values())
+        rec(
+            "search_explore",
+            shape_ok and populated_ok,
+            f"fields={explored}",
         )
         data, _, failed, _ = await self.call("list_people", with_hidden=True)
         people = data.get("people", data) if isinstance(data, dict) else data
