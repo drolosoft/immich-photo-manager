@@ -104,6 +104,9 @@ class StubClient:
     async def get_asset_thumbnail(self, asset_id, size="thumbnail"):
         return {"data": base64.b64encode(PNG_RED).decode(), "type": "image/png"}
 
+    async def get_asset_original(self, asset_id):
+        return {"data": PNG_RED, "type": "image/png"}
+
     async def get_video_playback(self, asset_id):
         return b"MP4"
 
@@ -114,12 +117,17 @@ class StubClient:
 
 
 class FailingThumbClient(StubClient):
-    """StubClient whose get_asset_thumbnail raises for one asset id."""
+    """StubClient whose image endpoints raise for one asset id."""
 
     async def get_asset_thumbnail(self, asset_id, size="thumbnail"):
         if asset_id == "a2":
             raise RuntimeError("boom 500")
         return await super().get_asset_thumbnail(asset_id, size)
+
+    async def get_asset_original(self, asset_id):
+        if asset_id == "a2":
+            raise RuntimeError("boom 500")
+        return await super().get_asset_original(asset_id)
 
 
 @pytest.mark.asyncio
@@ -252,7 +260,8 @@ async def test_export_pdf_no_fpdf(fake_ctx, tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_export_pdf_single_frame_uses_preview_size(fake_ctx, tmp_path, monkeypatch):
-    """With few frames per video the PDF gets preview-sized frames, not 250px thumbnails."""
+    """Quality is free inside the PDF: every frame count gets preview frames unless
+    thumbnail is asked for explicitly."""
     from immich_mcp_server import video_frames
     seen_sizes = []
 
@@ -266,8 +275,8 @@ async def test_export_pdf_single_frame_uses_preview_size(fake_ctx, tmp_path, mon
     await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "b.pdf"),
                             frames_per_video=12)
     await server.export_pdf(fake_ctx(StubClient()), album_id="alb", output_path=str(tmp_path / "c.pdf"),
-                            frames_per_video=12, frame_size="preview")
-    assert seen_sizes == ["preview", "thumbnail", "preview"]
+                            frames_per_video=12, frame_size="thumbnail")
+    assert seen_sizes == ["preview", "preview", "thumbnail"]
 
 
 @pytest.mark.asyncio
@@ -608,3 +617,35 @@ async def test_videos_from_the_same_trip_pass_without_confirmation(fake_ctx, tmp
         output_path=str(tmp_path / "t.pdf"),
     ))
     assert data["assets_included"] == 2 and data.get("confirm_required") is None
+
+
+# ── v1.12.7: max quality by default ─────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_auto_frame_size_is_always_preview(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    sizes = []
+
+    def spying_frames(data, count=6, size="thumbnail", backend=None, start=0.0, end=0.0, interval=0.0):
+        sizes.append(size)
+        return _fake_frames(data, count, size, backend, start, end, interval)
+
+    monkeypatch.setattr(video_frames, "extract_frames", spying_frames)
+    await server.export_pdf(fake_ctx(StubClient()), album_id="alb",
+                            output_path=str(tmp_path / "q.pdf"), frames_per_video=8)
+    assert sizes == ["preview"]  # 8 frames no longer downgrade to thumbnail
+
+
+@pytest.mark.asyncio
+async def test_photos_default_to_original_quality(fake_ctx, tmp_path):
+    calls = []
+
+    class SpyClient(StubClient):
+        async def get_asset_original(self, asset_id):
+            calls.append(asset_id)
+            return {"data": PNG_RED, "type": "image/png"}
+
+    await server.export_pdf(fake_ctx(SpyClient(assets=[_asset(1)])), asset_ids=["a1"],
+                            output_path=str(tmp_path / "r.pdf"))
+    assert calls == ["a1"]  # the stored file, not the preview

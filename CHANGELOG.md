@@ -6,6 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.12.7] — 2026-09-01
+
+### Changed
+- **Maximum quality by default in the PDF.** Quality inside the PDF is free (frames there never enter the conversation), so the old rule that dropped video frames to 250px thumbnails above 4 frames per video is gone: `frame_size="auto"` now always means preview (1440px). Photos default to `image_size="original"` (the stored file, up to 3000px) instead of the 1440px preview. `"thumbnail"` and `"preview"` remain as explicit choices for smaller files. This was #15's first complaint ("blown up thumbnails") finally applied everywhere.
+
 ## [v1.12.6] — 2026-09-01
 
 ### Changed
@@ -215,6 +220,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.12.7]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.7
 [v1.12.6]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.6
 [v1.12.5]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.5
 [v1.12.4]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.4

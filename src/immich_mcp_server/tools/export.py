@@ -284,8 +284,8 @@ EXPORT_OPTIONS = {
     "frame_interval": "One frame every N seconds instead. Default: off.",
     "frame_times": "Exact seconds per video, for hand-picked moments. Default: none.",
     "frame_captions": "One caption per chosen frame (photobook prints each on its page). Default: none.",
-    "image_size": "preview (1440px), thumbnail, or original for photos (print quality). Default: preview.",
-    "frame_size": "auto, preview or thumbnail for video frames in the PDF. Default: auto.",
+    "image_size": "original (stored quality, default), preview (1440px) or thumbnail for photos.",
+    "frame_size": "preview (default; quality is free inside the PDF) or thumbnail for video frames.",
     "language": "en or es for the fixed page labels. Default: en.",
     "map": "OpenStreetMap map on the Places page when assets carry GPS. Default: on; map=false keeps everything inside your network.",
     "output_path": "Where to write the file. Default: ~/Desktop/<title>.pdf, never overwritten.",
@@ -360,7 +360,7 @@ async def export_pdf(
     ctx: Context, album_id: str = "", asset_ids: list[str] = [], output_path: str = "",
     title: str = "", captions: dict = {}, layout: str = "detail", frames_per_video: int = 4,
     frame_interval: float = 0.0, frame_times: dict = {}, frame_captions: dict = {},
-    image_size: str = "preview",
+    image_size: str = "original",
     frame_size: str = "auto", language: str = "en", map: bool = True,
     cover: bool = True, index: bool = True, places: bool = True, footer: str = "full",
     header: bool = False, videos_position: str = "mixed", order: str = "auto",
@@ -395,11 +395,12 @@ async def export_pdf(
             frames_per_video/frame_interval for the listed videos; others keep the spread.
         frame_captions: {asset_id: [text, ...]} one caption per extracted frame, in frame
             order (photobook prints each on its frame's page; other layouts ignore them).
-        image_size: 'preview' (default, 1440px), 'thumbnail', or 'original' for photos:
-            the stored file, print quality, re-encoded to at most 3000px (a format
-            the server cannot decode, like some HEIC, falls back to preview with a note).
-        frame_size: video frame size in the PDF: 'auto' (default: preview up to 4 frames
-            per video, thumbnail above), 'preview' or 'thumbnail'.
+        image_size: 'original' (default): photos go in at the stored file's quality,
+            re-encoded to at most 3000px (a format the server cannot decode, like
+            some HEIC, falls back to preview with a note); 'preview' (1440px) or
+            'thumbnail' for smaller files.
+        frame_size: video frame size in the PDF: 'auto' (default, same as 'preview':
+            quality is free inside the PDF) or 'thumbnail' for a smaller file.
         language: 'en' (default) or 'es' for the fixed labels on the pages (Index,
             Places, Camera, page numbers); captions stay in whatever language you wrote.
         map: Draw an OpenStreetMap map on the Places page when assets carry GPS
@@ -439,10 +440,11 @@ async def export_pdf(
         layout = "detail"
     if image_size not in ("thumbnail", "preview", "original"):
         image_size = "preview"
-    # Few frames end up large on the page, so they deserve preview quality; a
-    # long strip stays at thumbnail size to keep the file reasonable.
+    # Frames in the PDF cost no conversation tokens, so quality is free there:
+    # "auto" means preview (1440px) always. "thumbnail" stays as an explicit
+    # choice for whoever wants a smaller file.
     if frame_size not in ("thumbnail", "preview"):
-        frame_size = "preview" if (0 < frames <= 4 and not interval) else "thumbnail"
+        frame_size = "preview"
     title = title or album_title or f"Immich export {datetime.date.today().isoformat()}"
 
     # Unrelated videos never mix silently — but an album IS the user's own
