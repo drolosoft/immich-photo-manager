@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from mcp.server.mcpserver import MCPServer, Context
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
 
 from . import __version__
@@ -18,8 +19,25 @@ from .immich_client import ImmichClient
 
 @asynccontextmanager
 async def app_lifespan(server: MCPServer) -> AsyncIterator[dict]:
-    """Initialize the Immich client on server startup."""
-    client = ImmichClient()
+    """Initialize the Immich client on server startup.
+
+    Missing credentials must not kill the server: a fresh container (or a first
+    run before /setup) still has to serve /health and accept update_credentials,
+    which is how the credentials arrive in the first place. The client stays
+    None until then and every other tool reports the fix by name.
+    """
+    try:
+        client = ImmichClient()
+    except ValueError:
+        print(
+            "Warning: no Immich credentials configured. The server is up; "
+            "set them with the update_credentials tool (or IMMICH_BASE_URL "
+            "and IMMICH_API_KEY).",
+            file=sys.stderr,
+        )
+        yield {"immich": None}
+        return
+
     # Verify connection at startup. Diagnostics go to stderr — under the
     # stdio transport stdout carries JSON-RPC and must stay pristine.
     try:
@@ -69,5 +87,18 @@ mcp = MCPServer(
 
 
 def _client(ctx: Context) -> ImmichClient:
-    """Get the Immich client from the request context."""
-    return ctx.request_context.lifespan_context["immich"]
+    """Get the Immich client from the request context.
+
+    The lifespan leaves it as None when the server started without credentials;
+    naming the fix here turns every tool's failure into an actionable message.
+    """
+    client = ctx.request_context.lifespan_context["immich"]
+    if client is None:
+        # ToolError is the SDK's anticipated-failure channel: the message lands
+        # in the tool result for the model to read instead of a bare
+        # "Error executing tool".
+        raise ToolError(
+            "No Immich credentials configured. Set them with the "
+            "update_credentials tool (base_url + api_key)."
+        )
+    return client

@@ -6,6 +6,13 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.6] — 2026-09-02
+
+### Fixed
+
+- **The server now starts without credentials.** A fresh container (or a first run before setup) used to die in the lifespan with a ValueError; now it serves, `/health` answers, and every tool returns "No Immich credentials configured" naming the fix. One `update_credentials` call connects it — no restart. Caught by the Docker publish smoke on v2.0.5.
+- **Credentials persist inside the container.** The config used to be written next to the installed package (read-only for the image's non-root user); it now lives under `/data`, so a mounted volume keeps it across restarts and re-creations.
+
 ## [v2.0.5] — 2026-09-02
 
 ### Added
@@ -286,6 +293,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.6]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.6
 [v2.0.5]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.5
 [v2.0.4]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.4
 [v2.0.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.3
