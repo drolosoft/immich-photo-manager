@@ -560,11 +560,11 @@ async def test_order_newest_overrides_the_default(fake_ctx, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_two_videos_years_apart_require_confirmation(fake_ctx, tmp_path):
+async def test_hand_picked_videos_years_apart_require_confirmation(fake_ctx, tmp_path):
     stories = [_dated_asset(1, "VIDEO", "2019-02-03T18:00:00Z"),
                _dated_asset(2, "VIDEO", "2026-03-01T12:00:00Z")]
     data = json.loads(await server.export_pdf(
-        fake_ctx(StubClient(assets=stories)), album_id="alb",
+        fake_ctx(StubClient(assets=stories)), asset_ids=["a1", "a2"],
         output_path=str(tmp_path / "g.pdf"),
     ))
     assert data["confirm_required"] is True
@@ -578,10 +578,23 @@ async def test_confirm_true_exports_the_mixed_videos_anyway(fake_ctx, tmp_path, 
     stories = [_dated_asset(1, "VIDEO", "2019-02-03T18:00:00Z"),
                _dated_asset(2, "VIDEO", "2026-03-01T12:00:00Z")]
     data = json.loads(await server.export_pdf(
-        fake_ctx(StubClient(assets=stories)), album_id="alb",
+        fake_ctx(StubClient(assets=stories)), asset_ids=["a1", "a2"],
         output_path=str(tmp_path / "y.pdf"), confirm=True,
     ))
     assert data["assets_included"] == 2 and (tmp_path / "y.pdf").exists()
+
+
+@pytest.mark.asyncio
+async def test_a_users_album_never_hits_the_gate(fake_ctx, tmp_path, monkeypatch):
+    from immich_mcp_server import video_frames
+    monkeypatch.setattr(video_frames, "extract_frames", _fake_frames)
+    stories = [_dated_asset(1, "VIDEO", "2019-02-03T18:00:00Z"),
+               _dated_asset(2, "VIDEO", "2026-03-01T12:00:00Z")]
+    data = json.loads(await server.export_pdf(
+        fake_ctx(StubClient(assets=stories)), album_id="alb",
+        output_path=str(tmp_path / "a.pdf"),
+    ))
+    assert data.get("confirm_required") is None and data["assets_included"] == 2
 
 
 @pytest.mark.asyncio

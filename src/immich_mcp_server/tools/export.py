@@ -332,8 +332,9 @@ STORY_SPAN_DAYS = 90
 
 
 def _mixed_stories(raw: list[dict]) -> dict | None:
-    """The confirm gate for unrelated videos: a payload when the selection's
-    videos span more than STORY_SPAN_DAYS, None when they read as one story."""
+    """The confirm gate for unrelated videos in a hand-picked selection: a payload
+    when its videos span more than STORY_SPAN_DAYS, None when they read as one
+    story. Albums are exempt: exporting an album is the user's own request."""
     videos = [asset for asset in raw if asset.get("type") == "VIDEO"]
     if len(videos) < 2:
         return None
@@ -414,8 +415,9 @@ async def export_pdf(
             'mixed' with the photos in the general order (default), 'first' or 'last'.
         order: 'auto' (albums read oldest to newest, like the frames inside a video;
             asset_ids keep the order you passed), 'oldest', 'newest' or 'given'.
-        confirm: Required (as True) to export videos more than 90 days apart, which
-            look like different stories; ask the user before confirming.
+        confirm: Only asked for when explicit asset_ids mix videos more than 90 days
+            apart (different stories). Pass True only when the user themselves asked
+            to mix them; exporting a whole album never needs it.
         limit: Max assets (1-500, default 100).
         return_base64: Also return the PDF bytes (skipped above 2 MB; every MB is
             roughly 350k tokens in the conversation).
@@ -443,8 +445,9 @@ async def export_pdf(
         frame_size = "preview" if (0 < frames <= 4 and not interval) else "thumbnail"
     title = title or album_title or f"Immich export {datetime.date.today().isoformat()}"
 
-    # Unrelated videos never mix silently: the gate answers instead of exporting.
-    if not confirm:
+    # Unrelated videos never mix silently — but an album IS the user's own
+    # request, so only hand-picked asset_ids selections go through the gate.
+    if asset_ids and not confirm:
         gate = _mixed_stories(raw)
         if gate:
             return json.dumps(gate)

@@ -6,6 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.12.6] — 2026-09-01
+
+### Changed
+- **The mixed-stories gate no longer stops whole albums.** Exporting an album is the user's own request, whatever it holds, so `album_id` exports skip the gate introduced in 1.12.5; only hand-picked `asset_ids` selections with videos more than 90 days apart ask for confirmation, and `confirm=true` is meant to be passed only when the user asked for the mix.
+
 ## [v1.12.5] — 2026-09-01
 
 ### Changed
@@ -210,6 +215,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.12.6]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.6
 [v1.12.5]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.5
 [v1.12.4]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.4
 [v1.12.3]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.3

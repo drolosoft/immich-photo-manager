@@ -54,7 +54,7 @@ Then Claude looks at the frames, chooses the moments (`frame_times`), writes the
 - `layout="detail"` keeps the compact look instead: one page per asset with a frame strip (timestamps under each frame) and the metadata block.
 - The `cover`, `index` and `places` pages can each be turned off, the footer can shrink to just the page number or disappear (`footer="pages"` / `"none"`), and a small title header on every page is available (`header=true`) — a print-ready photobook can be bare pages only.
 - Frames that go into the PDF cost no tokens, up to 120 per video; photos can go in at `image_size="original"` (print quality, capped at 3000px).
-- Albums read oldest to newest, like the frames inside a video, and unrelated videos (months apart) are never mixed silently: the tool asks first, one story per PDF. Live Photos count once, `language="es"` prints the page labels in Spanish, and the Places page draws an OpenStreetMap map on its own whenever the assets carry GPS (`map=false` to keep everything local).
+- Albums read oldest to newest, like the frames inside a video, and a hand-picked selection mixing videos months apart asks for confirmation first (your own albums export as they are), one story per PDF. Live Photos count once, `language="es"` prints the page labels in Spanish, and the Places page draws an OpenStreetMap map on its own whenever the assets carry GPS (`map=false` to keep everything local).
 
 The result for this clip: [`luna-photobook.pdf`](assets/12/luna-photobook.pdf) — the five moon pages, each with its caption.
 
