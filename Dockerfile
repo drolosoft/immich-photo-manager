@@ -24,6 +24,12 @@ ENV MCP_HOST=0.0.0.0 \
     MCP_PORT=8626 \
     MCP_TRANSPORT=http
 
+# Credentials set through the update_credentials tool persist as a small json;
+# the default location (next to the installed package) is read-only for the
+# non-root user, so they live under /data — surviving restarts when /data is a
+# mounted volume.
+ENV IMMICH_CACHE_DIR=/data/.immich-config
+
 # DNS-rebinding protection stays ON with its localhost default, which covers
 # the common `-p 8626:8626` + http://localhost:8626 setup. Reaching the
 # container under any other name (a reverse proxy, another container) needs
