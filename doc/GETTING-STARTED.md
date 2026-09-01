@@ -901,5 +901,5 @@ directly), so build the image once in a Shell, then reference it by its local ta
 ## Further Reading
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — How base64-embedded thumbnails solve the Cowork sandbox restriction, with full data flow diagrams
-- [MCP-TOOLS.md](./MCP-TOOLS.md) — Complete reference for all 57 MCP tools
+- [MCP-TOOLS.md](./MCP-TOOLS.md) — Complete reference for all 59 MCP tools
 - [SKILLS.md](./SKILLS.md) — Detailed documentation for all 13 skills

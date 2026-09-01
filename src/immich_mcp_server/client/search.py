@@ -21,6 +21,7 @@ class SearchApi:
         is_favorite: bool | None = None,
         is_archived: bool | None = None,
         asset_type: str | None = None,
+        ocr: str | None = None,
         page: int = 1,
         size: int = 100,
     ) -> dict:
@@ -46,6 +47,8 @@ class SearchApi:
             body["isArchived"] = is_archived
         if asset_type:
             body["type"] = asset_type
+        if ocr:
+            body["ocr"] = ocr
         return await self._request("POST", "/search/metadata", json=body)
 
     async def search_smart(
@@ -56,6 +59,7 @@ class SearchApi:
         country: str | None = None,
         taken_after: str | None = None,
         taken_before: str | None = None,
+        ocr: str | None = None,
         page: int = 1,
         size: int = 100,
     ) -> dict:
@@ -71,4 +75,10 @@ class SearchApi:
             body["takenAfter"] = taken_after
         if taken_before:
             body["takenBefore"] = taken_before
+        if ocr:
+            body["ocr"] = ocr
         return await self._request("POST", "/search/smart", json=body)
+
+    async def search_explore(self) -> list:
+        """Library overview grouped by explore field (cities, semantic tags)."""
+        return await self._request("GET", "/search/explore")

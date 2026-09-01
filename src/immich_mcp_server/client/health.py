@@ -29,6 +29,10 @@ class HealthApi:
         """Get Immich server version."""
         return await self._request("GET", "/server/version")
 
+    async def get_server_features(self) -> dict:
+        """Get the server feature flags (ocr, smartSearch, map...)."""
+        return await self._request("GET", "/server/features")
+
     async def get_statistics(self) -> dict:
         """Get library statistics (photos, videos, storage)."""
         return await self._request("GET", "/server/statistics")

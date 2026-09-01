@@ -6,6 +6,14 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.2] — 2026-09-01
+
+### Added
+
+- **`ocr` filter on both searches** — `search_metadata` and `search_smart` accept an `ocr` parameter that matches text recognized inside the images (tickets, signs, documents). The filter exists identically on Immich 2.x and 3.x; verified live with a real OCR hit on both lab servers.
+- **`search_explore`** — one call answers "what is in this library?": one representative asset per city (and, on Immich 3.x, the most recent additions), trimmed to value + asset id. A city appears once it holds at least 5 assets (Immich's own threshold).
+- **`get_capabilities`** — reports the server version, its feature flags (OCR, smart search, facial recognition, map...) and the known 2.x/3.x quirks in plain sentences, so a model can learn what this particular server can do before offering it.
+
 ## [v2.0.1] — 2026-09-01
 
 ### Added
@@ -249,6 +257,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.2]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.2
 [v2.0.1]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.1
 [v2.0.0]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.0
 [v1.12.8]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.8
