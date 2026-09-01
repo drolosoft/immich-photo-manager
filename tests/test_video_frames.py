@@ -374,3 +374,44 @@ async def test_get_video_frames_sheet_returns_one_image_and_skips_the_gate(fake_
                                            interval=1.0, sheet=True)
     assert isinstance(result, list) and len(result) == 2  # 60 frames → two sheets of 30
     assert all(isinstance(item, Image) for item in result)
+
+
+# ── v1.12.8: dead frames are dodged inside their bin ────────
+
+
+@pytest.fixture(scope="module")
+def clip_with_black_stripe(tmp_path_factory):
+    """3 s of detailed test pattern, fully black from 1.35 s to 1.65 s: the middle
+    bin's centre (1.5 s) lands exactly on dead frames."""
+    if not shutil.which("ffmpeg"):
+        pytest.skip("ffmpeg not on PATH; cannot synthesize a clip")
+    path = tmp_path_factory.mktemp("stripe") / "stripe.mp4"
+    subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+         "testsrc=size=320x240:rate=10:duration=3",
+         "-vf", "drawbox=x=0:y=0:w=iw:h=ih:color=black:t=fill:enable='between(t,1.35,1.65)'",
+         "-pix_fmt", "yuv420p", str(path)],
+        check=True,
+    )
+    return path.read_bytes()
+
+
+def _brightness_spread(frame):
+    from PIL import Image, ImageStat
+    image = Image.open(io.BytesIO(base64.b64decode(frame["data"]))).convert("L")
+    return ImageStat.Stat(image).stddev[0]
+
+
+def test_even_spacing_dodges_dead_frames(clip_with_black_stripe):
+    result = video_frames.extract_frames(clip_with_black_stripe, count=3, size="thumbnail")
+    middle = result["frames"][1]
+    assert _brightness_spread(middle) > 10.0  # not the black stripe
+    assert middle["timestamp"] != 1.5  # it moved off the dead centre
+    assert 1.0 <= middle["timestamp"] <= 2.0  # but stayed inside its own bin
+
+
+def test_explicit_times_are_never_dodged(clip_with_black_stripe):
+    result = video_frames.extract_frames_at(clip_with_black_stripe, [1.5], size="thumbnail")
+    frame = result["frames"][0]
+    assert frame["timestamp"] == 1.5
+    assert _brightness_spread(frame) < 10.0  # the black frame, exactly as asked

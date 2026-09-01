@@ -6,6 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v1.12.8] — 2026-09-01
+
+### Changed
+- **Spaced frames dodge dead spots.** Evenly spaced and interval frames treat each timestamp as a bin centre, not an exact order: the centre and one step to each side (a quarter of the spacing) are decoded, and the frame with the most to show goes in. A time-lapse that is pitch black at a bin's centre and full of sky a quarter-bin away no longer wastes the slot on the black frame; footage with detail everywhere keeps its exact centres. Explicit `frame_times` are never moved — an exact second asked for is an exact second delivered. Both PyAV and ffmpeg backends.
+
 ## [v1.12.7] — 2026-09-01
 
 ### Changed
@@ -220,6 +225,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v1.12.8]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.8
 [v1.12.7]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.7
 [v1.12.6]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.6
 [v1.12.5]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v1.12.5

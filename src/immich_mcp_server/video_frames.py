@@ -121,6 +121,37 @@ def estimate_tokens(frames: int, size: str = "thumbnail") -> int:
     return frames * TOKENS_PER_FRAME.get(size, TOKENS_PER_FRAME["thumbnail"])
 
 
+# A frame must beat the bin centre by this much grayscale spread to replace it,
+# so stable footage keeps its exact centres and only dead frames get dodged.
+DODGE_MARGIN = 5.0
+
+
+def _liveliness(image) -> float:
+    """How much a frame has to show: the grayscale spread. A black (or blown-out,
+    or uniform) frame scores near zero; anything with detail scores far above."""
+    from PIL import ImageStat
+
+    small = image.convert("L")
+    small.thumbnail((64, 64))
+    return ImageStat.Stat(small).stddev[0]
+
+
+def _candidates(timestamp: float, radius: float, duration: float) -> list[float]:
+    """The centre first (it wins ties), then a step to each side, clamped to the clip."""
+    if radius <= 0:
+        return [timestamp]
+    moments = [timestamp, timestamp - radius, timestamp + radius]
+    return [min(max(moment, 0.05), max(duration - 0.05, 0.05)) for moment in moments]
+
+
+def _dodge_radius(timestamps: list[float], duration: float) -> float:
+    """A quarter of the spacing between frames: far enough to escape a dead patch,
+    close enough that the label still names the same moment of the video."""
+    if len(timestamps) > 1:
+        return (timestamps[1] - timestamps[0]) / 4
+    return duration / 4
+
+
 def _pyav_available() -> bool:
     """True when the optional PyAV extra is installed."""
     try:
@@ -178,8 +209,13 @@ def _pyav_jpeg(frame, target: int, rotation: int) -> bytes:
     return buffer.getvalue()
 
 
-def _extract_pyav(path: str, timestamps: list[float], target: int) -> dict:
-    """Decode the frames at `timestamps` with PyAV, in process."""
+def _extract_pyav(path: str, timestamps: list[float], target: int, radius: float = 0.0) -> dict:
+    """Decode the frames at `timestamps` with PyAV, in process.
+
+    With a `radius`, each timestamp is a bin centre, not an exact order: the
+    centre and one step to each side are decoded, and the liveliest one goes
+    in, so an evenly spaced strip does not waste slots on dead black frames.
+    """
     import av
 
     frames = []
@@ -188,11 +224,19 @@ def _extract_pyav(path: str, timestamps: list[float], target: int) -> dict:
         stream.thread_type = "AUTO"
         duration = _pyav_duration(container, stream)
         for timestamp in timestamps:
-            frame = _pyav_frame_at(container, stream, timestamp)
-            if frame is None:
+            best = None
+            for candidate in _candidates(timestamp, radius, duration):
+                frame = _pyav_frame_at(container, stream, candidate)
+                if frame is None:
+                    continue
+                score = _liveliness(frame.to_image())
+                if best is None or score > best[0] + DODGE_MARGIN:
+                    best = (score, candidate, frame)
+            if best is None:
                 continue
+            _score, moment, frame = best
             rotation = int(getattr(frame, "rotation", 0) or 0)
-            frames.append(_entry(timestamp, _pyav_jpeg(frame, target, rotation)))
+            frames.append(_entry(moment, _pyav_jpeg(frame, target, rotation)))
     return {"duration": round(duration, 3), "backend": "pyav", "frames": frames}
 
 
@@ -221,20 +265,37 @@ def _ffmpeg_duration(path: str) -> float:
     return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
 
-def _extract_ffmpeg(path: str, timestamps: list[float], target: int) -> dict:
-    """Decode the frames at `timestamps` with the ffmpeg binary, one process per frame."""
+def _extract_ffmpeg(path: str, timestamps: list[float], target: int, radius: float = 0.0) -> dict:
+    """Decode the frames at `timestamps` with the ffmpeg binary, one process per frame.
+
+    With a `radius` the same dodge as the PyAV backend applies: the bin centre
+    and one step to each side are decoded, and the liveliest frame goes in.
+    """
+    import io as io_module
+
+    from PIL import Image
+
     duration = _ffmpeg_duration(path)
     # Scale the longer side to `target` and keep the other side even (-2).
     scale = f"scale='if(gt(iw,ih),min({target},iw),-2)':'if(gt(iw,ih),-2,min({target},ih))'"
     frames = []
     for timestamp in timestamps:
-        proc = subprocess.run(
-            ["ffmpeg", "-loglevel", "error", "-ss", f"{timestamp:.3f}", "-i", path,
-             "-frames:v", "1", "-vf", scale, "-f", "image2", "-c:v", "mjpeg", "pipe:1"],
-            capture_output=True,
-        )
-        if proc.returncode == 0 and proc.stdout:
-            frames.append(_entry(timestamp, proc.stdout))
+        best = None
+        for candidate in _candidates(timestamp, radius, duration):
+            proc = subprocess.run(
+                ["ffmpeg", "-loglevel", "error", "-ss", f"{candidate:.3f}", "-i", path,
+                 "-frames:v", "1", "-vf", scale, "-f", "image2", "-c:v", "mjpeg", "pipe:1"],
+                capture_output=True,
+            )
+            if proc.returncode != 0 or not proc.stdout:
+                continue
+            with Image.open(io_module.BytesIO(proc.stdout)) as decoded:
+                score = _liveliness(decoded)
+            if best is None or score > best[0] + DODGE_MARGIN:
+                best = (score, candidate, proc.stdout)
+        if best is not None:
+            _score, moment, data = best
+            frames.append(_entry(moment, data))
     return {"duration": round(duration, 3), "backend": "ffmpeg", "frames": frames}
 
 
@@ -356,9 +417,13 @@ def extract_frames(
     try:
         duration = _duration(path)
         timestamps = plan_timestamps(duration, count, interval, start, end)
+        # Spaced frames are bin centres, not exact orders: each may be swapped
+        # for a livelier neighbour inside its own bin (a time-lapse can be
+        # pitch black at the centre and full of sky a quarter-bin away).
+        radius = _dodge_radius(timestamps, duration)
         if backend == "pyav":
-            return _extract_pyav(path, timestamps, target)
-        return _extract_ffmpeg(path, timestamps, target)
+            return _extract_pyav(path, timestamps, target, radius)
+        return _extract_ffmpeg(path, timestamps, target, radius)
     finally:
         try:
             os.unlink(path)

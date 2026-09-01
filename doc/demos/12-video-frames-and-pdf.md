@@ -12,7 +12,7 @@
 What happens in the video luna.mov?
 ```
 
-Claude finds the asset and calls `get_video_frames` with the default 6 frames. Each frame is one image in the conversation (~1.6k tokens as a thumbnail), so the default stays small. These are the kind of frames it gets, evenly spaced, never the black frame at second zero:
+Claude finds the asset and calls `get_video_frames` with the default 6 frames. Each frame is one image in the conversation (~1.6k tokens as a thumbnail), so the default stays small. These are the kind of frames it gets, evenly spaced — and each slot picks the liveliest frame in its own neighbourhood, so a black or dead moment at the exact centre never wastes a slot:
 
 <p align="center">
 <img src="assets/12/01_001.0s.jpg" width="160"> <img src="assets/12/05_008.8s.jpg" width="160"> <img src="assets/12/08_014.7s.jpg" width="160"> <img src="assets/12/10_018.7s.jpg" width="160">
