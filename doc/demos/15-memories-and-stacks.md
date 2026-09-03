@@ -1,6 +1,8 @@
 # 🗂️ Memories and stacks: keep everything, show less
 
-Two Immich features that a chat is unusually good at driving. A memory is an "on this day" collection: a date, a year to look back to, and a handful of assets. A stack groups near-identical shots into one item fronted by a cover, with every frame still in the library. Both are reversible, which is why they are the right answer when a cleanup pass finds forty versions of the same thing and nobody wants to press delete. This page runs both from one prompt in a real Claude Code session against Immich 3.1.0, then shows the raw calls from the 2.0.9 transcripts.
+Two Immich features that a chat is unusually good at driving. A memory is an "on this day" collection: a date, a year to look back to, and a handful of assets. A stack groups near-identical shots into one item fronted by a cover, with every frame still in the library. Both are reversible, which is why they are the right answer when a cleanup pass finds dozens of versions of the same thing and nobody wants to press delete.
+
+This page runs both from one prompt in a real Claude Code session against Immich 3.1.0, then shows the raw calls from the 2.0.9 transcripts.
 
 ## 1. The round trip in one prompt
 
@@ -48,7 +50,7 @@ Nothing was deleted, nothing was moved, and the library shows one item where the
 
 ## 3. The 34 clips of one car
 
-Stacks came up in [issue #15](https://github.com/drolosoft/immich-photo-manager/issues/15), a thread about cleaning up a 530-asset car-spotting album: 34 clips of the same blue Aventador, sitting next to each other on the timeline. Deleting 33 of them is a decision nobody wants to make in a chat window, and a "delete candidate" tag only leaves the same decision for later. A stack ends the clutter without ending the clips: one item on the timeline, all 34 still there, and `delete_stack` undoes it in a call. The gentler cleanup is usually the one that actually gets done.
+Stacks came up in [issue #15](https://github.com/drolosoft/immich-photo-manager/issues/15), a thread about cleaning up a 530-asset car-spotting album: 34 clips of the same blue Aventador, next to each other on the timeline. Deleting 33 of them is a decision nobody wants to make in a chat window, and a "delete candidate" tag only leaves the same decision for later. A stack ends the clutter without ending the clips: one item on the timeline, all 34 still there, and `delete_stack` undoes it in a call.
 
 ## 4. A memory for a date
 

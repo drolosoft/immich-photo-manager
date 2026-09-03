@@ -71,7 +71,7 @@ Filters combine, so `album_ids` plus `person_ids` plus `ocr` is one call, not th
 
 ## 5. Places, and the spelling of a place
 
-`search_places(name="Lisbon")` looks the name up in Immich's built-in gazetteer, which is how you check a spelling before using it as a filter. The answer holds 20 rows, and the interesting part is that they are not all the same Lisbon:
+`search_places(name="Lisbon")` looks the name up in Immich's built-in gazetteer, which is how you check a spelling before using it as a filter. The answer holds 20 rows, and they are not all the same Lisbon:
 
 ```json
 { "total": 20, "places": [

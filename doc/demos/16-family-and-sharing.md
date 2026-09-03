@@ -27,7 +27,7 @@ Ten steps, ten tools, and Claude re-read the server after each change instead of
 > 9. **Download:** written to the requested path, 113,987 bytes, 5 assets.
 > 10. **Files in the zip:** 5 per the download result. Pending to verify by opening the file locally, since both attempts to run a shell command on it were declined.
 
-Point 10 is worth keeping in view: the sandbox refused the shell command that would have opened the zip, so Claude reported the count from the tool's own answer and said the local check was still pending rather than claiming it had looked inside.
+Point 10 matters: the sandbox refused the shell command that would have opened the zip, so Claude reported the count from the tool's own answer and said the local check was still pending rather than claiming it had looked inside.
 
 ## 2. Sharing is addressed by user id
 
@@ -39,7 +39,7 @@ Everything in this area takes a user id, never a name or an email, so `list_user
   { "id": "387e5d40-e195-499c-ba5c-96c10cc40fed", "name": "Lab", "email": "lab@example.com" } ] }
 ```
 
-`create_partner(user_id)` shares this account's whole library with that user and answers `{"id": "435674fe-...", "in_timeline": false}`. `list_partners` asks Immich in both directions in one call, which is the view that actually answers "who can see what":
+`create_partner(user_id)` shares this account's whole library with that user and answers `{"id": "435674fe-...", "in_timeline": false}`. `list_partners` asks Immich in both directions in one call, which is the view that answers "who can see what":
 
 ```json
 { "shared_with_me": [ { "id": "435674fe-...", "name": "Lab Partner", "email": "partner@example.com", "in_timeline": true } ],

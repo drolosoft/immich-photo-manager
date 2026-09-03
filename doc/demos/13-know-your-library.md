@@ -72,7 +72,7 @@ Here `total` counts the fields that came back, not the cities. That `createdAt` 
 
 ## 4. Counting without listing
 
-`search_statistics(make="LabCam")` returns `{"total": 4}` and nothing else. No asset rows, no thumbnails, no tokens spent on data the user did not ask for. It is the right call for "how many" questions, and it takes the same filters as a search.
+`search_statistics(make="LabCam")` returns `{"total": 4}` and nothing else. No asset rows and no thumbnails, so nothing is spent on data the user did not ask for. It is the right call for "how many" questions, and it takes the same filters as a search.
 
 ## 5. A random handful
 

@@ -65,7 +65,7 @@ DNS-rebinding protection is on, with a localhost default that already covers the
 -e MCP_ALLOWED_HOSTS=photos-mcp.example.com
 ```
 
-This is the one setting people hit first when they put the container behind a proxy, and the symptom is a rejected request rather than a broken server.
+When a request behind a proxy is rejected while `/health` answers fine, this setting is the first thing to check.
 
 ## 6. What is inside
 
