@@ -496,8 +496,15 @@ class LiveHarness:
         tag_names = [tag.get("name") for tag in asset.get("tags", [])]
         rec("tag_assets", (not failed) and "harness-tag" in tag_names, f"asset tags={tag_names}")
         data, _, failed, _ = await self.call("untag_assets", tag_id=TID, asset_ids=[PHOTO1])
-        asset, _, _, _ = await self.call("get_asset_info", asset_id=PHOTO1)
-        tag_names = [tag.get("name") for tag in asset.get("tags", [])]
+        # Immich applies untagging asynchronously: the DELETE answers 200 before
+        # the asset stops listing the tag. Give it up to ten seconds to converge.
+        tag_names = ["harness-tag"]
+        for _attempt in range(10):
+            asset, _, _, _ = await self.call("get_asset_info", asset_id=PHOTO1)
+            tag_names = [tag.get("name") for tag in asset.get("tags", [])]
+            if "harness-tag" not in tag_names:
+                break
+            await asyncio.sleep(1)
         rec("untag_assets", (not failed) and "harness-tag" not in tag_names, f"asset tags={tag_names}")
         data, _, failed, _ = await self.call("delete_tag", tag_id=TID)
         album, _, failed_again, _ = await self.call("get_tag", tag_id=TID)
@@ -702,8 +709,28 @@ class LiveHarness:
                     False,
                     f"SKIPPED: faces={bool(FID)} other_people={len(others)}",
                 )
+            data, _, failed, _ = await self.call("search_metadata", person_ids=[PID])
+            rec(
+                "search_metadata(person_ids)",
+                self.okj(data, failed) and data.get("total", 0) >= 1,
+                f"total={data.get('total')} for person {PID[:8]}",
+            )
             if len(others) >= 1:
-                data, _, failed, _ = await self.call("merge_people", person_id=PID, merge_ids=[others[-1]])
+                preview, _, preview_failed, _ = await self.call(
+                    "merge_people", person_id=PID, merge_ids=[others[-1]]
+                )
+                still_there, _, still_failed, _ = await self.call("get_person", person_id=others[-1])
+                rec(
+                    "merge_people(preview, no confirm)",
+                    (not preview_failed) and isinstance(preview, dict)
+                    and preview.get("confirm_required") is True and not still_failed,
+                    f"keep={preview.get('keep', {}).get('name') if isinstance(preview, dict) else preview} "
+                    f"merge={[person.get('name') for person in preview.get('merge', [])] if isinstance(preview, dict) else '?'} "
+                    f"untouched={not still_failed}",
+                )
+                data, _, failed, _ = await self.call(
+                    "merge_people", person_id=PID, merge_ids=[others[-1]], confirm=True
+                )
                 album, _, failed_again, _ = await self.call("get_person", person_id=others[-1])
                 rec(
                     "merge_people",
@@ -822,6 +849,36 @@ class LiveHarness:
             "reverse_geocode",
             self.okj(data, failed) and any(place.get("country") == "Portugal" for place in places),
             f"places={places}",
+        )
+        data, _, failed, _ = await self.call("search_metadata", album_ids=[ALB])
+        rec(
+            "search_metadata(album_ids)",
+            self.okj(data, failed) and data.get("total") == 5,
+            f"total={data.get('total')} (album has 5)",
+        )
+        data, _, failed, _ = await self.call(
+            "update_assets_metadata", asset_ids=[PHOTO3, PHOTO4], rating=3
+        )
+        third, _, _, _ = await self.call("get_asset_info", asset_id=PHOTO3)
+        fourth, _, _, _ = await self.call("get_asset_info", asset_id=PHOTO4)
+        ratings = [((asset or {}).get("exifInfo") or {}).get("rating") for asset in (third, fourth)]
+        rec(
+            "update_assets_metadata",
+            self.okj(data, failed) and data.get("updated") == 2 and ratings == [3, 3],
+            f"updated={data.get('updated')} ratings_after={ratings}",
+        )
+        # Same-moment comparison as the buckets: trash is excluded on both
+        # sides only when list_assets is read right here.
+        data, _, failed, _ = await self.call(
+            "get_calendar_heatmap", from_date="2026-01-01", to_date="2026-12-31"
+        )
+        heat_total = data.get("total") if isinstance(data, dict) else None
+        rec(
+            "get_calendar_heatmap",
+            self.okj(data, failed) and data.get("source") in ("immich", "timeline")
+            and heat_total == listed_total and len(data.get("series", [])) > 0,
+            f"source={data.get('source') if isinstance(data, dict) else '?'} total={heat_total} "
+            f"(list_assets says {listed_total}) days={len(data.get('series', [])) if isinstance(data, dict) else 0}",
         )
 
     async def check_memories(self):

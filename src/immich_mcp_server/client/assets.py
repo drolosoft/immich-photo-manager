@@ -31,6 +31,32 @@ class AssetsApi:
         """Update asset metadata (dates, GPS, description, etc)."""
         return await self._request("PUT", f"/assets/{asset_id}", json=fields)
 
+    async def update_assets_metadata(
+        self,
+        asset_ids: list[str],
+        date_time_original: str | None = None,
+        latitude: float | None = None,
+        longitude: float | None = None,
+        description: str | None = None,
+        is_favorite: bool | None = None,
+        rating: int | None = None,
+    ) -> None:
+        """One PUT /assets for many ids; only the given fields travel."""
+        body: dict[str, Any] = {"ids": asset_ids}
+        if date_time_original:
+            body["dateTimeOriginal"] = date_time_original
+        if latitude is not None:
+            body["latitude"] = latitude
+        if longitude is not None:
+            body["longitude"] = longitude
+        if description is not None:
+            body["description"] = description
+        if is_favorite is not None:
+            body["isFavorite"] = is_favorite
+        if rating is not None:
+            body["rating"] = rating
+        await self._request("PUT", "/assets", json=body)
+
     async def list_assets(
         self,
         is_favorite: bool | None = None,

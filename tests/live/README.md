@@ -20,6 +20,6 @@ python mcp_harness.py creds-2.7.5.json v2 "$(which immich-photo-manager)" ./medi
 python mcp_harness.py creds-3.1.0.json v3 "$(which immich-photo-manager)" ./media
 ```
 
-Each run prints one line per check and a summary such as `SUMMARY v3: 118/118 checks passed; tools not covered: []` (last full run 2026-09-02). Anything the harness could not exercise is listed, never silently skipped. Faces need at least two recognized people; if a run reports `SKIPPED` for `merge_people`/`reassign_face`, trigger facial recognition in Immich (Administration → Jobs) and rerun.
+Each run prints one line per check and a summary such as `SUMMARY v3: 123/123 checks passed; tools not covered: []` (last full run 2026-09-03). Anything the harness could not exercise is listed, never silently skipped. Faces need at least two recognized people; if a run reports `SKIPPED` for `merge_people`/`reassign_face`, trigger facial recognition in Immich (Administration → Jobs) and rerun.
 
 Tear down with `docker compose -p immich275 -f docker-compose.immich-2.7.5.yml down -v` (same for 3.1.0).

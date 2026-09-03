@@ -24,6 +24,9 @@ async def search_metadata(
     is_favorite: bool | None = None,
     asset_type: str = "",
     ocr: str = "",
+    person_ids: list[str] | None = None,
+    tag_ids: list[str] | None = None,
+    album_ids: list[str] | None = None,
     page: int = 1,
     size: int = 50,
 ) -> str:
@@ -44,6 +47,9 @@ async def search_metadata(
         asset_type: 'IMAGE' or 'VIDEO'. Omit for both.
         ocr: Text recognized inside the image (tickets, signs, documents). Needs
             OCR enabled on the server — check with get_capabilities.
+        person_ids: Only assets showing ALL of these people (ids from list_people).
+        tag_ids: Only assets carrying these tags (ids from list_tags).
+        album_ids: Only assets inside these albums.
         page: Page number, starting from 1 (default 1).
         size: Results per page (1-200, default 50).
 
@@ -60,6 +66,9 @@ async def search_metadata(
         is_favorite=is_favorite,
         asset_type=asset_type or None,
         ocr=ocr or None,
+        person_ids=person_ids or None,
+        tag_ids=tag_ids or None,
+        album_ids=album_ids or None,
         page=page,
         size=min(size, 200),
     )
@@ -293,6 +302,9 @@ async def search_smart(
     taken_after: str = "",
     taken_before: str = "",
     ocr: str = "",
+    person_ids: list[str] | None = None,
+    tag_ids: list[str] | None = None,
+    album_ids: list[str] | None = None,
     page: int = 1,
     size: int = 50,
 ) -> str:
@@ -310,6 +322,9 @@ async def search_smart(
         taken_before: ISO date — only assets captured before this date.
         ocr: Text recognized inside the image, combined with the visual query.
             Needs OCR enabled on the server — check with get_capabilities.
+        person_ids: Only assets showing ALL of these people (ids from list_people).
+        tag_ids: Only assets carrying these tags (ids from list_tags).
+        album_ids: Only assets inside these albums.
         page: Page number, starting from 1 (default 1).
         size: Results per page (1-200, default 50).
 
@@ -324,6 +339,9 @@ async def search_smart(
             taken_after=taken_after or None,
             taken_before=taken_before or None,
             ocr=ocr or None,
+            person_ids=person_ids or None,
+            tag_ids=tag_ids or None,
+            album_ids=album_ids or None,
             page=page,
             size=min(size, 200),
         )

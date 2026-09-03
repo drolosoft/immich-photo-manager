@@ -72,6 +72,57 @@ async def update_asset_metadata(
     return json.dumps(result, default=str)
 
 
+@mcp.tool()
+async def update_assets_metadata(
+    ctx: Context,
+    asset_ids: list[str],
+    date_time_original: str = "",
+    latitude: float | None = None,
+    longitude: float | None = None,
+    description: str = "",
+    is_favorite: bool | None = None,
+    rating: int | None = None,
+) -> str:
+    """Update the same metadata fields on many assets in ONE call — the whole
+    roll of a scanned album gets its real date, a trip's photos get their GPS,
+    a selection becomes favorites. Same fields as update_asset_metadata; only
+    the provided ones change. Side effect: permanently changes the metadata of
+    every listed asset.
+
+    Args:
+        asset_ids: The assets to update.
+        date_time_original: ISO 8601 datetime applied to all of them.
+        latitude: GPS latitude, decimal degrees.
+        longitude: GPS longitude, decimal degrees.
+        description: Description/caption applied to all of them.
+        is_favorite: Set favorite status on all of them.
+        rating: Star rating (1-5) on all of them.
+
+    Returns: JSON with success and the number of assets updated.
+    """
+    has_change = any((
+        date_time_original,
+        latitude is not None,
+        longitude is not None,
+        description,
+        is_favorite is not None,
+        rating is not None,
+    ))
+    if not has_change:
+        return json.dumps({"error": "No fields to update. Provide at least one field."})
+
+    await _client(ctx).update_assets_metadata(
+        asset_ids,
+        date_time_original=date_time_original or None,
+        latitude=latitude,
+        longitude=longitude,
+        description=description or None,
+        is_favorite=is_favorite,
+        rating=rating,
+    )
+    return json.dumps({"success": True, "updated": len(asset_ids)})
+
+
 async def _rotate_one(client, asset_id: str, angle: int) -> None:
     """Add `angle` degrees to the asset's current rotation, keeping its other edits.
 

@@ -6,6 +6,19 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.7] — 2026-09-03
+
+### Added
+
+- **Search by person, tag or album** — `search_metadata` and `search_smart` accept `person_ids`, `tag_ids` and `album_ids` (all three in both Immich majors). "Photos of Marie in the Lisbon album" is one call now.
+- **`update_assets_metadata`** — the same metadata fields on many assets in one `PUT /assets`: a scanned roll gets its real date, a trip its GPS, a selection becomes favorites.
+- **`get_calendar_heatmap`** — photos per day over a range, the data behind a calendar heatmap. Immich 3.x answers natively; on 2.x the same shape is built from the timeline buckets (taken dates), so both versions get it.
+- **Docker Compose example** in the README, next to the `docker run`.
+
+### Changed
+
+- **`merge_people` asks first.** An irreversible merge now returns a preview (who is kept, who disappears, by name) unless `confirm=true` — the same gate `empty_trash` already had. The `people-report` skill says so.
+
 ## [v2.0.6] — 2026-09-02
 
 ### Fixed
@@ -293,6 +306,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.7]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.7
 [v2.0.6]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.6
 [v2.0.5]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.5
 [v2.0.4]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.4

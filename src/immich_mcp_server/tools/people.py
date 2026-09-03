@@ -91,17 +91,34 @@ async def update_person(
 
 
 @mcp.tool()
-async def merge_people(ctx: Context, person_id: str, merge_ids: list[str]) -> str:
+async def merge_people(
+    ctx: Context, person_id: str, merge_ids: list[str], confirm: bool = False
+) -> str:
     """Merge multiple person clusters into one. Use this when the same real person has
     been split into multiple face clusters. DESTRUCTIVE and IRREVERSIBLE: merged persons
-    are permanently deleted and all their faces transfer to the target.
+    are permanently deleted and all their faces transfer to the target. Without
+    confirm=true nothing happens: the call returns who would be kept and who would
+    disappear, so the user can check the names before the merge.
 
     Args:
         person_id: The target person UUID to keep (receives all merged faces).
         merge_ids: List of person UUIDs to absorb into the target. These persons are permanently deleted.
+        confirm: Pass true only after the user has seen the preview and agreed.
 
-    Returns: JSON with merge result details.
+    Returns: JSON with the preview (confirm_required, keep, merge) or the merge result.
     """
+    if not confirm:
+        # An irreversible merge deserves the same gate as emptying the trash:
+        # show names, not ids, and let the person decide.
+        keep = await _client(ctx).get_person(person_id)
+        merge = [await _client(ctx).get_person(merge_id) for merge_id in merge_ids]
+        return json.dumps({
+            "confirm_required": True,
+            "keep": {"id": keep.get("id"), "name": keep.get("name")},
+            "merge": [{"id": person.get("id"), "name": person.get("name")} for person in merge],
+            "note": "Irreversible. Call again with confirm=true to merge.",
+        }, default=str)
+
     result = await _client(ctx).merge_people(person_id, merge_ids)
     return json.dumps(result, default=str)
 

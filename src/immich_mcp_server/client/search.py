@@ -22,6 +22,9 @@ class SearchApi:
         is_archived: bool | None = None,
         asset_type: str | None = None,
         ocr: str | None = None,
+        person_ids: list[str] | None = None,
+        tag_ids: list[str] | None = None,
+        album_ids: list[str] | None = None,
         page: int = 1,
         size: int = 100,
     ) -> dict:
@@ -49,6 +52,12 @@ class SearchApi:
             body["type"] = asset_type
         if ocr:
             body["ocr"] = ocr
+        if person_ids:
+            body["personIds"] = person_ids
+        if tag_ids:
+            body["tagIds"] = tag_ids
+        if album_ids:
+            body["albumIds"] = album_ids
         return await self._request("POST", "/search/metadata", json=body)
 
     async def search_smart(
@@ -60,6 +69,9 @@ class SearchApi:
         taken_after: str | None = None,
         taken_before: str | None = None,
         ocr: str | None = None,
+        person_ids: list[str] | None = None,
+        tag_ids: list[str] | None = None,
+        album_ids: list[str] | None = None,
         page: int = 1,
         size: int = 100,
     ) -> dict:
@@ -77,6 +89,12 @@ class SearchApi:
             body["takenBefore"] = taken_before
         if ocr:
             body["ocr"] = ocr
+        if person_ids:
+            body["personIds"] = person_ids
+        if tag_ids:
+            body["tagIds"] = tag_ids
+        if album_ids:
+            body["albumIds"] = album_ids
         return await self._request("POST", "/search/smart", json=body)
 
     async def search_explore(self) -> list:
