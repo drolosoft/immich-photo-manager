@@ -45,7 +45,9 @@ Common metadata problems in imported photo libraries:
 
 ### Step 1: Scan for Issues
 
-Run a comprehensive metadata quality scan:
+Over the API: walk the library with `get_timeline_buckets()`, then `get_timeline_bucket(time_bucket)` for the months worth checking. Each row carries the asset date, city and country, which is enough to spot exact-noon and exact-midnight timestamps and the days where some photos have a place and others do not. `get_asset_info` fills in the rest for a candidate.
+
+The queries below are an optional fallback that runs the same scan in one pass. The plugin never provides database access, so they only apply to a user who already has `psql` on their own Immich:
 
 ```sql
 -- Suspicious timestamps (exactly midnight or noon)
@@ -152,9 +154,22 @@ update_asset_metadata(
 )
 ```
 
+When a fix applies the same value to many photos (one day's GPS, one roll's date), use `update_assets_metadata(asset_ids=[...], latitude=…, longitude=…)` instead of looping: same fields, one call, and only the fields you pass are touched.
+
+```python
+# One day's photos, all missing GPS, all from the same place
+update_assets_metadata(
+    asset_ids=["uuid-1", "uuid-2", "uuid-3"],
+    latitude=41.3874,
+    longitude=2.1686
+)
+```
+
+Keep `update_asset_metadata` (singular) for the fixes that differ per photo, such as an interpolated timestamp.
+
 > **Known limitation:** Immich writes a `.xmp` sidecar when updating EXIF. If photos are in an external library with special characters (emojis) in the path, exiftool may fail silently. Photos uploaded directly through Immich work correctly.
 
-Process in batches and log every change for audit:
+Log every change for audit:
 
 ```python
 fix_log = {

@@ -42,6 +42,8 @@ Analyze storage usage in an Immich photo library, identify the biggest consumers
 
 ### Step 1: Storage Overview
 
+`get_statistics` gives the totals (photos, videos, storage used) in one call, with no database access. The query below is the optional fallback for the per-type averages and maximums Immich's API does not report; the plugin never provides database access, so it only applies to a user who already has `psql` on their own Immich.
+
 ```sql
 -- Total storage by asset type
 SELECT type,
@@ -77,6 +79,9 @@ GROUP BY format ORDER BY sum(("exifInfo"->>'fileSizeInByte')::bigint) DESC;
 ### Step 3: Identify Top Storage Consumers
 
 **Large files (>50MB):**
+
+The MCP tool `search_large_assets(min_size_mb=50, size=50)` answers this without database access. It returns the biggest files largest-first with filename, size in MB and date. Use the SQL below only when you need columns it does not return, such as the camera make or the original path.
+
 ```sql
 SELECT "id", "originalPath", type,
   pg_size_pretty(("exifInfo"->>'fileSizeInByte')::bigint) as size,
@@ -143,6 +148,8 @@ GROUP BY 1 ORDER BY 1;
 ```
 
 Calculate: at current growth rate, how many months until disk is full?
+
+When only a count is needed (how many videos, how many photos from one camera, how many favorites), use `search_statistics` instead of a query or a search: it returns the number alone, so a whole breakdown costs a handful of integers rather than pages of assets. `get_timeline_buckets()` gives the month-by-month volume the growth projection needs, also in one call.
 
 ### Step 5: Generate Report
 

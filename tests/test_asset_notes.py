@@ -90,7 +90,8 @@ async def test_review_assets_appends_a_dated_verdict_with_reason(fake_ctx, monke
         fake_ctx(stub), asset_ids=["a1", "a2"], verdict="delete_candidate",
         reason="near-identical to a3")
     result = json.loads(raw)
-    assert result == {"success": True, "reviewed": 2, "verdict": "delete_candidate"}
+    assert result == {"success": True, "reviewed": 2, "verdict": "delete_candidate",
+                      "failed": []}
     assert stub.store["a1"][KEY]["reviews"] == [
         {"at": "2026-09-03T10:00:00Z", "verdict": "delete_candidate",
          "reason": "near-identical to a3"}]
@@ -142,7 +143,8 @@ async def test_record_action_appends_to_the_actions_list(fake_ctx, monkeypatch):
     raw = await server.record_action(
         fake_ctx(stub), asset_ids=["a1"], action="added_to_album",
         detail="Lisbon 2026, from prompt 'group my Lisbon trip'")
-    assert json.loads(raw) == {"success": True, "recorded": 1, "action": "added_to_album"}
+    assert json.loads(raw) == {"success": True, "recorded": 1,
+                               "action": "added_to_album", "failed": []}
     assert stub.store["a1"][KEY]["actions"] == [
         {"at": "2026-09-03T10:00:00Z", "action": "added_to_album",
          "detail": "Lisbon 2026, from prompt 'group my Lisbon trip'"}]
@@ -189,7 +191,7 @@ async def test_get_assets_notes_lists_only_annotated_assets_with_last_verdict(fa
 async def test_clear_asset_notes_deletes_only_the_plugin_key(fake_ctx):
     stub = StubNotesClient({"a1": {"someone-elses-app": {"x": 1}, KEY: {"reviews": [], "actions": []}}})
     raw = await server.clear_asset_notes(fake_ctx(stub), asset_ids=["a1"])
-    assert json.loads(raw) == {"success": True, "cleared": 1}
+    assert json.loads(raw) == {"success": True, "cleared": 1, "failed": []}
     assert stub.deleted == [("a1", KEY)]
     assert stub.store["a1"] == {"someone-elses-app": {"x": 1}}
 

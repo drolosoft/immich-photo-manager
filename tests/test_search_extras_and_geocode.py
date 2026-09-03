@@ -87,6 +87,21 @@ async def test_search_statistics_posts_filters_and_returns_total(client):
 
 @pytest.mark.asyncio
 @respx.mock
+async def test_search_statistics_can_count_by_capture_date(client):
+    """StatisticsSearchDto carries takenAfter/takenBefore in both 2.7.5 and
+    3.1.0, so "how many photos did I take in 2019?" is a count rather than a
+    walk through pages of the expensive search."""
+    route = respx.post(f"{BASE}/api/search/statistics").mock(
+        return_value=Response(200, json={"total": 7}))
+    await client.search_statistics(taken_after="2019-01-01", taken_before="2019-12-31")
+    body = json.loads(route.calls[0].request.content)
+    assert body["takenAfter"] == "2019-01-01T00:00:00.000Z"
+    assert body["takenBefore"] == "2019-12-31T00:00:00.000Z"
+    assert "createdAfter" not in body
+
+
+@pytest.mark.asyncio
+@respx.mock
 async def test_search_large_assets_sends_query_params_not_a_body(client):
     route = respx.post(f"{BASE}/api/search/large-assets").mock(
         return_value=Response(200, json=[_asset(2)]))
@@ -165,7 +180,7 @@ async def test_search_places_tool_passes_the_name_through(fake_ctx):
 @pytest.mark.asyncio
 async def test_search_suggestions_tool_returns_the_value_list(fake_ctx):
     stub = StubExtrasClient()
-    raw = await server.search_suggestions(fake_ctx(stub), type="city")
+    raw = await server.search_suggestions(fake_ctx(stub), suggestion_type="city")
     assert stub.kwargs["suggestion_type"] == "city"
     assert json.loads(raw)["suggestions"] == ["Lisbon", "Porto"]
 
@@ -183,6 +198,16 @@ async def test_search_statistics_tool_returns_the_bare_total(fake_ctx):
     raw = await server.search_statistics(fake_ctx(stub), make="Apple")
     assert stub.kwargs["make"] == "Apple"
     assert json.loads(raw) == {"total": 42}
+
+
+@pytest.mark.asyncio
+async def test_search_statistics_tool_passes_the_capture_date_range(fake_ctx):
+    stub = StubExtrasClient()
+    await server.search_statistics(
+        fake_ctx(stub), taken_after="2019-01-01", taken_before="2019-12-31")
+    assert stub.kwargs["taken_after"] == "2019-01-01"
+    assert stub.kwargs["taken_before"] == "2019-12-31"
+    assert stub.kwargs["created_after"] is None
 
 
 @pytest.mark.asyncio

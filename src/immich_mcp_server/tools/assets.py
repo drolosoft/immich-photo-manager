@@ -10,7 +10,16 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _album_assets
+from ._common import _album_assets, _api_error
+
+# Immich accepts -1 (rejected) and 1 to 5 (stars). Immich 3.x refuses 0 outright
+# ("no longer valid"), while 2.7.5 silently accepts it, so the plugin refuses it
+# on both and the same call behaves the same way on either major.
+VALID_RATINGS = (-1, 1, 2, 3, 4, 5)
+
+RATING_ERROR = ("Rating must be -1 (rejected) or 1 to 5 (stars). Immich 3.x rejects "
+                "0, and a rating cannot be cleared through this tool.")
+
 
 @mcp.tool()
 async def get_asset_info(ctx: Context, asset_id: str, with_notes: bool = False) -> str:
@@ -23,7 +32,9 @@ async def get_asset_info(ctx: Context, asset_id: str, with_notes: bool = False) 
         with_notes: Also include the plugin's notes on the asset (past review
             verdicts and recorded actions, see get_asset_notes). One extra request.
 
-    Returns: JSON with EXIF data, GPS, dates, dimensions, file size, camera make/model, and owner.
+    Returns: JSON with EXIF data, GPS, dates, dimensions, file size, camera
+    make/model, and owner; plus a `notes` object (reviews and actions) when
+    with_notes is true.
     """
     result = await _client(ctx).get_asset(asset_id)
     if with_notes:
@@ -55,10 +66,14 @@ async def update_asset_metadata(
         longitude: GPS longitude, decimal degrees (-180.0 to 180.0).
         description: Free-text description/caption for the asset.
         is_favorite: Set favorite status (true/false).
-        rating: Star rating (1-5), or null to clear.
+        rating: -1 to reject the photo, or 1 to 5 stars. A rating cannot be
+            cleared from here, and 0 is not a rating Immich 3.x accepts.
 
     Returns: JSON with the updated asset object.
     """
+    if rating is not None and rating not in VALID_RATINGS:
+        return json.dumps({"error": RATING_ERROR})
+
     fields: dict = {}
     if date_time_original:
         fields["dateTimeOriginal"] = date_time_original
@@ -74,7 +89,14 @@ async def update_asset_metadata(
         fields["rating"] = rating
     if not fields:
         return json.dumps({"error": "No fields to update. Provide at least one field."})
-    result = await _client(ctx).update_asset(asset_id, **fields)
+
+    # A value Immich refuses (a date it cannot parse, coordinates out of range)
+    # answers 400; its own message says which field it objected to.
+    try:
+        result = await _client(ctx).update_asset(asset_id, **fields)
+    except httpx.HTTPStatusError as exc:
+        return _api_error(exc)
+
     return json.dumps(result, default=str)
 
 
@@ -102,10 +124,17 @@ async def update_assets_metadata(
         longitude: GPS longitude, decimal degrees.
         description: Description/caption applied to all of them.
         is_favorite: Set favorite status on all of them.
-        rating: Star rating (1-5) on all of them.
+        rating: -1 to reject them, or 1 to 5 stars. A rating cannot be cleared
+            from here, and 0 is not a rating Immich 3.x accepts.
 
     Returns: JSON with success and the number of assets updated.
     """
+    if not asset_ids:
+        return json.dumps({"error": "asset_ids cannot be empty."})
+
+    if rating is not None and rating not in VALID_RATINGS:
+        return json.dumps({"error": RATING_ERROR})
+
     has_change = any((
         date_time_original,
         latitude is not None,
@@ -117,15 +146,21 @@ async def update_assets_metadata(
     if not has_change:
         return json.dumps({"error": "No fields to update. Provide at least one field."})
 
-    await _client(ctx).update_assets_metadata(
-        asset_ids,
-        date_time_original=date_time_original or None,
-        latitude=latitude,
-        longitude=longitude,
-        description=description or None,
-        is_favorite=is_favorite,
-        rating=rating,
-    )
+    # The bulk endpoint is all-or-nothing: one value Immich refuses fails the
+    # whole batch with a 400 naming the field, which is what the caller must see.
+    try:
+        await _client(ctx).update_assets_metadata(
+            asset_ids,
+            date_time_original=date_time_original or None,
+            latitude=latitude,
+            longitude=longitude,
+            description=description or None,
+            is_favorite=is_favorite,
+            rating=rating,
+        )
+    except httpx.HTTPStatusError as exc:
+        return _api_error(exc)
+
     return json.dumps({"success": True, "updated": len(asset_ids)})
 
 
@@ -187,7 +222,7 @@ async def rotate_assets(
     if album_id:
         album = await client.get_album(album_id)
         album_name = album.get("albumName", "")
-        ids = [asset["id"] for asset in await _album_assets(client, album_id, album)]
+        ids = [asset["id"] for asset in await _album_assets(client, album_id)]
         if not ids:
             return json.dumps({"error": f"Album '{album_name}' is empty."})
     elif asset_ids:
@@ -236,7 +271,7 @@ async def revert_asset_edits(
     if album_id:
         album = await client.get_album(album_id)
         album_name = album.get("albumName", "")
-        ids = [asset["id"] for asset in await _album_assets(client, album_id, album)]
+        ids = [asset["id"] for asset in await _album_assets(client, album_id)]
         if not ids:
             return json.dumps({"error": f"Album '{album_name}' is empty."})
     elif asset_ids:
@@ -297,7 +332,7 @@ async def reverse_geocode(ctx: Context, lat: float, lon: float) -> str:
         lat: Latitude in decimal degrees.
         lon: Longitude in decimal degrees.
 
-    Returns: JSON with a places array of {city, state, country} candidates.
+    Returns: JSON with total and a places array of {city, state, country} candidates.
     """
     result = await _client(ctx).reverse_geocode(lat, lon)
-    return json.dumps({"places": result}, default=str)
+    return json.dumps({"total": len(result), "places": result}, default=str)

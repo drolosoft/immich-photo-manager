@@ -5,12 +5,18 @@ module is imported; `server.py` imports all tool modules and re-exports the func
 """
 
 import json
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import _api_error
+
+# How far back an open-ended heatmap looks on Immich 2.x. The fallback costs one
+# request per month in range, so an unbounded call would walk the whole library.
+HEATMAP_DEFAULT_DAYS = 365
 
 
 @mcp.tool()
@@ -20,6 +26,7 @@ async def get_timeline_buckets(
     person_id: str = "",
     tag_id: str = "",
     is_favorite: bool | None = None,
+    order: str = "",
 ) -> str:
     """Month-by-month map of the library: one bucket per month with its asset count.
     Use this before fetching assets — it shows in one cheap call which months hold
@@ -31,15 +38,19 @@ async def get_timeline_buckets(
         person_id: Only count assets showing this person.
         tag_id: Only count assets carrying this tag.
         is_favorite: If true, only count favorites.
+        order: 'desc' for newest month first (the default), 'asc' for oldest first.
 
     Returns: JSON with total_buckets and a buckets array of {timeBucket, count},
-    newest month first.
+    newest month first unless order='asc'.
     """
+    # The ordering is asked for explicitly rather than inherited from whatever
+    # Immich happens to return, so the documented "newest first" is a guarantee.
     result = await _client(ctx).get_timeline_buckets(
         album_id=album_id or None,
         person_id=person_id or None,
         tag_id=tag_id or None,
         is_favorite=is_favorite,
+        order=order or "desc",
     )
     return json.dumps({"total_buckets": len(result), "buckets": result}, default=str)
 
@@ -67,13 +78,18 @@ async def get_timeline_bucket(
     Returns: JSON with an assets array; each row has asset_id, date, is_image,
     is_favorite, duration, city and country.
     """
-    result = await _client(ctx).get_timeline_bucket(
-        time_bucket,
-        album_id=album_id or None,
-        person_id=person_id or None,
-        tag_id=tag_id or None,
-        is_favorite=is_favorite,
-    )
+    # A key that is not a real bucket (a month Immich never returned, or a
+    # free-form date) answers 400; the status says so instead of failing bare.
+    try:
+        result = await _client(ctx).get_timeline_bucket(
+            time_bucket,
+            album_id=album_id or None,
+            person_id=person_id or None,
+            tag_id=tag_id or None,
+            is_favorite=is_favorite,
+        )
+    except httpx.HTTPStatusError as exc:
+        return _api_error(exc)
 
     # Immich answers columnar (one array per field, same length); rows are what
     # a model can actually read, so zip the interesting columns back together.
@@ -114,9 +130,20 @@ def _bucket_in_range(time_bucket: str, from_date: str, to_date: str) -> bool:
     return True
 
 
+def _default_from_date() -> str:
+    """The lower bound an open-ended 2.x heatmap falls back to: one year ago
+    today, in UTC. Isolated so tests can pin the arithmetic."""
+    return (datetime.now(timezone.utc) - timedelta(days=HEATMAP_DEFAULT_DAYS)).date().isoformat()
+
+
 async def _heatmap_from_timeline(client, from_date: str, to_date: str) -> dict:
     """Immich 2.x has no heatmap route: count the timeline's assets per taken
     day instead. One request per month in range, none outside it."""
+    # Without a lower bound this would fetch every month the library has ever
+    # held, so an open-ended call is narrowed to the last year instead.
+    if not from_date:
+        from_date = _default_from_date()
+
     buckets = await client.get_timeline_buckets()
     counts: dict[str, int] = {}
 
@@ -142,19 +169,22 @@ async def get_calendar_heatmap(
     ctx: Context,
     from_date: str = "",
     to_date: str = "",
-    type: str = "Taken",
+    heatmap_type: str = "Taken",
 ) -> str:
     """How many photos per day, over a date range — the data behind a calendar
     heatmap. Use this to find gaps (months with nothing), busy periods, or to
     check a library's health at a glance without listing assets. Immich 3.x
     answers natively; on Immich 2.x the same shape is built from the timeline
-    (taken dates only). Read-only.
+    (taken dates only), which costs one request per month in the range, so pass
+    the narrowest range that answers the question. Read-only.
 
     Args:
-        from_date: ISO date lower bound (e.g. '2026-01-01'). Omit for the server default.
+        from_date: ISO date lower bound (e.g. '2026-01-01'). Omit for the server
+            default on Immich 3.x; on 2.x an omitted bound means the last 365 days,
+            because an open-ended range would walk every month of the library.
         to_date: ISO date upper bound. Omit for the server default.
-        type: 'Taken' (capture date, default) or 'Upload' (when it reached Immich;
-            3.x only).
+        heatmap_type: 'Taken' (capture date, default) or 'Upload' (when it reached
+            Immich; 3.x only).
 
     Returns: JSON with source ('immich' or 'timeline'), total and a series of
     {date, count} for the days that have activity, oldest first (a day missing
@@ -164,13 +194,13 @@ async def get_calendar_heatmap(
         result = await _client(ctx).get_calendar_heatmap(
             from_date=from_date or None,
             to_date=to_date or None,
-            heatmap_type=type,
+            heatmap_type=heatmap_type,
         )
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code != 404:
             raise
         # 404 means Immich 2.x: no heatmap route at all.
-        if type != "Taken":
+        if heatmap_type != "Taken":
             return json.dumps({
                 "error": "This Immich version has no upload-date heatmap; only "
                          "type='Taken' is available here (built from the timeline).",

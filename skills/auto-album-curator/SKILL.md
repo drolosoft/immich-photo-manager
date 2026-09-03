@@ -69,6 +69,7 @@ For each album, build a profile:
 - Is it a single event (1-3 days) or ongoing collection?
 - For event albums, new photos should be within the date range
 - For collection albums, any date is valid
+- `get_timeline_buckets(album_id=…)` settles that question without fetching a single asset: one or two buckets means an event, buckets spread across years mean a collection
 
 **Visual Profile:**
 - Use `search_smart` (CLIP) with descriptive terms derived from album name
@@ -163,7 +164,7 @@ The curator handles different album types differently:
 | **Event** | Photos span 1-7 days | Strict date range matching |
 | **Trip** | Photos span 1-4 weeks, multiple locations | GPS along the route |
 | **Theme** | No GPS pattern, mixed dates | CLIP visual similarity only |
-| **People** | Album named after a person | Face recognition (if available) |
+| **People** | Album named after a person | `search_people(name=album.name)` for the id, then `search_metadata(person_ids=["<id>"])` |
 
 ## Scheduled Mode
 

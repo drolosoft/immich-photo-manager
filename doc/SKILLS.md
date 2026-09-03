@@ -11,16 +11,18 @@ Complete documentation for all 13 skills in the Immich Photo Manager plugin. Eac
 | 1 | [Album Manager](#1-album-manager) | Organization | Yes (creates albums) | MCP tools |
 | 2 | [Photo Search](#2-photo-search) | Discovery | No | MCP tools |
 | 3 | [Photo Cleanup](#3-photo-cleanup) | Maintenance | Yes (archive/delete) | MCP tools |
-| 4 | [Duplicate Report](#4-duplicate-report) | Analysis | Yes (delete dupes) | Python + PostgreSQL + filesystem |
-| 5 | [Library Health Report](#5-library-health-report) | Analysis | No | PostgreSQL |
-| 6 | [Timeline Gaps](#6-timeline-gaps) | Analysis | No | PostgreSQL |
-| 7 | [Metadata Fixer](#7-metadata-fixer) | Maintenance | Yes (updates EXIF) | PostgreSQL + Immich API |
+| 4 | [Duplicate Report](#4-duplicate-report) | Analysis | Yes (delete dupes) | MCP tools + Python (Pillow, imagehash) + read access to the files |
+| 5 | [Library Health Report](#5-library-health-report) | Analysis | No | MCP tools (`get_capabilities`, `get_statistics`, `get_timeline_buckets`) |
+| 6 | [Timeline Gaps](#6-timeline-gaps) | Analysis | No | MCP tools (`get_timeline_buckets`, `get_calendar_heatmap`) |
+| 7 | [Metadata Fixer](#7-metadata-fixer) | Maintenance | Yes (updates EXIF) | MCP tools (`search_metadata`, `update_assets_metadata`) |
 | 8 | [Auto-Album Curator](#8-auto-album-curator) | Organization | Yes (adds to albums) | MCP tools |
-| 9 | [Storage Optimizer](#9-storage-optimizer) | Analysis | Yes (optional delete) | PostgreSQL |
-| 10 | [People Report](#10-people-report) | Analysis | No | PostgreSQL |
-| 11 | [Travel Map](#11-travel-map) | Visualization | No | PostgreSQL |
+| 9 | [Storage Optimizer](#9-storage-optimizer) | Analysis | Yes (optional delete) | MCP tools (`search_large_assets`, `search_statistics`) |
+| 10 | [People Report](#10-people-report) | Analysis | No | MCP tools (`list_people`, `get_person`, `get_asset_faces`) |
+| 11 | [Travel Map](#11-travel-map) | Visualization | No | MCP tools (`get_map_markers`, `search_cities`, `reverse_geocode`) |
 | 12 | [Rotate Photos](#12-rotate-photos) | Maintenance | Yes (applies edits) | MCP tools |
 | 13 | [Album Report](#13-album-report) | Analysis | No | MCP tools |
+
+**No database needed**: every skill runs on the MCP tools alone. A few of them still print a SQL query as an optional fallback, for a column Immich's API does not expose (the original file path, for instance). The plugin never provides database access, so those queries are only for someone who already has `psql` on their own Immich.
 
 **Safety principle**: Skills that modify data NEVER act automatically. They present findings, ask for approval, and only proceed with explicit confirmation.
 
@@ -91,7 +93,7 @@ Natural language photo search that translates your intent into optimal Immich AP
 | City/Country | "photos from Barcelona" | `city`, `country` |
 | Date range | "photos from last Christmas" | `taken_after`, `taken_before` |
 | Camera | "photos taken with iPhone" | `make`, `model` |
-| Person | "who is Alice?" | `search_people(name)` — finds the person record; browse their photos in the Immich UI |
+| Person | "photos of Alice" | `search_people(name)` for the person id, then `search_metadata(person_ids=["<id>"])` |
 | Type | "all my videos" | `asset_type="VIDEO"` |
 | Favorites | "my best photos" | `is_favorite=true` |
 
@@ -433,7 +435,7 @@ Immich's face detection and recognition must be enabled (ML container running) a
 - **Unnamed clusters**: Largest unnamed face clusters likely representing real people worth naming
 - **Coverage improvement**: "Naming these 15 clusters would increase coverage from 58% to 82%"
 - **Co-occurrence**: Who appears together most often (e.g., "María & Sam: 1,204 photos together")
-- **Timeline per person**: When each person first and last appears
+- **Timeline per person**: `get_timeline_buckets(person_id="<id>")` brackets when each person first and last appears, and shows the months they show up most
 
 ### Privacy Note
 

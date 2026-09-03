@@ -6,6 +6,31 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.9] — 2026-09-03
+
+A consistency pass over the 41 tools added since 2.0.2, done before documenting them publicly. Two real dual-era bugs came out of it.
+
+### Fixed
+
+- **Bare dates now work on Immich 3.x.** `2019-07-14` in `taken_after`, `created_after`, `file_created_after` and friends was accepted by 2.7.5 and refused with 400 by 3.1.0, which validates full ISO 8601. The client widens a bare date to midnight UTC (exactly how 2.x read it), so the same call now works on both majors.
+- **Credentials survive a plugin update.** `update_credentials` saved only into the plugin version's cache directory, so a plugin update forgot them (the README promised otherwise). They are now also kept in `~/.immich-photo-manager/config.json`; precedence is explicit arguments, the cache dir, real environment values, then that copy — the plugin's placeholder environment values never count as credentials.
+- `update_asset_metadata` / `update_assets_metadata` refuse `rating=0` up front (Immich 3.x rejects it: -1 rejected, 1 to 5 starred) and return a clean error on a server 400 instead of a traceback.
+- `download_archive` streams to a `.part` file and renames on success; a failed download no longer leaves a corrupt zip that blocks the retry.
+- `get_calendar_heatmap` on Immich 2.x with no range defaults to the last 365 days instead of walking every month in the library.
+- Immich 4xx answers on the new tools (`search_suggestions`, `create_stack`, `create_partner`, `update_partner`, `create_activity`, `list_activities`, `get_timeline_bucket`, id filters on both searches, `get_capabilities` with a scoped key) come back as `{"error": ...}` with the server's message instead of a bare "Error executing tool".
+
+### Changed
+
+- Parameter names: `search_suggestions(suggestion_type=...)`, `get_calendar_heatmap(heatmap_type=...)`, `list_activities(activity_type=...)` (were `type`).
+- Every delete tool answers `{"success": true, "deleted": "<id>"}` (`delete_album` and `delete_tag` joined the newer shape).
+- `reverse_geocode`, `list_users`, `search_suggestions` and `search_explore` carry a `total`; `get_timeline_buckets` takes `order` ("desc" by default); `search_large_assets` caps `size` at 200; `list_memories` defaults to 50; `search_statistics` accepts `taken_after` / `taken_before`.
+- Bulk tools refuse an empty `asset_ids`; the notes tools and the `merge_people` preview continue past a failing asset and report it in `failed[]`.
+- `get_download_info` needs an album or ids, like `download_archive`; `download_archive` no longer fetches the album object it did not use.
+
+### Documentation
+
+- `doc/SKILLS.md` no longer claims that five skills require PostgreSQL (the plugin never asked for database access). The 13 skills now name the tools added since 2.0.2 where they apply, with the SQL kept only as an optional fallback. `people-report` no longer says person search and first/last appearance are impossible. Tool Details sections for every new area in `doc/MCP-TOOLS.md`; README highlights caught up.
+
 ## [v2.0.8] — 2026-09-03
 
 ### Added
@@ -313,6 +338,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.9]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.9
 [v2.0.8]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.8
 [v2.0.7]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.7
 [v2.0.6]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.6

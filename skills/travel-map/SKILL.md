@@ -96,7 +96,7 @@ def cluster_locations(photos, radius_km=15):
     return clusters
 ```
 
-Alternatively, use the reverse-geocoded city/country from EXIF:
+Alternatively, use the reverse-geocoded city/country from EXIF. `search_cities` lists every city that appears in the library with its country and one representative asset, and `search_statistics(city=…)` gives the photo count for each one, so the place list needs no database access. The query below is the optional fallback when the first and last visit dates and the cluster centre are wanted in one pass; the plugin never provides database access, so it only applies to a user who already has `psql` on their own Immich.
 
 ```sql
 SELECT
@@ -118,7 +118,7 @@ ORDER BY photos DESC;
 ### Step 3: Enrich Clusters
 
 For each cluster:
-- **Name**: Use the most common city name, or country if no city
+- **Name**: Use the most common city name from EXIF. For a cluster built from raw coordinates, where no photo carries a geocoded name, call `reverse_geocode(lat, lon)` on the cluster centre: it resolves the place from Immich's own offline geodata, so no external service is contacted and no API key is needed
 - **Photo count**: Total photos in the cluster
 - **Date range**: First to last visit
 - **Visit count**: Number of distinct visit periods (>30 days apart = separate visit)

@@ -6,9 +6,11 @@ module is imported; `server.py` imports all tool modules and re-exports the func
 
 import json
 
+import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import _api_error
 
 
 def _trim_stack(stack: dict) -> dict:
@@ -34,11 +36,21 @@ async def create_stack(ctx: Context, asset_ids: list[str]) -> str:
     stack on the server.
 
     Args:
-        asset_ids: The assets to group. Order matters: the first is the cover.
+        asset_ids: The assets to group, at least two. Order matters: the first is
+            the cover.
 
     Returns: JSON with the new stack's id, primary_asset_id and asset list.
     """
-    result = await _client(ctx).create_stack(asset_ids)
+    if not asset_ids:
+        return json.dumps({"error": "asset_ids cannot be empty."})
+
+    # A single asset and an id that is not a real asset both answer 400; the
+    # status names which of the two Immich objected to.
+    try:
+        result = await _client(ctx).create_stack(asset_ids)
+    except httpx.HTTPStatusError as exc:
+        return _api_error(exc)
+
     return json.dumps(_trim_stack(result), default=str)
 
 
@@ -59,7 +71,9 @@ async def list_stacks(ctx: Context, primary_asset_id: str = "") -> str:
 
 @mcp.tool()
 async def get_stack(ctx: Context, stack_id: str) -> str:
-    """One stack with its assets. Read-only.
+    """One stack with its assets. Use this after list_stacks to see everything a
+    group holds before changing its cover or dissolving it, or to check what
+    create_stack actually grouped. Read-only.
 
     Args:
         stack_id: The stack to fetch.

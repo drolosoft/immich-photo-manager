@@ -61,7 +61,7 @@ npx playwright install chromium
 | **Icon** | 📸 |
 | **Title** | immich-photo-manager |
 | **Badge** | Initially hidden, appears after Scene 1 |
-| **Stats** | 42,596 photos · 5,060 videos · 36 tools (appears after connection) |
+| **Stats** | 42,596 photos · 5,060 videos · 94 tools (appears after connection) |
 
 ---
 
@@ -86,7 +86,7 @@ Shows the mandatory setup flow. Every skill requires a connected server.
   - Success result block: "✅ Connected · Immich v2.6.2"
   - Stats line: "42,596 photos · 5,060 videos · 124 albums"
 - Header badge transitions from hidden to "MCP Connected" (green)
-- Header right stats appear: "42,596 photos · 5,060 videos · 36 tools"
+- Header right stats appear: "42,596 photos · 5,060 videos · 94 tools"
 
 ### Key message:
 Users understand immediately that the plugin connects to THEIR Immich server.

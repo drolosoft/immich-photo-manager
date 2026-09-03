@@ -10,6 +10,7 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import _api_error
 
 @mcp.tool()
 async def search_metadata(
@@ -55,23 +56,29 @@ async def search_metadata(
 
     Returns: JSON with total match count, current page, and assets array with IDs, filenames, and dates.
     """
-    result = await _client(ctx).search_metadata(
-        city=city or None,
-        state=state or None,
-        country=country or None,
-        make=make or None,
-        model=model or None,
-        taken_after=taken_after or None,
-        taken_before=taken_before or None,
-        is_favorite=is_favorite,
-        asset_type=asset_type or None,
-        ocr=ocr or None,
-        person_ids=person_ids or None,
-        tag_ids=tag_ids or None,
-        album_ids=album_ids or None,
-        page=page,
-        size=min(size, 200),
-    )
+    # An id that is not a UUID (a person or tag name passed by mistake) makes
+    # Immich answer 400; the status and its message say more than a bare failure.
+    try:
+        result = await _client(ctx).search_metadata(
+            city=city or None,
+            state=state or None,
+            country=country or None,
+            make=make or None,
+            model=model or None,
+            taken_after=taken_after or None,
+            taken_before=taken_before or None,
+            is_favorite=is_favorite,
+            asset_type=asset_type or None,
+            ocr=ocr or None,
+            person_ids=person_ids or None,
+            tag_ids=tag_ids or None,
+            album_ids=album_ids or None,
+            page=page,
+            size=min(size, 200),
+        )
+    except httpx.HTTPStatusError as exc:
+        return _api_error(exc)
+
     # Flatten the response for easier consumption
     assets = result.get("assets", {}).get("items", [])
     total = result.get("assets", {}).get("total", 0)
@@ -87,8 +94,9 @@ async def search_explore(ctx: Context) -> str:
     it holds at least 5 assets (Immich's own threshold), so small libraries can
     come back empty. Read-only.
 
-    Returns: JSON with a fields array; each field has its name (e.g. 'exifInfo.city')
-    and items pairing each value with one representative asset_id.
+    Returns: JSON with total (how many fields came back) and a fields array; each
+    field has its name (e.g. 'exifInfo.city') and items pairing each value with one
+    representative asset_id.
     """
     result = await _client(ctx).search_explore()
 
@@ -99,7 +107,7 @@ async def search_explore(ctx: Context) -> str:
         items = [{"value": item.get("value"), "asset_id": item.get("data", {}).get("id")}
                  for item in field.get("items", [])]
         fields.append({"field": field.get("fieldName"), "items": items})
-    return json.dumps({"fields": fields}, default=str)
+    return json.dumps({"total": len(fields), "fields": fields}, default=str)
 
 
 @mcp.tool()
@@ -143,7 +151,7 @@ async def search_places(ctx: Context, name: str) -> str:
 @mcp.tool()
 async def search_suggestions(
     ctx: Context,
-    type: str,
+    suggestion_type: str,
     country: str = "",
     state: str = "",
     make: str = "",
@@ -154,23 +162,29 @@ async def search_suggestions(
     guessing (e.g. 'iPhone 14 Pro' vs 'iPhone14,3'). Read-only.
 
     Args:
-        type: One of 'country', 'state', 'city', 'camera-make', 'camera-model',
-            'camera-lens-model'.
+        suggestion_type: One of 'country', 'state', 'city', 'camera-make',
+            'camera-model', 'camera-lens-model'.
         country: Narrow city/state suggestions to this country.
         state: Narrow city suggestions to this state.
         make: Narrow model suggestions to this camera make.
         model: Narrow lens suggestions to this camera model.
 
-    Returns: JSON with a suggestions array of strings.
+    Returns: JSON with total and a suggestions array of strings.
     """
-    result = await _client(ctx).search_suggestions(
-        type,
-        country=country or None,
-        state=state or None,
-        make=make or None,
-        model=model or None,
-    )
-    return json.dumps({"suggestions": result}, default=str)
+    # A suggestion_type outside Immich's enum answers 400; the message names the
+    # values it accepts, which is exactly what the caller needs to see.
+    try:
+        result = await _client(ctx).search_suggestions(
+            suggestion_type,
+            country=country or None,
+            state=state or None,
+            make=make or None,
+            model=model or None,
+        )
+    except httpx.HTTPStatusError as exc:
+        return _api_error(exc)
+
+    return json.dumps({"total": len(result), "suggestions": result}, default=str)
 
 
 @mcp.tool()
@@ -223,10 +237,13 @@ async def search_statistics(
     ocr: str = "",
     created_after: str = "",
     created_before: str = "",
+    taken_after: str = "",
+    taken_before: str = "",
 ) -> str:
     """Count how many assets match a filter WITHOUT fetching them. Use this instead
     of search_metadata whenever only the number matters ('how many photos from
-    Spain?') — it costs one integer instead of pages of assets. Read-only.
+    Spain?', 'how many did I take in 2019?') — it costs one integer instead of
+    pages of assets. Read-only.
 
     Args:
         city: Count assets from this city.
@@ -236,22 +253,31 @@ async def search_statistics(
         model: Count assets from this camera model.
         is_favorite: If true, count only favorites.
         ocr: Count assets whose recognized text matches (needs OCR on the server).
-        created_after: ISO date lower bound on upload date.
+        created_after: ISO date lower bound on upload date (when it reached Immich).
         created_before: ISO date upper bound on upload date.
+        taken_after: ISO date lower bound on capture date (when the photo was taken).
+        taken_before: ISO date upper bound on capture date.
 
     Returns: JSON {total}.
     """
-    result = await _client(ctx).search_statistics(
-        city=city or None,
-        country=country or None,
-        state=state or None,
-        make=make or None,
-        model=model or None,
-        is_favorite=is_favorite,
-        ocr=ocr or None,
-        created_after=created_after or None,
-        created_before=created_before or None,
-    )
+    # A bound Immich cannot parse answers 400; its message names the field.
+    try:
+        result = await _client(ctx).search_statistics(
+            city=city or None,
+            country=country or None,
+            state=state or None,
+            make=make or None,
+            model=model or None,
+            is_favorite=is_favorite,
+            ocr=ocr or None,
+            created_after=created_after or None,
+            created_before=created_before or None,
+            taken_after=taken_after or None,
+            taken_before=taken_before or None,
+        )
+    except httpx.HTTPStatusError as exc:
+        return _api_error(exc)
+
     return json.dumps({"total": result.get("total", 0)})
 
 
@@ -268,15 +294,17 @@ async def search_large_assets(
 
     Args:
         min_size_mb: Only assets at least this many megabytes (0 = no minimum).
-        size: How many assets to return (default 20).
+        size: How many assets to return (1-200, default 20).
         asset_type: 'IMAGE' or 'VIDEO'. Omit for both.
 
-    Returns: JSON with an assets array of {asset_id, filename, size_mb, date},
-    largest first.
+    Returns: JSON with total and an assets array of {asset_id, filename, size_mb,
+    date}, largest first.
     """
+    # The same page-size cap the other searches apply, and 0 means the tool's own
+    # default rather than the server's, so `size` reads the same everywhere.
     result = await _client(ctx).search_large_assets(
         min_file_size=min_size_mb * 1024 * 1024 if min_size_mb else None,
-        size=size or None,
+        size=min(size, 200) if size else 20,
         asset_type=asset_type or None,
     )
 
@@ -357,7 +385,10 @@ async def search_smart(
                 ),
                 "http_status": 500,
             })
-        raise
+        # Any other status is Immich rejecting the request itself, most often a
+        # 400 on a person, tag or album id that is not a UUID.
+        return _api_error(exc)
+
     assets = result.get("assets", {}).get("items", [])
     total = result.get("assets", {}).get("total", 0)
     return json.dumps({"total": total, "page": page, "assets": assets}, default=str)

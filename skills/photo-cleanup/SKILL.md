@@ -79,6 +79,8 @@ Detection strategy:
 4. **Near-duplicates**: Same timestamp + similar dimensions + high CLIP similarity → present to user
 5. **Burst groups**: Sequential timestamps (< 2 seconds apart) + same location → let user pick best
 
+For 4 and 5, deleting is not the only option. `create_stack(asset_ids=[...])` groups the shots behind the best one (the first id becomes the cover), so the library shows a single item and nothing is lost. Offer it before offering the trash: a stack is reversible with `delete_stack`, a deletion is not.
+
 ### 3. Low-Quality Photo Detection
 
 | Issue | Detection | Action |

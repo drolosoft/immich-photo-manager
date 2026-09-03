@@ -85,7 +85,7 @@ top_pairs = sorted(co_occurrence.items(), key=lambda x: x[1], reverse=True)[:15]
 
 ### Step 3: Per-Person Profiles
 
-There is no MCP tool that searches assets by person — the report's per-person data comes entirely from `list_people` and `get_person`:
+Per-person data comes from `list_people` and `get_person`; to pull the actual photos of a person, pass their id to `search_metadata(person_ids=["<id>"])`. The same filter works on `search_smart` when the query is visual:
 
 ```
 # get_person returns name, birthDate, faceCount, and hidden status
@@ -101,7 +101,7 @@ for person in named:
     })
 ```
 
-First/last appearance dates are not available through the MCP tools. For per-person browsing (timeline, all photos of one person), link the user to the person's page in the Immich web UI (`/people/{id}`).
+For first and last appearance, call `get_timeline_buckets(person_id="<id>")`: the oldest and newest buckets bracket the person's span, and the counts per month show when they appear most. For per-person browsing (every photo, in order) link the user to the person's page in the Immich web UI (`/people/{id}`).
 
 ### Step 4: Recognition Quality
 

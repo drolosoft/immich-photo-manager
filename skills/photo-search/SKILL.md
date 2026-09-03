@@ -48,6 +48,8 @@ The user has a curated library of real albums. Creating temporary albums pollute
 
 Identify what the user is looking for. Determine which search dimensions apply.
 
+If the user is browsing rather than looking for something specific ("what's in here?", "surprise me"), start with `search_explore` for one representative photo per city and per detected concept, or `search_random` for a quick sample. Both answer in one call.
+
 ### Step 2: Search for matching photos
 
 Use `search_metadata` and/or `search_smart` to find matching assets.
@@ -56,6 +58,7 @@ Use `search_metadata` and/or `search_smart` to find matching assets.
 - Immich stores cities as **municipalities**, not tourist names. "Tikal" does not exist as a city — it's in the municipality of **"Flores"** (state: **"Petén"**, country: **"Guatemala"**).
 - "Lanzarote" does not exist as a city — look for municipalities like "Arrecife", "Yaiza", "Teguise", "Haría", etc. (state: **"Canary Islands"**, country: **"Spain"**).
 - When a place-name search returns 0 results, try broader terms: search by **state** or **country** instead of city, then filter. Or use `search_smart` with the place name as a CLIP query.
+- Do not guess spellings. `search_cities` lists every city that actually appears in the library, and `search_suggestions(suggestion_type="city", country="Spain")` returns the exact strings `search_metadata` expects. One call is cheaper than three failed searches, and the same trick works for `camera-make` and `camera-model`.
 
 Search strategy priority:
 1. `search_metadata(city=...)` — fastest, most precise if the city name matches
@@ -116,6 +119,12 @@ Use the search results directly — they already contain `id`, `originalFileName
 | **Camera/device** | `search_metadata(make=..., model=...)` | make="Apple", model="iPhone 14 Pro" |
 | **File type** | `search_metadata(asset_type=...)` | "IMAGE" or "VIDEO" |
 | **Favorites** | `search_metadata(is_favorite=true)` | true |
+| **Person** | `search_metadata(person_ids=[...])` | ids from `search_people(name=...)` or `list_people`; matches assets showing all of them |
+| **Text inside the image** | `search_metadata(ocr=...)` | "boarding pass" (needs OCR enabled, check with `get_capabilities`) |
+| **Tags** | `search_metadata(tag_ids=[...])` | ids from `list_tags` |
+| **Inside an album** | `search_metadata(album_ids=[...])` | narrows any of the above to those albums |
+
+The same four parameters work on `search_smart`, so a visual query can be filtered by person, tag, album or recognized text.
 
 ## Query Translation
 

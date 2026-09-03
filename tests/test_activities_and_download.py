@@ -8,6 +8,7 @@ and 3.1.0 OpenAPI specs (verified 2026-09-02).
 
 import json
 
+import httpx
 import pytest
 import respx
 from httpx import Response
@@ -72,6 +73,38 @@ async def test_download_archive_streams_the_zip_to_disk(client, tmp_path):
     written = await client.download_archive(["a1", "a2"], str(destination))
     assert destination.read_bytes() == b"PK-fake-zip-bytes"
     assert written == len(b"PK-fake-zip-bytes")
+    # The temp file the chunks went through is renamed, not left beside the zip.
+    assert not (tmp_path / "album.zip.part").exists()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_download_archive_leaves_nothing_behind_when_the_stream_fails(
+        client, tmp_path):
+    """A big album can drop mid-stream. The half-written zip used to stay on
+    disk, and the tool's own never-overwrite guard then told the user to pick
+    another path instead of telling them the download had failed."""
+    respx.post(f"{BASE}/api/download/archive").mock(
+        side_effect=httpx.ReadTimeout("the connection dropped"))
+    destination = tmp_path / "album.zip"
+
+    with pytest.raises(httpx.ReadTimeout):
+        await client.download_archive(["a1", "a2"], str(destination))
+
+    assert not destination.exists()
+    assert not (tmp_path / "album.zip.part").exists()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_download_archive_removes_the_partial_when_immich_refuses(client, tmp_path):
+    respx.post(f"{BASE}/api/download/archive").mock(return_value=Response(400))
+    destination = tmp_path / "album.zip"
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await client.download_archive(["a1"], str(destination))
+
+    assert list(tmp_path.iterdir()) == []
 
 
 # ── Tools ────────────────────────────────────────────────────────────────────
@@ -131,12 +164,14 @@ class StubDownloadClient:
     def __init__(self):
         self.kwargs = None
         self.archive_ids = None
+        self.albums_fetched = []
 
     async def get_download_info(self, album_id=None, asset_ids=None):
         self.kwargs = {"album_id": album_id, "asset_ids": asset_ids}
         return {"totalSize": 2048, "archives": [{"size": 2048, "assetIds": ["a1", "a2"]}]}
 
     async def get_album(self, album_id):
+        self.albums_fetched.append(album_id)
         return {"id": album_id, "albumName": "Lab Album"}
 
     async def get_album_assets(self, album_id, limit=None, with_exif=False):
@@ -187,3 +222,24 @@ async def test_download_archive_tool_requires_album_or_ids(fake_ctx, tmp_path):
     raw = await server.download_archive(
         fake_ctx(StubDownloadClient()), output_path=str(tmp_path / "x.zip"))
     assert "error" in json.loads(raw)
+
+
+@pytest.mark.asyncio
+async def test_get_download_info_tool_requires_album_or_ids(fake_ctx):
+    """The pair is meant to be called in sequence, so the twin that sizes the
+    archive refuses the same empty request the one that builds it refuses."""
+    stub = StubDownloadClient()
+    raw = await server.get_download_info(fake_ctx(stub))
+    assert "error" in json.loads(raw)
+    assert stub.kwargs is None
+
+
+@pytest.mark.asyncio
+async def test_download_archive_tool_resolves_an_album_without_fetching_it(
+        fake_ctx, tmp_path):
+    """The album object was fetched only to be handed to a helper that ignored
+    it, so an album download cost one pointless request."""
+    stub = StubDownloadClient()
+    await server.download_archive(
+        fake_ctx(stub), album_id="alb1", output_path=str(tmp_path / "lab.zip"))
+    assert stub.albums_fetched == []

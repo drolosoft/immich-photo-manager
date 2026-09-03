@@ -26,11 +26,16 @@ EXTRA = creds["extra"]
 VIDEO = IDS[0]
 PHOTO1, PHOTO2, PHOTO3, PHOTO4 = IDS[1:5]
 cache = tempfile.mkdtemp(prefix=f"immich-cache-{TAG}-")
+# update_credentials also writes the update-proof copy (~/.immich-photo-manager);
+# point it at a throwaway dir so a lab run never leaves lab credentials in the
+# real home directory.
+config_home = tempfile.mkdtemp(prefix=f"immich-config-{TAG}-")
 env = {
     **os.environ,
     "IMMICH_BASE_URL": creds["base"],
     "IMMICH_API_KEY": creds["key"],
     "IMMICH_CACHE_DIR": cache,
+    "IMMICH_CONFIG_HOME": config_home,
     "MCP_TRANSPORT": "stdio",
 }
 results = []
@@ -508,7 +513,12 @@ class LiveHarness:
         rec("untag_assets", (not failed) and "harness-tag" not in tag_names, f"asset tags={tag_names}")
         data, _, failed, _ = await self.call("delete_tag", tag_id=TID)
         album, _, failed_again, _ = await self.call("get_tag", tag_id=TID)
-        rec("delete_tag", (not failed) and failed_again, f"after delete: error={failed_again}")
+        rec(
+            "delete_tag",
+            (not failed) and failed_again
+            and data.get("success") is True and data.get("deleted") == TID,
+            f"payload={data} after delete: error={failed_again}",
+        )
 
     async def check_upload_trash_lifecycle(self):
         """Upload / trash lifecycle."""
@@ -577,7 +587,12 @@ class LiveHarness:
         )
         data, _, failed, _ = await self.call("delete_album", album_id=self.new_album)
         album, _, failed_again, _ = await self.call("get_album", album_id=self.new_album)
-        rec("delete_album", (not failed) and failed_again, f"after delete error={failed_again}")
+        rec(
+            "delete_album",
+            (not failed) and failed_again
+            and data.get("success") is True and data.get("deleted") == self.new_album,
+            f"payload={data} after delete error={failed_again}",
+        )
 
     async def check_edits(self):
         """Edits."""
@@ -629,8 +644,8 @@ class LiveHarness:
         populated_ok = TAG == "v2" or any(explored.values())
         rec(
             "search_explore",
-            shape_ok and populated_ok,
-            f"fields={explored}",
+            shape_ok and populated_ok and data.get("total") == len(fields),
+            f"total={data.get('total')} fields={explored}",
         )
         data, _, failed, _ = await self.call("list_people", with_hidden=True)
         people = data.get("people", data) if isinstance(data, dict) else data
@@ -790,10 +805,13 @@ class LiveHarness:
         data, _, failed, _ = await self.call("get_timeline_buckets")
         buckets = data.get("buckets", []) if isinstance(data, dict) else []
         bucket_total = sum(bucket.get("count", 0) for bucket in buckets)
+        keys = [bucket.get("timeBucket") for bucket in buckets]
         rec(
             "get_timeline_buckets",
-            self.okj(data, failed) and bucket_total == listed_total,
-            f"{len(buckets)} buckets, {bucket_total} assets (list_assets says {listed_total})",
+            self.okj(data, failed) and bucket_total == listed_total
+            and keys == sorted(keys, reverse=True),
+            f"{len(buckets)} buckets, {bucket_total} assets "
+            f"(list_assets says {listed_total}) newest_first={keys == sorted(keys, reverse=True)}",
         )
         first_bucket = buckets[0]["timeBucket"] if buckets else ""
         data, _, failed, _ = await self.call("get_timeline_bucket", time_bucket=first_bucket)
@@ -817,12 +835,13 @@ class LiveHarness:
             self.okj(data, failed) and len(places) > 0,
             f"total={data.get('total')} first={places[0].get('name') if places else None}",
         )
-        data, _, failed, _ = await self.call("search_suggestions", type="city")
+        data, _, failed, _ = await self.call("search_suggestions", suggestion_type="city")
         suggestions = data.get("suggestions", []) if isinstance(data, dict) else []
         rec(
             "search_suggestions",
-            self.okj(data, failed) and "Lisbon" in suggestions,
-            f"suggestions={suggestions}",
+            self.okj(data, failed) and "Lisbon" in suggestions
+            and data.get("total") == len(suggestions),
+            f"total={data.get('total')} suggestions={suggestions}",
         )
         data, _, failed, _ = await self.call("search_random", size=3)
         rec(
@@ -836,6 +855,18 @@ class LiveHarness:
             self.okj(data, failed) and data.get("total") == 4,
             f"total={data.get('total')} (expected 4, same as search_metadata make=LabCam)",
         )
+        # Bare dates on purpose: Immich 3.x validates these bounds as full ISO
+        # 8601 and 2.7.5 does not, so this is the check that the client widens
+        # the documented value into one both majors accept.
+        data, _, failed, _ = await self.call(
+            "search_statistics", taken_after="2000-01-01", taken_before="2100-01-01"
+        )
+        rec(
+            "search_statistics(taken range)",
+            self.okj(data, failed) and data.get("total", 0) > 0,
+            f"total={data.get('total') if isinstance(data, dict) else data} "
+            "(bare-date capture bounds, takenAfter/takenBefore)",
+        )
         data, _, failed, _ = await self.call("search_large_assets", size=5)
         sizes = [asset.get("size_mb") for asset in data.get("assets", [])] if isinstance(data, dict) else []
         rec(
@@ -847,8 +878,9 @@ class LiveHarness:
         places = data.get("places", []) if isinstance(data, dict) else []
         rec(
             "reverse_geocode",
-            self.okj(data, failed) and any(place.get("country") == "Portugal" for place in places),
-            f"places={places}",
+            self.okj(data, failed) and any(place.get("country") == "Portugal" for place in places)
+            and data.get("total") == len(places),
+            f"total={data.get('total')} places={places}",
         )
         data, _, failed, _ = await self.call("search_metadata", album_ids=[ALB])
         rec(
@@ -867,6 +899,18 @@ class LiveHarness:
             self.okj(data, failed) and data.get("updated") == 2 and ratings == [3, 3],
             f"updated={data.get('updated')} ratings_after={ratings}",
         )
+        # Immich 3.x answers 400 for a rating of 0 while 2.7.5 accepts it. The
+        # plugin refuses it itself, so both majors give the same clear answer
+        # instead of a crash on one and a silent write on the other.
+        data, _, failed, _ = await self.call(
+            "update_assets_metadata", asset_ids=[PHOTO3], rating=0
+        )
+        rec(
+            "update_assets_metadata(rating=0 refused)",
+            failed and "-1" in str(data),
+            str(data)[:140],
+        )
+
         # Same-moment comparison as the buckets: trash is excluded on both
         # sides only when list_assets is read right here.
         data, _, failed, _ = await self.call(
@@ -998,8 +1042,8 @@ class LiveHarness:
         partner = next((user for user in users if user.get("email") == "partner@example.com"), None)
         rec(
             "list_users",
-            self.okj(data, failed) and partner is not None,
-            f"{len(users)} users, partner_found={partner is not None}",
+            self.okj(data, failed) and partner is not None and data.get("total") == len(users),
+            f"total={data.get('total')} users, partner_found={partner is not None}",
         )
         partner_id = (partner or {}).get("id")
 
@@ -1075,6 +1119,12 @@ class LiveHarness:
             self.okj(data, failed) and data.get("total_size_mb", 0) > 0 and data.get("asset_count") == 5,
             f"size_mb={data.get('total_size_mb')} assets={data.get('asset_count')} (album has 5)",
         )
+        data, _, failed, _ = await self.call("get_download_info")
+        rec(
+            "get_download_info(no target refused)",
+            failed and "album_id" in str(data),
+            str(data)[:140],
+        )
         import tempfile
         import zipfile
         zip_path = os.path.join(tempfile.mkdtemp(), "lab-album.zip")
@@ -1085,10 +1135,13 @@ class LiveHarness:
         if os.path.exists(zip_path):
             with zipfile.ZipFile(zip_path) as archive:
                 names = archive.namelist()
+        leftover = os.path.exists(zip_path + ".part")
         rec(
             "download_archive",
-            self.okj(data, failed) and data.get("bytes", 0) > 0 and len(names) == 5,
-            f"bytes={data.get('bytes')} files_in_zip={len(names)}",
+            self.okj(data, failed) and data.get("bytes", 0) > 0 and len(names) == 5
+            and data.get("assets") == 5 and not leftover,
+            f"bytes={data.get('bytes')} files_in_zip={len(names)} "
+            f"assets={data.get('assets')} partial_left={leftover}",
         )
         data, _, failed, _ = await self.call(
             "download_archive", album_id=ALB, output_path=zip_path

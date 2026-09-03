@@ -116,7 +116,7 @@ Comments and likes on shared albums.
 
 | Tool | Description | Returns |
 |------|-------------|---------|
-| `get_download_info` | Size of the zip an album/selection would make, before building it | {total_size_mb, asset_count} |
+| `get_download_info` | Size of the zip an album/selection would make, before building it | {total_size_mb, asset_count, archives} |
 | `download_archive` | Album or selection as one zip, streamed to a local path, never overwrites | JSON {path, bytes, assets} |
 
 ### Notes (5)
@@ -578,6 +578,227 @@ Uses Immich's machine learning container to find visually similar photos. Requir
 
 Good queries: "sunset", "birthday cake", "mountains with snow", "group photo at dinner"
 Less effective: Very specific queries, proper nouns, text-heavy images
+
+### `get_capabilities`
+
+Call this once at the start of a session, before offering anything that depends on a server feature. It answers "can this Immich do OCR, smart search, faces, map?" and "which Immich major is this?", so a search that would come back empty is never offered and a missing feature is not mistaken for an empty library. No parameters.
+
+Returns `{server_version, immich_major, features, quirks}`. `features` is Immich's own flag object (`ocr`, `smartSearch`, `facialRecognition`, `map`, `trash`, and whatever else that version reports). `quirks` is a list of plain sentences the flags do not cover: the edits API applies to images only, tags can change color but never be renamed, videos expose a single thumbnail. On Immich 3.x it adds that fetching an album does not include its assets (the plugin already works around it) and that `list_people` hides people below a face-count threshold. On 2.x it adds that searching by asset ids is ignored, so the plugin fetches each asset one by one.
+
+A scoped API key can be allowed to read the version and still be refused the feature flags. When that happens the call does not fail: `features` comes back empty and a `features_note` explains that whether OCR, smart search or facial recognition are on is unknown, while the version and the quirks are still accurate.
+
+### `search_explore` / `search_cities`
+
+The two "what is in this library?" calls, for a library nobody has described yet. `search_explore` is Immich's own Explore page: one representative asset per city and per detected concept. `search_cities` is the same idea for places only, without Immich's five-asset threshold, so it is the reliable one on a small library. Neither takes parameters.
+
+`search_explore` returns `{total, fields}`, with `total` counting the fields that came back and each field carrying its name (`exifInfo.city`, and the concept field) and `items` pairing each value with one representative `asset_id`. `search_cities` returns `{total, cities}` with `{city, country, asset_id, date}` per row. Feed the ids to `get_thumbnails_batch` to actually show them.
+
+### `search_suggestions`
+
+The exact strings the library holds for one field, so a filter is never guessed. Ask for the cities before calling `search_metadata(city=...)`, or for the camera models before `model="iPhone 14 Pro"` (Immich may hold `iPhone14,3` instead).
+
+```json
+{
+  "suggestion_type": "city",
+  "country": "Spain"
+}
+```
+
+`suggestion_type` is required and must be one of `country`, `state`, `city`, `camera-make`, `camera-model`, `camera-lens-model`. The other parameters narrow the answer: `country` and `state` for city suggestions, `make` for model suggestions, `model` for lens suggestions. Returns `{total, suggestions}`, a plain list of strings ready to paste into `search_metadata`.
+
+### `search_random`
+
+A quick sample of the library, optionally filtered. Good for "surprise me", for a feel of what a filter matches before paging through it, and for spot checks on a big library.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `size` | integer | How many assets. Default 10, capped at 100 |
+| `city` / `country` | string | Place filters, same spellings as `search_metadata` |
+| `make` / `model` | string | Camera filters |
+| `is_favorite` | boolean | Only favorites |
+| `ocr` | string | Only assets whose recognized text matches (needs OCR on the server) |
+
+Returns `{total, assets}`.
+
+### `search_statistics`
+
+Counting without fetching. "How many photos from Spain?" costs one integer here, against pages of assets through `search_metadata`, so use this whenever only the number matters, including for every row of a breakdown.
+
+Accepts `city`, `state`, `country`, `make`, `model`, `is_favorite`, `ocr`, `created_after` and `created_before`. Returns `{total}`.
+
+> **Upload date, not capture date.** `created_after` / `created_before` bound the date the asset reached Immich, which is what Immich's count endpoint accepts. There is no `taken_after` here, so "how many photos did I take in 2019?" cannot be answered by this tool. Use `search_metadata(taken_after=…, taken_before=…)` and read its `total`, or `get_timeline_buckets` and sum the months.
+
+### `search_large_assets`
+
+What is eating storage, biggest first. This is the one call behind most of the storage-optimizer skill.
+
+```json
+{
+  "min_size_mb": 50,
+  "size": 50,
+  "asset_type": "VIDEO"
+}
+```
+
+`min_size_mb` is a floor in megabytes (0 for no minimum), `size` is how many rows to return (default 20, capped at 200), `asset_type` is `IMAGE` or `VIDEO`. Note that `size` means "how many" and `min_size_mb` means "how big"; they are different axes. Returns `{total, assets}` with `{asset_id, filename, size_mb, date}` per row, largest first.
+
+### `reverse_geocode`
+
+Turns coordinates into a place name using Immich's own offline geodata, so nothing leaves your network and no API key is involved. Use it to name a marker from `get_map_markers` or a GPS cluster whose photos carry no geocoded city.
+
+```json
+{
+  "lat": 41.3874,
+  "lon": 2.1686
+}
+```
+
+Returns `{total, places}`, a list of `{city, state, country}` candidates for those coordinates.
+
+### `get_timeline_buckets` / `get_timeline_bucket`
+
+The cheap way to navigate by date. `get_timeline_buckets` maps the whole library in one request: one bucket per month with its asset count. `get_timeline_bucket` then fetches the assets of a single month. Together they walk a large library without a single search.
+
+Both accept the same filters, and this is where the pair earns its keep:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `album_id` | string | Only assets in this album (an event album gives one or two buckets, a collection spans years) |
+| `person_id` | string | Only assets showing this person, so the oldest and newest buckets bracket when they appear |
+| `tag_id` | string | Only assets carrying this tag |
+| `is_favorite` | boolean | Only favorites |
+| `order` | string | `desc` for newest month first (the default), `asc` for oldest first |
+
+`get_timeline_bucket` additionally requires `time_bucket`, the key exactly as the buckets call returned it (`"2026-03-01"`).
+
+```json
+{
+  "person_id": "uuid-of-person"
+}
+```
+
+`get_timeline_buckets` returns `{total_buckets, buckets}` with `{timeBucket, count}` rows. `get_timeline_bucket` returns `{time_bucket, total, assets}`, one row per asset with `asset_id`, `date`, `is_image`, `is_favorite`, `duration`, `city` and `country`. Immich answers that endpoint columnar (one array per field); the tool zips it back into rows so it can be read.
+
+### `get_calendar_heatmap`
+
+Photos per day over a range: gaps, busy periods and library health at a glance, without listing a single asset.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `from_date` | ISO date | Lower bound, e.g. `"2026-01-01"` |
+| `to_date` | ISO date | Upper bound |
+| `heatmap_type` | string | `"Taken"` (capture date, default) or `"Upload"` (when it reached Immich, Immich 3.x only) |
+
+```json
+{
+  "from_date": "2019-01-01",
+  "to_date": "2019-12-31"
+}
+```
+
+Returns `{source, total, series}`, where `series` holds `{date, count}` for the days that had activity, oldest first. A day missing from the series had nothing. `source` says where the numbers came from: `"immich"` on 3.x, which answers natively, or `"timeline"` on 2.x, where the same shape is built from the timeline buckets (capture dates only, so `heatmap_type="Upload"` returns an explanatory error there instead).
+
+> **Pass the narrowest range that answers the question.** The 2.x fallback costs one request per month in range, so a wide range is a slow call. An omitted bound means the server default on 3.x, but the last 365 days on 2.x, precisely so that an open-ended call does not walk every month the library has ever held.
+
+### `list_memories` / `create_memory` / `update_memory` / `delete_memory`
+
+Immich's "on this day" collections: photos from the same date in past years. Use them to build a "tal día como hoy" story, album or PDF, and to save the ones worth keeping.
+
+`list_memories(for_date, is_saved, size)`: `for_date` is an ISO date and returns the memories Immich would show on that day (pass today for the classic feed); `is_saved` filters to saved or unsaved only; `size` caps the count, default 50. Returns `{total, memories}`, each memory carrying `id`, `type`, `memory_at`, the `year` it looks back to, `is_saved`, `asset_count` and a trimmed `assets` list of `{asset_id, filename, date}`.
+
+```json
+{
+  "memory_at": "2026-09-03",
+  "year": 2019,
+  "asset_ids": ["uuid-1", "uuid-2"]
+}
+```
+
+`create_memory` needs both `memory_at` (the date the memory is shown on, usually today's month and day) and `year` (the past year it looks back to, required by Immich). `asset_ids` may be omitted, but an empty memory shows nothing. It returns the created memory in the same shape as a list row.
+
+`update_memory(memory_id, is_saved, memory_at, seen_at)` saves or unsaves a memory, moves its date, or marks it seen. `delete_memory(memory_id)` returns `{"success": true, "deleted": "<memory id>"}`; the photos stay in the library, only the memory entry goes.
+
+### `create_stack` / `list_stacks` / `get_stack` / `update_stack` / `delete_stack`
+
+Stacking is the gentler alternative to deleting. A burst, three tries at the same shot, a photo and its edit: group them and the library shows one item fronted by the primary asset, with every frame still there. It is reversible, which makes it the right offer when the user cannot decide which copy is best.
+
+```json
+{
+  "asset_ids": ["uuid-best-shot", "uuid-2", "uuid-3"]
+}
+```
+
+`create_stack` takes at least two asset ids, in order, and the **first one becomes the cover**. `list_stacks` takes an optional `primary_asset_id` to find the stack fronted by a given asset. `update_stack(stack_id, primary_asset_id)` changes the cover, and the new cover must already belong to the stack. `delete_stack(stack_id)` dissolves the grouping and returns `{"success": true, "deleted": "<stack id>"}` with a note that the assets themselves stay in the library.
+
+The read calls return `{id, primary_asset_id, asset_count, assets}`, each asset trimmed to `{asset_id, filename}`; `list_stacks` wraps them in `{total, stacks}`.
+
+### `list_users` / `list_partners` / `create_partner` / `update_partner` / `remove_partner`
+
+Immich's family sharing. Each side keeps its own library, and a partner sees the other's photos next to their own. Start with `list_users` to find the id, since everything else here is addressed by user id, not by name or email.
+
+`list_users` returns `{total, users}` with `{id, name, email}`. `list_partners` asks Immich in both directions and returns `{shared_with_me, shared_by_me}`, each entry `{id, name, email, in_timeline}`.
+
+```json
+{
+  "user_id": "uuid-of-user",
+  "in_timeline": true
+}
+```
+
+`create_partner(user_id)` shares this account's whole library with that user. `update_partner(user_id, in_timeline)` decides whether their photos are mixed into this timeline or kept separate, and it only works on someone in `shared_with_me`: the flag controls how *their* photos appear *here*, so calling it on a `shared_by_me` partner is rejected by Immich. `remove_partner(user_id)` revokes the sharing and returns `{"success": true, "removed": "<user id>"}`; their own photos are never touched.
+
+### `list_activities` / `create_activity` / `delete_activity`
+
+Comments and likes on a shared album, the conversation that happens around photos the user shared with someone. Only meaningful on albums that actually have a shared link or shared users.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `album_id` | string | **Required.** The shared album |
+| `asset_id` | string | Only activity on this one asset within the album |
+| `activity_type` | string | `"comment"` or `"like"`. Omit for both |
+
+```json
+{
+  "album_id": "uuid-of-album",
+  "activity_type": "comment"
+}
+```
+
+`list_activities` returns `{total, activities}` with `{id, type, comment, asset_id, user, created_at}` per entry. `create_activity(album_id, comment, asset_id, like)` posts one: pass `comment` for text, or `like=true` for a like (then leave `comment` empty), and `asset_id` to attach it to one photo instead of the album. It returns `{id, type}`. `delete_activity(activity_id)` removes it for everyone and returns `{"success": true, "deleted": "<activity id>"}`.
+
+### `get_download_info` / `download_archive`
+
+Getting the originals out, as one zip on the machine running the server. Call them in that order: originals and videos add up fast, and telling the user "this is 14 GB" before starting is the whole point of the first tool.
+
+```json
+{
+  "album_id": "uuid-of-album"
+}
+```
+
+Both accept `album_id` **or** `asset_ids`, not both, and `download_archive` additionally requires `output_path`. `get_download_info` returns `{total_size_mb, asset_count, archives}`, where `archives` is how many separate zips Immich would split the download into. `download_archive` streams the file to disk and returns `{path, bytes, assets}`.
+
+An existing file is never overwritten: the call refuses and asks for another path. In the Docker image, write into the mounted `/data` volume.
+
+### `review_assets` / `record_action` / `get_asset_notes` / `get_assets_notes` / `clear_asset_notes`
+
+The plugin's own memory on an asset, so a second cleanup session does not redo the first one's thinking. Immich lets an app store a key with a JSON value on each asset; this plugin owns exactly one key, `immich-photo-manager`, and never reads or deletes another app's. The notes are invisible in the Immich UI and not searchable, so tags remain the visible state a user acts on and notes carry the reasoning behind it.
+
+```json
+{
+  "asset_ids": ["uuid-1", "uuid-2"],
+  "verdict": "duplicate_of",
+  "reason": "near-identical to IMG_6367, keep that one"
+}
+```
+
+`review_assets` records a verdict with its reason. `verdict` is a closed vocabulary so that sessions stay comparable: `keep`, `delete_candidate`, `duplicate_of`, `needs_check`. `record_action(asset_ids, action, detail)` records what the plugin did instead of what it decided: `action` is a short label like `added_to_album`, `date_fixed` or `rotated`, and `detail` holds the context worth keeping (which album, the previous value, the user's request). Each list keeps only the 10 newest entries per asset; this is a memory, not an audit log.
+
+`get_asset_notes(asset_id)` reads one asset's `reviews` and `actions`, newest last. `get_assets_notes(asset_ids)` is the call that makes the whole thing worth using: it returns `{checked, annotated}`, one compact row per asset that already carries notes with its `last_verdict`, `last_reason` and `last_review_at`, so a 500-asset pass can skip everything an earlier session already judged. `clear_asset_notes(asset_ids)` forgets them again.
+
+The bulk calls work asset by asset and do not stop at the first bad id: each one returns a `failed` array of `{asset_id, error}` alongside its count, and `success` is true only when that array is empty. An empty `asset_ids` is rejected rather than silently reported as zero.
+
+`get_asset_info(asset_id, with_notes=true)` returns the same notes inline, which saves a second call when the asset is being fetched anyway.
 
 ---
 

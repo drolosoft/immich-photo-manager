@@ -30,6 +30,11 @@ async def get_download_info(
     Returns: JSON with total_size_mb, asset_count and the number of archives
     Immich would split the download into.
     """
+    # The same guard its twin download_archive uses: an empty body would size
+    # nothing at all, which reads as a zero-byte album rather than a mistake.
+    if not album_id and not asset_ids:
+        return json.dumps({"error": "Pass album_id or asset_ids — nothing to size."})
+
     result = await _client(ctx).get_download_info(
         album_id=album_id or None,
         asset_ids=asset_ids or None,
@@ -61,7 +66,7 @@ async def download_archive(
         album_id: Download the whole album.
         asset_ids: Or download just these assets.
 
-    Returns: JSON with path and bytes written, or an error.
+    Returns: JSON with path, bytes written and how many assets went in, or an error.
     """
     if not album_id and not asset_ids:
         return json.dumps({"error": "Pass album_id or asset_ids — nothing to download."})
@@ -74,8 +79,7 @@ async def download_archive(
     # other album tool works from (survives the Immich 3.x album-assets change).
     ids = list(asset_ids or [])
     if album_id:
-        album = await _client(ctx).get_album(album_id)
-        assets = await _album_assets(_client(ctx), album_id, album)
+        assets = await _album_assets(_client(ctx), album_id)
         ids.extend(asset.get("id") for asset in assets)
 
     written = await _client(ctx).download_archive(ids, output_path)
