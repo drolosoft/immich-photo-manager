@@ -25,8 +25,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Annotations go on the manifest and on the index: the ghcr package page
+      # reads the description of a multi-arch image from the index, and labels
+      # alone only reach the per-platform configs.
       - id: meta
         uses: docker/metadata-action@v5
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -40,6 +45,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
 
       # The image must actually serve before the tag is public: run the
       # just-built amd64 image and hit /health.

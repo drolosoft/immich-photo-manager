@@ -14,15 +14,17 @@
 </p>
 <p align="center">
   <a href="tests/live/"><img src="https://img.shields.io/badge/tested_live_on_Immich-2.7.5_%7C_3.1.0-2ea44f" alt="Tested live on Immich 2.7.5 and 3.1.0"></a>
-  <a href="tests/"><img src="https://img.shields.io/badge/unit_tests-349_on_every_push-2ea44f" alt="349 unit tests on every push"></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/unit_tests-355_on_every_push-2ea44f" alt="355 unit tests on every push"></a>
   <a href="doc/demos/"><img src="https://img.shields.io/badge/demos-18_real_sessions-blue" alt="18 demos from real sessions"></a>
 </p>
+
+<!-- mcp-name: io.github.drolosoft/immich-photo-manager -->
 
 > **MCP server for intelligent photo management with [Immich](https://immich.app): your self-hosted library, understood.**
 
 If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance: search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally and talks only to your Immich; your originals stay on your server (see [what leaves your network](#what-leaves-your-network)).
 
-> **Tested, not assumed.** Every push runs 349 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 94 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras (the legacy handshake and stateless 2026-07-28) are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Demos [13 to 18](doc/demos/README.md) cover everything added in 2.x (library discovery, OCR and people search, memories and stacks, partners and downloads, asset notes, the Docker image) from real sessions. Details: [How it's tested](#how-its-tested).
+> **Tested, not assumed.** Every push runs 355 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 94 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras (the legacy handshake and stateless 2026-07-28) are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Demos [13 to 18](doc/demos/README.md) cover everything added in 2.x (library discovery, OCR and people search, memories and stacks, partners and downloads, asset notes, the Docker image) from real sessions. Details: [How it's tested](#how-its-tested).
 
 <p align="center"><img src="./assets/demo.gif" alt="immich-photo-manager demo" width="800"></p>
 
@@ -254,6 +256,27 @@ RESULT: Zero cloud dependency, fully self-hosted stack.
 
 ---
 
+## Tools
+
+The 94 tools by area. Parameters, return shapes and examples for each one are in the [MCP Tools Reference](doc/MCP-TOOLS.md).
+
+- **Search**: `search_smart`, `search_metadata`, `search_explore`, `search_cities`, `search_places`, `search_suggestions`, `search_random`, `search_statistics`, `search_large_assets`, `list_assets`
+- **Albums**: `list_albums`, `get_album`, `create_album`, `update_album`, `delete_album`, `add_assets_to_album`, `remove_assets_from_album`
+- **Assets and metadata**: `get_asset_info`, `update_asset_metadata`, `update_assets_metadata`, `rotate_assets`, `revert_asset_edits`, `get_map_markers`, `reverse_geocode`, `upload_asset`
+- **Images and thumbnails**: `get_asset_image`, `get_album_images`, `get_images_batch`, `get_asset_thumbnail`, `get_album_thumbnails`, `get_thumbnails_batch`
+- **Video and PDF**: `get_video_frames`, `get_video_frames_json`, `get_export_preview`, `export_pdf`
+- **People and faces**: `list_people`, `get_person`, `update_person`, `merge_people`, `search_people`, `get_person_thumbnail`, `get_asset_faces`, `reassign_face`
+- **Duplicates and stacks**: `get_duplicates`, `resolve_duplicates`, `create_stack`, `list_stacks`, `get_stack`, `update_stack`, `delete_stack`
+- **Tags**: `list_tags`, `get_tag`, `create_tag`, `update_tag`, `delete_tag`, `tag_assets`, `untag_assets`
+- **Dates**: `get_timeline_buckets`, `get_timeline_bucket`, `get_calendar_heatmap`, `list_memories`, `create_memory`, `update_memory`, `delete_memory`
+- **Sharing**: `list_shared_links`, `create_shared_link`, `get_shared_link`, `update_shared_link`, `delete_shared_link`, `list_users`, `list_partners`, `create_partner`, `update_partner`, `remove_partner`, `list_activities`, `create_activity`, `delete_activity`
+- **Download**: `get_download_info`, `download_archive`
+- **Trash**: `delete_assets`, `empty_trash`, `restore_trash`, `restore_assets`
+- **Asset notes**: `review_assets`, `record_action`, `get_asset_notes`, `get_assets_notes`, `clear_asset_notes`
+- **Server and connection**: `ping`, `get_server_version`, `get_capabilities`, `get_statistics`, `get_connection_info`, `update_credentials`
+
+---
+
 ## Why immich-photo-manager?
 
 Immich is excellent at storing and viewing your photos. But managing a large library (deduplication, metadata repair, album curation, storage analysis) still requires manual effort or custom scripts.
@@ -277,7 +300,7 @@ Immich is excellent at storing and viewing your photos. But managing a large lib
 
 ## How it's tested
 
-- **Unit suite, every push**: 349 pytest cases on Python 3.10 and 3.13 (HTTP mocked), plus ruff. Releases are tagged only when this gate is green.
+- **Unit suite, every push**: 355 pytest cases on Python 3.10 and 3.13 (HTTP mocked), plus ruff. Releases are tagged only when this gate is green.
 - **Live, every tool, two Immich versions**: [`tests/live/`](tests/live/) starts real Immich **2.7.5** and **3.1.0** in Docker, fills them with a small library, and drives all 94 tools over the MCP protocol, re-reading state after each write. Run before every release; last full run 2026-09-03, 132/132 checks on both.
 - **In use**: [PyPI](https://pypi.org/project/immich-photo-manager/) downloads, merged PRs from four outside contributors, and the demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions.
 

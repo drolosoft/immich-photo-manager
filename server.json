@@ -1,0 +1,87 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.drolosoft/immich-photo-manager",
+  "title": "Immich Photo Manager",
+  "description": "Photo management for self-hosted Immich: search, albums, duplicates, faces, PDF reports. 94 tools.",
+  "websiteUrl": "https://github.com/drolosoft/immich-photo-manager",
+  "repository": {
+    "url": "https://github.com/drolosoft/immich-photo-manager",
+    "source": "github"
+  },
+  "version": "2.0.10",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "immich-photo-manager",
+      "version": "2.0.10",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "IMMICH_BASE_URL",
+          "description": "URL of your Immich server, for example https://photos.example.com",
+          "isRequired": true
+        },
+        {
+          "name": "IMMICH_API_KEY",
+          "description": "Immich API key (Account Settings, API Keys). Both variables can also be set later from the client with the update_credentials tool.",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    },
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/drolosoft/immich-photo-manager:2.0.10",
+      "version": "2.0.10",
+      "runtimeHint": "docker",
+      "transport": {
+        "type": "streamable-http",
+        "url": "http://localhost:8626/mcp"
+      },
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "-p",
+          "value": "8626:8626",
+          "description": "Publish the MCP port; the server listens on 8626 inside the container",
+          "isRequired": true
+        },
+        {
+          "type": "named",
+          "name": "-v",
+          "value": "{exports_dir}:/data",
+          "description": "Directory on the host for the PDFs and zips the tools write, and for credentials set from the client",
+          "isRequired": false,
+          "variables": {
+            "exports_dir": {
+              "description": "Host directory to mount on /data",
+              "format": "filepath"
+            }
+          }
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "IMMICH_BASE_URL",
+          "description": "URL of your Immich server. Optional at start: without it every tool answers with the fix and one update_credentials call connects the container.",
+          "isRequired": false
+        },
+        {
+          "name": "IMMICH_API_KEY",
+          "description": "Immich API key",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "MCP_ALLOWED_HOSTS",
+          "description": "Extra hostnames the container may be reached under (a reverse proxy, another container). DNS-rebinding protection stays on.",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}
