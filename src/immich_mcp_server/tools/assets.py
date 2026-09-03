@@ -13,17 +13,23 @@ from ..app import mcp, _client
 from ._common import _album_assets
 
 @mcp.tool()
-async def get_asset_info(ctx: Context, asset_id: str) -> str:
+async def get_asset_info(ctx: Context, asset_id: str, with_notes: bool = False) -> str:
     """Get full metadata for a single asset. Use this when you need EXIF details,
     GPS coordinates, camera info, or file properties for a known asset ID.
     For finding assets, use search_metadata or search_smart instead. Read-only.
 
     Args:
         asset_id: The asset's UUID (from search results, album listings, or list_assets).
+        with_notes: Also include the plugin's notes on the asset (past review
+            verdicts and recorded actions, see get_asset_notes). One extra request.
 
     Returns: JSON with EXIF data, GPS, dates, dimensions, file size, camera make/model, and owner.
     """
     result = await _client(ctx).get_asset(asset_id)
+    if with_notes:
+        from .notes import _load_notes
+
+        result["notes"] = await _load_notes(_client(ctx), asset_id)
     return json.dumps(result, default=str)
 
 

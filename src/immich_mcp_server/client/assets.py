@@ -107,6 +107,22 @@ class AssetsApi:
             params["fileCreatedBefore"] = file_created_before
         return await self._request("GET", "/map/markers", params=params)
 
+    # ── Per-asset key-value metadata (app storage, invisible in the Immich UI) ──
+
+    async def get_asset_metadata(self, asset_id: str) -> list[dict]:
+        """Every metadata key an asset carries, from any app: [{key, value, updatedAt}]."""
+        return await self._request("GET", f"/assets/{asset_id}/metadata")
+
+    async def upsert_asset_metadata(self, asset_id: str, key: str, value: dict) -> list[dict]:
+        """Create or replace one key's JSON object on an asset."""
+        return await self._request(
+            "PUT", f"/assets/{asset_id}/metadata", json={"items": [{"key": key, "value": value}]}
+        )
+
+    async def delete_asset_metadata(self, asset_id: str, key: str) -> None:
+        """Remove one key from an asset; other apps' keys are untouched."""
+        await self._request("DELETE", f"/assets/{asset_id}/metadata/{key}")
+
     async def reverse_geocode(self, lat: float, lon: float) -> list[dict]:
         """Resolve coordinates to city/state/country using Immich's own geodata."""
         return await self._request(

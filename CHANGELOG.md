@@ -6,6 +6,13 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.8] — 2026-09-03
+
+### Added
+
+- **Asset notes — the plugin's memory on each asset.** Five tools over Immich's per-asset metadata (same endpoints on 2.x and 3.x), under one key, `immich-photo-manager`: `review_assets` remembers a verdict (`keep`, `delete_candidate`, `duplicate_of`, `needs_check`) with its reason; `record_action` remembers what the plugin did and why; `get_asset_notes` reads one asset; `get_assets_notes` tells which of many assets already carry notes and their last verdict — the call that lets a cleanup pass skip what an earlier session reviewed; `clear_asset_notes` forgets only the plugin's key. Each list keeps its last 10 entries. `get_asset_info(with_notes=true)` includes them inline.
+- The `photo-cleanup` and `duplicate-report` skills now check notes before analysing and leave verdicts after deciding. Tags remain the visible state in Immich; notes carry the why.
+
 ## [v2.0.7] — 2026-09-03
 
 ### Added
@@ -306,6 +313,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.8]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.8
 [v2.0.7]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.7
 [v2.0.6]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.6
 [v2.0.5]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.5

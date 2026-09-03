@@ -10,6 +10,7 @@ otherwise.
 
 TOOL_NAMES = (
     "add_assets_to_album",
+    "clear_asset_notes",
     "create_activity",
     "create_album",
     "create_memory",
@@ -33,7 +34,9 @@ TOOL_NAMES = (
     "get_asset_faces",
     "get_asset_image",
     "get_asset_info",
+    "get_asset_notes",
     "get_asset_thumbnail",
+    "get_assets_notes",
     "get_calendar_heatmap",
     "get_capabilities",
     "get_connection_info",
@@ -67,6 +70,7 @@ TOOL_NAMES = (
     "merge_people",
     "ping",
     "reassign_face",
+    "record_action",
     "remove_assets_from_album",
     "remove_partner",
     "resolve_duplicates",
@@ -74,6 +78,7 @@ TOOL_NAMES = (
     "restore_trash",
     "reverse_geocode",
     "revert_asset_edits",
+    "review_assets",
     "rotate_assets",
     "search_cities",
     "search_explore",

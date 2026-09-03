@@ -128,6 +128,14 @@ After the quick scan, clean up category by category:
    - Present candidates with thumbnails if possible
    - User decides per-photo or in batches
 
+### Remember what was decided (notes)
+
+The plugin keeps its own memory on each asset (`review_assets`, `get_assets_notes`), invisible in Immich and separate from tags. Use it so a second pass — days later, another session — does not redo the work:
+
+- **Before analysing a batch**, call `get_assets_notes(asset_ids)` and skip the assets that already have a `last_verdict`, unless the user asks to re-review them. Say how many were skipped.
+- **After each decision**, call `review_assets(asset_ids, verdict, reason)` with `keep`, `delete_candidate`, `duplicate_of` or `needs_check` and a short concrete reason ("near-identical to IMG_6367, that one has the bystander"). Tag the delete candidates as well (a tag is what the user sees and selects in Immich; the note is the why).
+- When something is trashed, `record_action(asset_ids, "trashed", reason)` so the audit trail survives a restore.
+
 ### Progress Reporting
 
 For large cleanups, report progress every 500 assets processed:

@@ -1100,6 +1100,59 @@ class LiveHarness:
         )
         os.remove(zip_path)
 
+    async def check_notes(self):
+        """Asset notes: review, record, read one, read batch, with_notes, clear."""
+        data, _, failed, _ = await self.call(
+            "review_assets", asset_ids=[PHOTO3], verdict="delete_candidate",
+            reason="harness: near-identical to photo 4",
+        )
+        rec(
+            "review_assets",
+            self.okj(data, failed) and data.get("reviewed") == 1,
+            f"{data}",
+        )
+        data, _, failed, _ = await self.call(
+            "record_action", asset_ids=[PHOTO3], action="harness_touch", detail="rating set to 3"
+        )
+        rec(
+            "record_action",
+            self.okj(data, failed) and data.get("recorded") == 1,
+            f"{data}",
+        )
+        data, _, failed, _ = await self.call("get_asset_notes", asset_id=PHOTO3)
+        reviews = data.get("reviews", []) if isinstance(data, dict) else []
+        actions = data.get("actions", []) if isinstance(data, dict) else []
+        rec(
+            "get_asset_notes",
+            self.okj(data, failed) and reviews and reviews[-1].get("verdict") == "delete_candidate"
+            and actions and actions[-1].get("action") == "harness_touch",
+            f"reviews={len(reviews)} last={reviews[-1].get('verdict') if reviews else None} actions={len(actions)}",
+        )
+        data, _, failed, _ = await self.call("get_assets_notes", asset_ids=[PHOTO3, PHOTO4])
+        annotated = data.get("annotated", []) if isinstance(data, dict) else []
+        rec(
+            "get_assets_notes",
+            self.okj(data, failed) and data.get("checked") == 2
+            and [row.get("asset_id") for row in annotated] == [PHOTO3]
+            and annotated[0].get("last_verdict") == "delete_candidate",
+            f"checked={data.get('checked')} annotated={[row.get('asset_id', '')[:8] for row in annotated]}",
+        )
+        data, _, failed, _ = await self.call("get_asset_info", asset_id=PHOTO3, with_notes=True)
+        notes = data.get("notes", {}) if isinstance(data, dict) else {}
+        rec(
+            "  get_asset_info(with_notes)",
+            self.okj(data, failed) and len(notes.get("reviews", [])) >= 1,
+            f"notes.reviews={len(notes.get('reviews', []))}",
+        )
+        data, _, failed, _ = await self.call("clear_asset_notes", asset_ids=[PHOTO3, PHOTO4])
+        after, _, _, _ = await self.call("get_asset_notes", asset_id=PHOTO3)
+        rec(
+            "clear_asset_notes",
+            self.okj(data, failed) and data.get("cleared") == 2
+            and isinstance(after, dict) and after.get("reviews") == [] and after.get("actions") == [],
+            f"cleared={data.get('cleared')} after={after.get('reviews') if isinstance(after, dict) else after}",
+        )
+
     async def check_credentials(self):
         """Credentials (same creds, must keep working)."""
         data, _, failed, _ = await self.call(
@@ -1144,6 +1197,7 @@ async def main():
             await harness.check_stacks()
             await harness.check_partners()
             await harness.check_activities_download()
+            await harness.check_notes()
             await harness.check_credentials()
 
     covered = {reader["tool"].split("(")[0].strip() for reader in results}

@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-The Immich Photo Manager MCP server exposes 89 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
+The Immich Photo Manager MCP server exposes 94 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
 
 ---
 
@@ -19,7 +19,7 @@ The Immich Photo Manager MCP server exposes 89 tools that Claude can use to inte
 
 | Tool | Description | Returns |
 |------|-------------|---------|
-| `get_asset_info` | Get full metadata for a specific asset | EXIF data, GPS, dates, dimensions, file info |
+| `get_asset_info` | Get full metadata for a specific asset (`with_notes=true` adds the plugin's notes) | EXIF data, GPS, dates, dimensions, file info |
 | `reverse_geocode` | Resolve GPS coordinates to city/state/country (Immich's offline geodata) | Place candidates |
 | `update_asset_metadata` | Update asset metadata (dates, GPS, description, favorites, rating) | Updated asset object |
 | `update_assets_metadata` | The same fields on MANY assets in one call (a scanned roll gets its date, a trip its GPS) | {success, updated} |
@@ -118,6 +118,20 @@ Comments and likes on shared albums.
 |------|-------------|---------|
 | `get_download_info` | Size of the zip an album/selection would make, before building it | {total_size_mb, asset_count} |
 | `download_archive` | Album or selection as one zip, streamed to a local path, never overwrites | JSON {path, bytes, assets} |
+
+### Notes (5)
+
+The plugin's own memory on each asset, stored in Immich's per-asset metadata under one key (`immich-photo-manager`). Invisible in the Immich UI and not searchable — tags stay the visible state; notes carry the why, and let a later session skip what was already reviewed.
+
+| Tool | Description | Modifies? |
+|------|-------------|-----------|
+| `review_assets` | Remember a verdict (`keep`, `delete_candidate`, `duplicate_of`, `needs_check`) with its reason; last 10 kept | Yes |
+| `record_action` | Remember what the plugin did to assets and why (album, date fix, rotation); last 10 kept | Yes |
+| `get_asset_notes` | One asset's reviews and actions | No |
+| `get_assets_notes` | Which of many assets already carry notes, with their last verdict — the "skip what I reviewed" call | No |
+| `clear_asset_notes` | Forget the plugin's notes (other apps' metadata untouched) | Yes |
+
+`get_asset_info(asset_id, with_notes=true)` includes the same notes inline.
 
 ### Memories (4)
 

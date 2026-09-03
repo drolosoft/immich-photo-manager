@@ -177,6 +177,10 @@ RECOMMENDATION
 
 Batch Immich deletions in groups of 100 assets per call. For ML-detected duplicates, prefer `resolve_duplicates` which handles them natively in Immich.
 
+### Step 5b: Leave notes for the next pass
+
+Before removal, remember the decision on every asset touched: `review_assets(kept_ids, "keep", "best of the group: <why>")` and `review_assets(trashed_ids, "duplicate_of", "duplicate of <kept filename>")`. A later run starts with `get_assets_notes(asset_ids)` and skips what already carries a verdict, so a 500-asset album is not re-analysed from scratch.
+
 ### Step 6: Verify
 
 After removal, query Immich statistics to confirm the new count and present before/after comparison.
