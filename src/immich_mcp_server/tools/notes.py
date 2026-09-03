@@ -79,17 +79,32 @@ async def review_assets(
         reason: Free text explaining the verdict (e.g. 'near-identical to IMG_6367,
             keep that one'). Short and concrete beats long.
 
-    Returns: JSON with success, the number of assets reviewed and the verdict.
+    Returns: JSON with success, the number of assets reviewed, the verdict, and a
+    failed array of {asset_id, error} for any asset that could not be written.
+    Success is true only when nothing failed.
     """
+    if not asset_ids:
+        return json.dumps({"error": "asset_ids cannot be empty."})
+
     if verdict not in VERDICTS:
         return json.dumps({
             "error": f"Unknown verdict '{verdict}'. Use one of: {', '.join(VERDICTS)}.",
         })
 
     entry = {"at": _now(), "verdict": verdict, "reason": reason}
+    reviewed = 0
+    failed = []
     for asset_id in asset_ids:
-        await _append_note(_client(ctx), asset_id, "reviews", entry)
-    return json.dumps({"success": True, "reviewed": len(asset_ids), "verdict": verdict})
+        # One bad id must not throw away the assets already annotated: note the
+        # failure and carry on, the way rotate_assets does.
+        try:
+            await _append_note(_client(ctx), asset_id, "reviews", entry)
+            reviewed += 1
+        except Exception as exc:
+            failed.append({"asset_id": asset_id, "error": str(exc)})
+
+    return json.dumps({"success": not failed, "reviewed": reviewed,
+                       "verdict": verdict, "failed": failed}, default=str)
 
 
 @mcp.tool()
@@ -107,12 +122,27 @@ async def record_action(
         detail: Free text with the context worth keeping (album name, previous
             value, the user's request).
 
-    Returns: JSON with success, the number of assets recorded and the action.
+    Returns: JSON with success, the number of assets recorded, the action, and a
+    failed array of {asset_id, error} for any asset that could not be written.
+    Success is true only when nothing failed.
     """
+    if not asset_ids:
+        return json.dumps({"error": "asset_ids cannot be empty."})
+
     entry = {"at": _now(), "action": action, "detail": detail}
+    recorded = 0
+    failed = []
     for asset_id in asset_ids:
-        await _append_note(_client(ctx), asset_id, "actions", entry)
-    return json.dumps({"success": True, "recorded": len(asset_ids), "action": action})
+        # A half-written batch is worse than a reported one: keep going and say
+        # exactly which assets missed out.
+        try:
+            await _append_note(_client(ctx), asset_id, "actions", entry)
+            recorded += 1
+        except Exception as exc:
+            failed.append({"asset_id": asset_id, "error": str(exc)})
+
+    return json.dumps({"success": not failed, "recorded": recorded,
+                       "action": action, "failed": failed}, default=str)
 
 
 @mcp.tool()
@@ -141,15 +171,30 @@ async def get_assets_notes(ctx: Context, asset_ids: list[str]) -> str:
     Args:
         asset_ids: The candidates to check (an album's assets, a search result).
 
-    Returns: JSON with checked (how many were asked) and annotated: one compact
-    row per asset that has notes — asset_id, last_verdict, last_reason,
-    last_review_at, and the reviews/actions counts.
+    Returns: JSON with checked (how many were asked), annotated (one compact row
+    per asset that has notes — asset_id, last_verdict, last_reason, last_review_at,
+    and the reviews/actions counts) and a failed array of {asset_id, error} for the
+    assets that could not be read. Success is true only when nothing failed.
     """
+    if not asset_ids:
+        return json.dumps({"error": "asset_ids cannot be empty."})
+
     annotated = []
+    checked = 0
+    failed = []
     for asset_id in asset_ids:
-        notes = await _load_notes(_client(ctx), asset_id)
+        # An id that no longer exists must not hide the notes of the rest of the
+        # batch, which is the whole point of this call.
+        try:
+            notes = await _load_notes(_client(ctx), asset_id)
+            checked += 1
+        except Exception as exc:
+            failed.append({"asset_id": asset_id, "error": str(exc)})
+            continue
+
         if not notes["reviews"] and not notes["actions"]:
             continue
+
         last = notes["reviews"][-1] if notes["reviews"] else {}
         annotated.append({
             "asset_id": asset_id,
@@ -159,7 +204,9 @@ async def get_assets_notes(ctx: Context, asset_ids: list[str]) -> str:
             "reviews": len(notes["reviews"]),
             "actions": len(notes["actions"]),
         })
-    return json.dumps({"checked": len(asset_ids), "annotated": annotated}, default=str)
+
+    return json.dumps({"success": not failed, "checked": checked,
+                       "annotated": annotated, "failed": failed}, default=str)
 
 
 @mcp.tool()
@@ -171,8 +218,22 @@ async def clear_asset_notes(ctx: Context, asset_ids: list[str]) -> str:
     Args:
         asset_ids: The assets to clear.
 
-    Returns: JSON with success and how many assets were cleared.
+    Returns: JSON with success, how many assets were cleared, and a failed array
+    of {asset_id, error}. Success is true only when nothing failed.
     """
+    if not asset_ids:
+        return json.dumps({"error": "asset_ids cannot be empty."})
+
+    cleared = 0
+    failed = []
     for asset_id in asset_ids:
-        await _client(ctx).delete_asset_metadata(asset_id, NOTES_KEY)
-    return json.dumps({"success": True, "cleared": len(asset_ids)})
+        # Clearing is a best-effort cleanup: one unreachable asset should not
+        # leave the rest of the batch annotated.
+        try:
+            await _client(ctx).delete_asset_metadata(asset_id, NOTES_KEY)
+            cleared += 1
+        except Exception as exc:
+            failed.append({"asset_id": asset_id, "error": str(exc)})
+
+    return json.dumps({"success": not failed, "cleared": cleared, "failed": failed},
+                      default=str)

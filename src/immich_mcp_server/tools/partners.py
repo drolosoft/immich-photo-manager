@@ -6,9 +6,11 @@ module is imported; `server.py` imports all tool modules and re-exports the func
 
 import json
 
+import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import _api_error
 
 
 @mcp.tool()
@@ -16,12 +18,12 @@ async def list_users(ctx: Context) -> str:
     """The users visible on this Immich server. Use this to find the id that
     create_partner needs, or to see who could be shared with. Read-only.
 
-    Returns: JSON with a users array of {id, name, email}.
+    Returns: JSON with total and a users array of {id, name, email}.
     """
     result = await _client(ctx).list_users()
     users = [{"id": user.get("id"), "name": user.get("name"), "email": user.get("email")}
              for user in result]
-    return json.dumps({"users": users}, default=str)
+    return json.dumps({"total": len(users), "users": users}, default=str)
 
 
 @mcp.tool()
@@ -57,7 +59,13 @@ async def create_partner(ctx: Context, user_id: str) -> str:
 
     Returns: JSON with the new partner entry.
     """
-    result = await _client(ctx).create_partner(user_id)
+    # Immich answers 400 for this account's own id and for a user who is already
+    # a partner; both are worth telling apart from a broken call.
+    try:
+        result = await _client(ctx).create_partner(user_id)
+    except httpx.HTTPStatusError as exc:
+        return _api_error(exc)
+
     return json.dumps({"id": result.get("id"), "in_timeline": result.get("inTimeline")},
                       default=str)
 
@@ -77,7 +85,19 @@ async def update_partner(ctx: Context, user_id: str, in_timeline: bool) -> str:
 
     Returns: JSON with the updated partner entry.
     """
-    result = await _client(ctx).update_partner(user_id, in_timeline=in_timeline)
+    try:
+        result = await _client(ctx).update_partner(user_id, in_timeline=in_timeline)
+    except httpx.HTTPStatusError as exc:
+        # Immich answers 400 or 404 for a partner this account shares WITH, which
+        # is the mistake this tool invites, so the status carries the way out too.
+        error = json.loads(_api_error(exc))
+        error["hint"] = (
+            "in_timeline only applies to a partner who shares their library with "
+            "this account: pass an id from the shared_with_me list of list_partners, "
+            "not from shared_by_me."
+        )
+        return json.dumps(error)
+
     return json.dumps({"id": result.get("id"), "in_timeline": result.get("inTimeline")},
                       default=str)
 

@@ -8,6 +8,7 @@ the OpenAPI specs 2026-09-03.
 """
 
 import json
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
@@ -97,11 +98,51 @@ async def test_heatmap_tool_falls_back_to_the_timeline_on_immich2(fake_ctx):
     assert sorted(stub.fetched_buckets) == ["2026-03-01", "2026-04-01"]
 
 
+class StubOpenEndedFallbackClient:
+    """Immich 2.x with buckets on both sides of the one-year mark."""
+
+    def __init__(self, recent_month, old_month):
+        self.recent_month = recent_month
+        self.old_month = old_month
+        self.fetched_buckets = []
+
+    async def get_calendar_heatmap(self, **kwargs):
+        request = httpx.Request("GET", f"{BASE}/api/users/me/calendar-heatmap")
+        raise httpx.HTTPStatusError("404", request=request,
+                                    response=httpx.Response(404, request=request))
+
+    async def get_timeline_buckets(self, **kwargs):
+        return [{"timeBucket": f"{self.recent_month}-01", "count": 1},
+                {"timeBucket": f"{self.old_month}-01", "count": 1}]
+
+    async def get_timeline_bucket(self, time_bucket, **kwargs):
+        self.fetched_buckets.append(time_bucket)
+        return {"id": ["a1"], "fileCreatedAt": [f"{time_bucket[:7]}-15T09:00:00Z"]}
+
+
+@pytest.mark.asyncio
+async def test_heatmap_fallback_defaults_to_the_last_year(fake_ctx):
+    """Without a lower bound the fallback used to issue one request per month
+    the library has ever held — 120 sequential calls for a ten-year library,
+    inside a single tool call. An open-ended range now means the last 365 days."""
+    today = datetime.now(timezone.utc).date()
+    recent_month = (today - timedelta(days=30)).strftime("%Y-%m")
+    old_month = (today - timedelta(days=800)).strftime("%Y-%m")
+    stub = StubOpenEndedFallbackClient(recent_month, old_month)
+
+    raw = await server.get_calendar_heatmap(fake_ctx(stub))
+
+    result = json.loads(raw)
+    assert result["source"] == "timeline"
+    assert stub.fetched_buckets == [f"{recent_month}-01"]
+    assert [entry["date"][:7] for entry in result["series"]] == [recent_month]
+
+
 @pytest.mark.asyncio
 async def test_heatmap_fallback_cannot_do_upload_dates(fake_ctx):
     raw = await server.get_calendar_heatmap(
         fake_ctx(StubFallbackClient()), from_date="2026-03-01", to_date="2026-04-30",
-        type="Upload")
+        heatmap_type="Upload")
     result = json.loads(raw)
     assert "error" in result
     assert "Taken" in result["error"]

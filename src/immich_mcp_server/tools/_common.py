@@ -21,7 +21,7 @@ def _api_error(exc: httpx.HTTPStatusError) -> str:
     })
 
 
-async def _album_assets(client, album_id: str, album: dict) -> list[dict]:
+async def _album_assets(client, album_id: str) -> list[dict]:
     """Album assets across Immich versions, always via POST /search/metadata
     (albumIds, withPeople). Immich >= 3.0 no longer inlines `assets` in the album,
     and the inline list on 2.x lacks recognized people, so the search path is the

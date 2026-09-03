@@ -54,6 +54,9 @@ Use the Immich MCP tools for all API interactions:
 - `get_asset_info` — Get full metadata for a specific asset (GPS, EXIF, dates)
 - `get_statistics` — Get library statistics (total photos, videos, storage)
 - `get_asset_thumbnail` — Get base64 thumbnail for an asset (used for gallery HTML generation)
+- `create_stack` / `list_stacks` — Group near-identical shots under one cover asset instead of dropping them; the album shows the stack as a single item
+- `get_download_info` — Size of the zip an album would make, before building it
+- `download_archive` — Write the album's originals to a zip on the machine running the server
 
 ## Album Creation Workflow
 
@@ -88,6 +91,8 @@ From the search results, filter out:
 - Duplicate/near-duplicate images
 - Blurry or very dark photos (if quality metadata available)
 - Photos that don't match the location theme
+
+Near-duplicates do not have to be dropped. When several shots are the same moment, `create_stack(asset_ids=[...])` groups them behind the best one: the album reads clean and nothing is thrown away. The first id passed becomes the cover.
 
 Prefer photos that:
 - Have strong composition or visual interest

@@ -6,6 +6,7 @@ module is imported; `server.py` imports all tool modules and re-exports the func
 
 import json
 
+import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
@@ -41,10 +42,26 @@ async def get_capabilities(ctx: Context) -> str:
 
     Returns: JSON with server_version, immich_major, features (the server's own
     flags: ocr, smartSearch, facialRecognition, map, trash...) and quirks (plain
-    sentences about version-specific behaviour the caller should know).
+    sentences about version-specific behaviour the caller should know). When the
+    API key may not read the feature flags, features is empty and a note says so;
+    the version and the quirks still come back.
     """
     version = await _client(ctx).get_server_version()
-    features = await _client(ctx).get_server_features()
+
+    # A scoped key can read the version and still be refused the feature flags.
+    # Half an answer beats none, so the refusal becomes a note beside the version.
+    features_note = ""
+    try:
+        features = await _client(ctx).get_server_features()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code != 403:
+            raise
+        features = {}
+        features_note = (
+            "This API key cannot read the server feature flags (403), so whether "
+            "OCR, smart search or facial recognition are enabled is unknown here. "
+            "Everything else in this answer is accurate."
+        )
 
     major = version.get("major", 0)
     version_string = "%s.%s.%s" % (
@@ -69,12 +86,15 @@ async def get_capabilities(ctx: Context) -> str:
             "Searching by asset ids is ignored by this server; the plugin "
             "falls back to fetching each asset individually.")
 
-    return json.dumps({
+    capabilities = {
         "server_version": version_string,
         "immich_major": major,
         "features": features,
         "quirks": quirks,
-    })
+    }
+    if features_note:
+        capabilities["features_note"] = features_note
+    return json.dumps(capabilities)
 
 
 @mcp.tool()

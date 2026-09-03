@@ -111,6 +111,7 @@ When generating HTML galleries or visual reports, thumbnails must be fetched wit
 - **CLIP search doesn't help**: Searching for "sideways photo" returns semantically similar images, not actually misrotated ones.
 - **EXIF orientation**: Immich already handles EXIF orientation tags when generating thumbnails. Photos that appear wrong in the UI have a genuine orientation problem that needs manual correction.
 - **Angle must be a multiple of 90**: Arbitrary angles are not supported.
+- **Images only**: Immich's edits API applies to images, not videos, so a video sitting in a mixed album does not get rotated. `get_capabilities` reports this quirk for whichever server version is connected, and anything the server rejects comes back in the `failed` count with its reason.
 
 ## Common Mistakes
 

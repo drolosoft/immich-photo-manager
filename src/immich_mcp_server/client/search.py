@@ -5,6 +5,8 @@ Mixin of `ImmichClient` (see `immich_client.py`).
 
 from typing import Any
 
+from .base import to_immich_datetime
+
 
 class SearchApi:
     """Metadata search and CLIP smart search."""
@@ -41,9 +43,9 @@ class SearchApi:
         if model:
             body["model"] = model
         if taken_after:
-            body["takenAfter"] = taken_after
+            body["takenAfter"] = to_immich_datetime(taken_after)
         if taken_before:
-            body["takenBefore"] = taken_before
+            body["takenBefore"] = to_immich_datetime(taken_before)
         if is_favorite is not None:
             body["isFavorite"] = is_favorite
         if is_archived is not None:
@@ -84,9 +86,9 @@ class SearchApi:
         if country:
             body["country"] = country
         if taken_after:
-            body["takenAfter"] = taken_after
+            body["takenAfter"] = to_immich_datetime(taken_after)
         if taken_before:
-            body["takenBefore"] = taken_before
+            body["takenBefore"] = to_immich_datetime(taken_before)
         if ocr:
             body["ocr"] = ocr
         if person_ids:
@@ -166,6 +168,8 @@ class SearchApi:
         ocr: str | None = None,
         created_after: str | None = None,
         created_before: str | None = None,
+        taken_after: str | None = None,
+        taken_before: str | None = None,
     ) -> dict:
         """Count matching assets without fetching them (`{total}`)."""
         body: dict[str, Any] = {}
@@ -184,9 +188,13 @@ class SearchApi:
         if ocr:
             body["ocr"] = ocr
         if created_after:
-            body["createdAfter"] = created_after
+            body["createdAfter"] = to_immich_datetime(created_after)
         if created_before:
-            body["createdBefore"] = created_before
+            body["createdBefore"] = to_immich_datetime(created_before)
+        if taken_after:
+            body["takenAfter"] = to_immich_datetime(taken_after)
+        if taken_before:
+            body["takenBefore"] = to_immich_datetime(taken_before)
         return await self._request("POST", "/search/statistics", json=body)
 
     async def search_large_assets(

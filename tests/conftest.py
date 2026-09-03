@@ -16,10 +16,16 @@ from immich_mcp_server.immich_client import ImmichClient  # noqa: E402
 
 @pytest.fixture
 def isolated_cache(tmp_path, monkeypatch):
-    """Point the credential cache at a fresh temp dir and reset the
-    class-level cache-dir memo so tests never see each other's config."""
+    """Point both credential locations at fresh temp dirs and reset the
+    class-level cache-dir memo so tests never see each other's config.
+
+    IMMICH_CONFIG_HOME matters as much as the cache dir here: save_config also
+    writes the update-proof copy, and without the override the suite would
+    write into the real ~/.immich-photo-manager.
+    """
     cache_dir = tmp_path / "mcpb-cache"
     monkeypatch.setenv("IMMICH_CACHE_DIR", str(cache_dir))
+    monkeypatch.setenv("IMMICH_CONFIG_HOME", str(tmp_path / "config-home"))
     ImmichClient._cache_dir = None
     yield cache_dir
     ImmichClient._cache_dir = None

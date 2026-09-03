@@ -99,11 +99,13 @@ async def delete_tag(ctx: Context, tag_id: str) -> str:
     Args:
         tag_id: The tag's UUID to delete.
 
-    Returns: JSON with deleted confirmation and tag_id.
+    Returns: JSON with success, the deleted tag's id and tag_id.
     """
     try:
         await _client(ctx).delete_tag(tag_id)
-        return json.dumps({"deleted": True, "tag_id": tag_id})
+        # `deleted` carries the subject and `success` the boolean, the one shape
+        # every delete tool answers with; tag_id stays for callers that read it.
+        return json.dumps({"success": True, "deleted": tag_id, "tag_id": tag_id})
     except httpx.HTTPStatusError as exc:
         return _api_error(exc)
 

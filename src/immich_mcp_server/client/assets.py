@@ -7,6 +7,8 @@ from typing import Any
 
 import httpx
 
+from .base import to_immich_datetime
+
 
 class AssetsApi:
     """Single assets: read, update, list, jobs, map markers."""
@@ -102,9 +104,9 @@ class AssetsApi:
         if is_favorite is not None:
             params["isFavorite"] = str(is_favorite).lower()
         if file_created_after:
-            params["fileCreatedAfter"] = file_created_after
+            params["fileCreatedAfter"] = to_immich_datetime(file_created_after)
         if file_created_before:
-            params["fileCreatedBefore"] = file_created_before
+            params["fileCreatedBefore"] = to_immich_datetime(file_created_before)
         return await self._request("GET", "/map/markers", params=params)
 
     # ── Per-asset key-value metadata (app storage, invisible in the Immich UI) ──

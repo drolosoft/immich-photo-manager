@@ -6,9 +6,11 @@ module is imported; `server.py` imports all tool modules and re-exports the func
 
 import json
 
+import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import _api_error
 
 
 @mcp.tool()
@@ -16,7 +18,7 @@ async def list_activities(
     ctx: Context,
     album_id: str,
     asset_id: str = "",
-    type: str = "",
+    activity_type: str = "",
 ) -> str:
     """Comments and likes on a shared album, newest context included. Use this to
     read what the people an album is shared with have said about it or about one
@@ -25,16 +27,21 @@ async def list_activities(
     Args:
         album_id: The album whose activity to read.
         asset_id: Only activity on this asset within the album.
-        type: 'comment' or 'like'. Omit for both.
+        activity_type: 'comment' or 'like'. Omit for both.
 
-    Returns: JSON with an activities array (id, type, comment, asset_id, user name,
-    created_at).
+    Returns: JSON with total and an activities array (id, type, comment, asset_id,
+    user name, created_at).
     """
-    result = await _client(ctx).list_activities(
-        album_id,
-        asset_id=asset_id or None,
-        activity_type=type or None,
-    )
+    # An album id that does not exist answers 404, which is a plain answer the
+    # model can act on rather than a bare tool failure.
+    try:
+        result = await _client(ctx).list_activities(
+            album_id,
+            asset_id=asset_id or None,
+            activity_type=activity_type or None,
+        )
+    except httpx.HTTPStatusError as exc:
+        return _api_error(exc)
 
     activities = []
     for activity in result:
@@ -68,12 +75,18 @@ async def create_activity(
 
     Returns: JSON with the created activity's id and type.
     """
-    result = await _client(ctx).create_activity(
-        album_id,
-        activity_type="like" if like else "comment",
-        comment=comment or None,
-        asset_id=asset_id or None,
-    )
+    # Immich answers 400 when the album is not shared, or when a comment carries
+    # no text; the status and its message explain which of the two happened.
+    try:
+        result = await _client(ctx).create_activity(
+            album_id,
+            activity_type="like" if like else "comment",
+            comment=comment or None,
+            asset_id=asset_id or None,
+        )
+    except httpx.HTTPStatusError as exc:
+        return _api_error(exc)
+
     return json.dumps({"id": result.get("id"), "type": result.get("type")}, default=str)
 
 

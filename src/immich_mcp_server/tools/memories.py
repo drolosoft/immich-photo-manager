@@ -37,7 +37,7 @@ async def list_memories(
     ctx: Context,
     for_date: str = "",
     is_saved: bool | None = None,
-    size: int = 0,
+    size: int = 50,
 ) -> str:
     """List memories — Immich's "on this day" collections of photos from past years.
     Use this to build a 'tal día como hoy' story, album or PDF: each memory carries
@@ -47,15 +47,16 @@ async def list_memories(
         for_date: ISO date — return the memories Immich shows on that day
             (e.g. today for the classic on-this-day feed). Omit for all memories.
         is_saved: If true, only memories the user saved; if false, only unsaved.
-        size: Maximum memories to return. 0 means server default.
+        size: Maximum memories to return (default 50).
 
-    Returns: JSON with a memories array; each has id, type, memory_at, the year it
-    remembers, is_saved, asset_count and a trimmed assets list (id, filename, date).
+    Returns: JSON with total and a memories array; each has id, type, memory_at,
+    the year it remembers, is_saved, asset_count and a trimmed assets list
+    (id, filename, date).
     """
     result = await _client(ctx).list_memories(
         for_date=for_date or None,
         is_saved=is_saved,
-        size=size or None,
+        size=size,
     )
     memories = [_trim_memory(memory) for memory in result]
     return json.dumps({"total": len(memories), "memories": memories}, default=str)
@@ -78,7 +79,8 @@ async def create_memory(
         year: The past year the memory looks back to (required by Immich).
         asset_ids: Assets to include. May be empty, but an empty memory shows nothing.
 
-    Returns: JSON with the created memory's id and type.
+    Returns: JSON with the created memory's id, type, memory_at, the year it
+    remembers, is_saved, asset_count and a trimmed assets list (id, filename, date).
     """
     result = await _client(ctx).create_memory(
         memory_at=memory_at,

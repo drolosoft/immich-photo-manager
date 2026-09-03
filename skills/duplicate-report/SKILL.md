@@ -177,6 +177,8 @@ RECOMMENDATION
 
 Batch Immich deletions in groups of 100 assets per call. For ML-detected duplicates, prefer `resolve_duplicates` which handles them natively in Immich.
 
+For near-duplicates the user hesitates over (a burst, three tries at the same shot), offer `create_stack(asset_ids=[...])` as the middle option: the shots stay in the library but show as one item fronted by the first id passed. It is reversible with `delete_stack`, so it is the safe answer when "which one is best?" has no clear winner.
+
 ### Step 5b: Leave notes for the next pass
 
 Before removal, remember the decision on every asset touched: `review_assets(kept_ids, "keep", "best of the group: <why>")` and `review_assets(trashed_ids, "duplicate_of", "duplicate of <kept filename>")`. A later run starts with `get_assets_notes(asset_ids)` and skips what already carries a verdict, so a 500-asset album is not re-analysed from scratch.
@@ -188,7 +190,9 @@ After removal, query Immich statistics to confirm the new count and present befo
 ## Report Variations
 
 ### Quick Report (no disk scan)
-Uses only Immich database — checksums, filenames, timestamps. Fast but misses re-encoded duplicates.
+The fast pass over the API is `get_duplicates`, which returns Immich's own ML-detected groups with their similarity scores, plus `search_large_assets` to see which of them are worth the space. Fast, but it misses re-encoded copies across sources.
+
+The queries below go one level deeper (exact checksums, filename overlap between import paths). The plugin never provides database access, so they only apply to a user who already has `psql` on their own Immich.
 
 ```sql
 -- Exact checksum duplicates

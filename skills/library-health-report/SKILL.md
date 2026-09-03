@@ -40,9 +40,15 @@ Generate a comprehensive health assessment of an Immich photo library. Covers as
 
 ## Report Sections
 
+### Section 0: What this server can do
+
+Call `get_capabilities` once before anything else: it reports the server version, which features are actually enabled (OCR, smart search, facial recognition, map) and the quirks of that Immich major. A health report that says "GPS coverage 0%" is misleading when the map feature is simply off, and a section about OCR text makes no sense on a server without OCR. Mention the version in the report header.
+
 ### Section 1: Asset Inventory
 
-Query Immich for the full library snapshot:
+Start with `get_statistics`. It is the official Immich count of photos, videos and storage used, in one call and with no database access. `search_statistics(...)` answers any narrower count ("how many videos", "how many favorites") the same cheap way.
+
+The query below is an optional fallback for the columns the API does not expose, such as the trash breakdown by type. The plugin never provides database access, so it only applies if you already have `psql` on your own Immich:
 
 ```sql
 -- Total assets by type
@@ -58,8 +64,6 @@ FROM asset
 WHERE "deletedAt" IS NOT NULL
 GROUP BY type;
 ```
-
-Also use the MCP tool `get_statistics` for the official Immich counts.
 
 Present as:
 
@@ -132,6 +136,10 @@ METADATA QUALITY
 
 ### Section 4: Time Distribution
 
+`get_timeline_buckets()` returns one bucket per month with its asset count in a single call, which is the whole year-by-year picture already: sum the buckets per year and the low years stand out. `get_calendar_heatmap(from_date=…, to_date=…)` adds the per-day detail for a year worth looking at more closely. Pass an explicit range: on Immich 2.x the counts are built from the timeline, one request per month in range, and an omitted bound falls back to the last 365 days.
+
+The query below is the optional fallback when the photo/video split per year matters:
+
 ```sql
 SELECT extract(year from "localDateTime") as year,
   count(*) as photos,
@@ -177,7 +185,7 @@ Always ask the user which format they prefer.
 ## Important Notes
 
 - This skill is **read-only** — it never modifies assets or metadata
-- Uses both Immich MCP tools (for official counts) and direct database queries (for deep analysis)
-- Database access requires PostgreSQL connection details
+- The whole report can be produced with the MCP tools alone: `get_capabilities`, `get_statistics`, `search_statistics`, `get_timeline_buckets` and `get_calendar_heatmap`
+- The SQL blocks are an optional fallback for the few columns Immich's API does not expose (original paths, format breakdown). The plugin exposes no database tool, so running them means the user's own `psql` against their own Immich. Never ask for database credentials
 - For libraries >50K assets, some queries may take 10-30 seconds
 - Always show the query execution time so users know what to expect

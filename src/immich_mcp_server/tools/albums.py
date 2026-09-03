@@ -52,7 +52,7 @@ async def get_album(ctx: Context, album_id: str) -> str:
     """
     client = _client(ctx)
     result = await client.get_album(album_id)
-    assets = await _album_assets(client, album_id, result)
+    assets = await _album_assets(client, album_id)
     return json.dumps(
         {
             "id": result["id"],
@@ -140,10 +140,12 @@ async def delete_album(ctx: Context, album_id: str) -> str:
     Args:
         album_id: The album's UUID to delete.
 
-    Returns: JSON with deleted confirmation and album_id.
+    Returns: JSON with success, the deleted album's id and album_id.
     """
     await _client(ctx).delete_album(album_id)
-    return json.dumps({"deleted": True, "album_id": album_id})
+    # `deleted` carries the subject and `success` the boolean, the one shape every
+    # delete tool answers with; album_id stays for callers that already read it.
+    return json.dumps({"success": True, "deleted": album_id, "album_id": album_id})
 
 
 @mcp.tool()

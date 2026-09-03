@@ -20,6 +20,8 @@ python mcp_harness.py creds-2.7.5.json v2 "$(which immich-photo-manager)" ./medi
 python mcp_harness.py creds-3.1.0.json v3 "$(which immich-photo-manager)" ./media
 ```
 
-Each run prints one line per check and a summary such as `SUMMARY v3: 129/129 checks passed; tools not covered: []` (last full run 2026-09-03). Anything the harness could not exercise is listed, never silently skipped. Faces need at least two recognized people; if a run reports `SKIPPED` for `merge_people`/`reassign_face`, trigger facial recognition in Immich (Administration → Jobs) and rerun.
+`stories.py` is the second half of the kit: it drives the PUBLISHED package (any venv's `immich-photo-manager` binary) through realistic stories — know your library, search that finds, memories and stacks, family and sharing, the plugin remembers, bulk and gates — and writes one Markdown transcript per story (tool, arguments, real result, elapsed ms) plus a `summary.json`. The demo pages under `doc/demos/` are written from those transcripts. Usage: `python3 tests/live/stories.py <creds.json> <v2|v3> <binary> <output dir>`; it leaves the lab as it found it.
+
+Each run prints one line per check and a summary such as `SUMMARY v3: 132/132 checks passed; tools not covered: []` (last full run 2026-09-03). Anything the harness could not exercise is listed, never silently skipped. Faces need at least two recognized people; if a run reports `SKIPPED` for `merge_people`/`reassign_face`, trigger facial recognition in Immich (Administration → Jobs) and rerun.
 
 Tear down with `docker compose -p immich275 -f docker-compose.immich-2.7.5.yml down -v` (same for 3.1.0).

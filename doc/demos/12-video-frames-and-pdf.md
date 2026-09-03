@@ -75,4 +75,4 @@ The video goes from Immich to the machine running the plugin, where the frames a
 
 ---
 
-*Every claim above runs in the live kit: [`tests/live/`](../../tests/live/) drives all 57 tools against real Immich 2.7.5 and 3.1.0 before each release.*
+*Every claim above runs in the live kit: [`tests/live/`](../../tests/live/) drives all 94 tools against real Immich 2.7.5 and 3.1.0 before each release.*

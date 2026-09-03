@@ -38,6 +38,7 @@ Build a PDF on the user's machine with `export_pdf`. Metadata comes from Immich;
 3. For a long video, skim it first with one call: `get_video_frames(asset_id, interval=5, sheet=true)` returns contact sheets (30 stamped frames per image) instead of dozens of images. If a video needs a closer look (something passes between two frames), narrow it: `get_video_frames(asset_id, count=8, start=8, end=12)`, or `interval=1` for one frame per second. When the tool answers with `confirm_required`, tell the user the number of frames and the estimated tokens and continue only if they agree (`confirm=true`).
 4. Write one caption per asset (what it shows, in the user's language) into `captions={asset_id: text}`.
 5. `export_pdf(album_id=…, captions=…, frames_per_video=6)`; report the path, pages and warnings. Offer `layout="grid"` for big sets, `map=true` when there is GPS data (explain it fetches OpenStreetMap tiles), and a higher `frames_per_video` (up to 120, free of tokens) for videos that matter.
+6. If the user wants the photos themselves and not only the report, `get_download_info(album_id=…)` says how big the zip would be and how many archives Immich would split it into, and `download_archive(output_path=…, album_id=…)` writes the originals next to the PDF. Say the size before downloading: originals and videos add up fast, and an existing file is never overwritten.
 
 ## Photobook
 

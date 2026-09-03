@@ -42,7 +42,7 @@ Analyze the photo timeline month by month to detect gaps, anomalies, and coverag
 
 ### Step 1: Build Monthly Timeline
 
-Generate a complete month-by-month matrix across all sources:
+Generate a complete month-by-month matrix across all sources. The MCP tool `get_timeline_buckets` returns one bucket per month with its asset count in a single call, so start there, and drop to the SQL below only when the per-source split matters, since the buckets do not know where a photo was imported from. The plugin never provides database access: the query is for a user who already has `psql` on their own Immich.
 
 ```sql
 WITH months AS (
@@ -162,6 +162,8 @@ If the user wants an HTML output, generate an interactive timeline using a heatm
 - Hover shows exact counts per source
 - Empty cells highlighted in yellow/red
 
+`get_calendar_heatmap(from_date=…, to_date=…)` returns the per-day counts this grid needs, already filtered to the days that have activity. Pass the narrowest range that answers the question: on Immich 2.x the counts are built from the timeline, one request per month in range, and an omitted bound falls back to the last 365 days rather than the whole library. `heatmap_type="Upload"` (import date instead of capture date) needs Immich 3.x.
+
 ## Cross-Source Gap Analysis
 
 For users with multiple import sources, check if gaps in one source are covered by another:
@@ -186,4 +188,4 @@ This answers: "If I delete all Google photos, which months would I lose coverage
 - Uses `localDateTime` (not `createdAt`) for accurate chronological analysis
 - Photos with suspicious dates (midnight/noon) are flagged but still counted
 - The "sparse" threshold adapts to the user's average volume — what's sparse for a heavy photographer is different from a casual one
-- Generate_series requires PostgreSQL — this won't work with SQLite
+- The month matrix and the heatmap come from `get_timeline_buckets` and `get_calendar_heatmap`, so the whole analysis runs on the MCP tools. Only the per-source split needs SQL, and `generate_series` there requires PostgreSQL (it won't work with SQLite)

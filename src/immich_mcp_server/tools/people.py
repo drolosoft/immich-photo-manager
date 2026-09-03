@@ -98,24 +98,40 @@ async def merge_people(
     been split into multiple face clusters. DESTRUCTIVE and IRREVERSIBLE: merged persons
     are permanently deleted and all their faces transfer to the target. Without
     confirm=true nothing happens: the call returns who would be kept and who would
-    disappear, so the user can check the names before the merge.
+    disappear, so the user can check the names before the merge. Side effect: with
+    confirm=true, permanently deletes the merged persons; without it the call only
+    previews and changes nothing.
 
     Args:
         person_id: The target person UUID to keep (receives all merged faces).
         merge_ids: List of person UUIDs to absorb into the target. These persons are permanently deleted.
         confirm: Pass true only after the user has seen the preview and agreed.
 
-    Returns: JSON with the preview (confirm_required, keep, merge) or the merge result.
+    Returns: JSON with the preview (confirm_required, keep, merge, failed) or the
+    merge result.
     """
     if not confirm:
         # An irreversible merge deserves the same gate as emptying the trash:
         # show names, not ids, and let the person decide.
         keep = await _client(ctx).get_person(person_id)
-        merge = [await _client(ctx).get_person(merge_id) for merge_id in merge_ids]
+
+        merge = []
+        failed = []
+        for merge_id in merge_ids:
+            # A preview that dies on one unknown id shows no names at all, which
+            # is the opposite of what the gate is for: list what resolved and say
+            # which ids did not.
+            try:
+                person = await _client(ctx).get_person(merge_id)
+                merge.append({"id": person.get("id"), "name": person.get("name")})
+            except Exception as exc:
+                failed.append({"person_id": merge_id, "error": str(exc)})
+
         return json.dumps({
             "confirm_required": True,
             "keep": {"id": keep.get("id"), "name": keep.get("name")},
-            "merge": [{"id": person.get("id"), "name": person.get("name")} for person in merge],
+            "merge": merge,
+            "failed": failed,
             "note": "Irreversible. Call again with confirm=true to merge.",
         }, default=str)
 
