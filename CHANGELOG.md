@@ -6,9 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.11] - 2026-09-04
+
 ### Added
 
-- **`server.json` for the official MCP registry** (registry.modelcontextprotocol.io): the PyPI package (`uvx`, stdio) and the Docker image (Streamable HTTP on 8626) under the name `io.github.drolosoft/immich-photo-manager`. The two ownership proofs the registry checks are in place: the `mcp-name` token in the README (what PyPI renders) and the `io.modelcontextprotocol.server.name` label on the image. `tests/test_registry_metadata.py` keeps the name and every version in `server.json` equal to `pyproject.toml`, and pins the plugin manifest and package `__init__` to the same version on the way. The first publish waits for the next release, since the registry verifies the published artifacts.
+- **`server.json` for the official MCP registry** (registry.modelcontextprotocol.io): the PyPI package (`uvx`, stdio) and the Docker image (Streamable HTTP on 8626) under the name `io.github.drolosoft/immich-photo-manager`. The two ownership proofs the registry checks are in place: the `mcp-name` token in the README (what PyPI renders) and the `io.modelcontextprotocol.server.name` label on the image. `tests/test_registry_metadata.py` keeps the name and every version in `server.json` equal to `pyproject.toml`, and pins the plugin manifest and package `__init__` to the same version on the way. This release is the first one the registry can verify.
 - **Tools section in the README**: the 94 tools by area, one line each, in front of the comparison table. Directories that extract the tool list from the README (mcp.so) showed none.
 
 ### Fixed
@@ -358,6 +360,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.11]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.11
 [v2.0.10]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.10
 [v2.0.9]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.9
 [v2.0.8]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.8
