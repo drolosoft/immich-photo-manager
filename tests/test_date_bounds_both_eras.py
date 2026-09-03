@@ -81,3 +81,22 @@ async def test_a_timestamp_the_caller_supplied_is_sent_untouched(client):
         return_value=Response(200, json={"assets": {"items": [], "total": 0}}))
     await client.search_metadata(taken_after="2019-07-14T15:23:41.000Z")
     assert json.loads(route.calls[0].request.content)["takenAfter"] == "2019-07-14T15:23:41.000Z"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_memory_dates_are_widened_for_immich3(client):
+    """A real Claude Code session on 3.1.0 hit it: create_memory with a bare
+    memory_at date was refused, the retry with a full timestamp went through.
+    memoryAt, seenAt and the `for` filter follow the same rule as the searches."""
+    create = respx.post(f"{BASE}/api/memories").mock(return_value=Response(201, json={"id": "m1"}))
+    update = respx.put(f"{BASE}/api/memories/m1").mock(return_value=Response(200, json={"id": "m1"}))
+    listing = respx.get(f"{BASE}/api/memories").mock(return_value=Response(200, json=[]))
+    await client.create_memory(memory_at="2026-09-03", year=2020, asset_ids=["a1"])
+    await client.update_memory("m1", memory_at="2026-09-04", seen_at="2026-09-05")
+    await client.list_memories(for_date="2026-09-03")
+    assert json.loads(create.calls[0].request.content)["memoryAt"] == "2026-09-03T00:00:00.000Z"
+    body = json.loads(update.calls[0].request.content)
+    assert body["memoryAt"] == "2026-09-04T00:00:00.000Z"
+    assert body["seenAt"] == "2026-09-05T00:00:00.000Z"
+    assert listing.calls[0].request.url.params["for"] == "2026-09-03T00:00:00.000Z"

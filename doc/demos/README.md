@@ -15,5 +15,12 @@ Real workflows showing what the plugin does, step by step. Each demo uses the ac
 | 👁️ | [09 — Auto Album Curator](09-auto-album-curator.md) | Monitor your library for new photos that match existing albums |
 | 👤 | [10 — People Report](10-people-report.md) | Face detection summary — who appears most, untagged faces, group photos |
 | 📷 | [11 — Album Walkthrough](11-album-walkthrough.md) | Read an album item by item, same-person vs duplicates, sub-album, tags + descriptions — all in plain English |
+| 🎬 | [12 — Video Frames and a PDF Photobook](12-video-frames-and-pdf.md) | Frames from one real clip, contact sheets, and the photobook export that came out of issue #15 |
+| 🧭 | [13 — Know a Library Before Searching It](13-know-your-library.md) | Capabilities, cities, cameras, months and days: the tour that answers before you know what to search for |
+| 🔎 | [14 — Search That Finds](14-search-that-finds.md) | OCR text inside photos, people by id, tags and albums as filters, places and coordinates |
+| 🗂️ | [15 — Memories and Stacks](15-memories-and-stacks.md) | "On this day" collections, and stacking near-identical shots instead of deleting them |
+| 👨‍👩‍👦 | [16 — Partners, Comments and the Album as a Zip](16-family-and-sharing.md) | Family sharing both directions, album activities, and a streamed album download |
+| 📝 | [17 — The Plugin Remembers](17-the-plugin-remembers.md) | Verdicts and reasons stored on the asset, so the next cleanup pass skips what was already reviewed |
+| 🐳 | [18 — Run It as a Container](18-docker.md) | The multi-arch image on port 8626, /health, credentials by conversation, Compose |
 | 💻 | [Claude Code Demo](cc/claude-code-example-demo.txt) | Same plugin, from the terminal — search, gallery generation, album links |
 | 🦎 | [Gemma 4 + LM Studio Demo](cc/lm-studio-gemma4-demo.txt) | MCP with a local model — zero cloud, fully self-hosted AI photo management |
