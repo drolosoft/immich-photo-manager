@@ -5,6 +5,8 @@ Mixin of `ImmichClient` (see `immich_client.py`).
 
 from typing import Any
 
+from .base import to_immich_datetime
+
 
 class MemoriesApi:
     """Memories: Immich's "on this day" collections."""
@@ -20,7 +22,7 @@ class MemoriesApi:
         """List memories, optionally the ones Immich shows for a given day."""
         params: dict[str, Any] = {}
         if for_date:
-            params["for"] = for_date
+            params["for"] = to_immich_datetime(for_date)
         if memory_type:
             params["type"] = memory_type
         if is_saved is not None:
@@ -42,7 +44,7 @@ class MemoriesApi:
         """Create a memory. `data.year` is required by both Immich majors."""
         body: dict[str, Any] = {
             "type": memory_type,
-            "memoryAt": memory_at,
+            "memoryAt": to_immich_datetime(memory_at),
             "data": {"year": year},
         }
         if asset_ids:
@@ -63,9 +65,9 @@ class MemoriesApi:
         if is_saved is not None:
             body["isSaved"] = is_saved
         if memory_at:
-            body["memoryAt"] = memory_at
+            body["memoryAt"] = to_immich_datetime(memory_at)
         if seen_at:
-            body["seenAt"] = seen_at
+            body["seenAt"] = to_immich_datetime(seen_at)
         return await self._request("PUT", f"/memories/{memory_id}", json=body)
 
     async def delete_memory(self, memory_id: str) -> None:

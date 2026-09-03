@@ -929,7 +929,7 @@ class LiveHarness:
         """Memories: create, list, update, delete on the real server."""
         data, _, failed, _ = await self.call(
             "create_memory",
-            memory_at="2026-09-01T00:00:00Z",
+            memory_at="2026-09-01",
             year=2020,
             asset_ids=[PHOTO2],
         )

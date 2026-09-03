@@ -6,6 +6,17 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.10] — 2026-09-03
+
+### Fixed
+
+- **Bare dates in memories on Immich 3.x.** A real Claude Code session hit it: `create_memory(memory_at="2026-09-03")` was refused by 3.1.0 and worked on retry with a full timestamp. `memory_at`, `seen_at` and the `for_date` filter now get the same widening the search filters got in 2.0.9. The live harness creates its memory with a bare date on both majors.
+
+### Documentation
+
+- Six new demo pages from real sessions of the published package against Immich 2.7.5 and 3.1.0, driven both as raw calls and from natural-language prompts in Claude Code: [13 Know a library before searching it](doc/demos/13-know-your-library.md), [14 Search that finds](doc/demos/14-search-that-finds.md), [15 Memories and stacks](doc/demos/15-memories-and-stacks.md), [16 Partners, comments and the album as a zip](doc/demos/16-family-and-sharing.md), [17 The plugin remembers](doc/demos/17-the-plugin-remembers.md), [18 Run it as a container](doc/demos/18-docker.md). The demos index lists 12 to 18.
+- `tests/live/stories.py` joins the live kit: it drives the published package through six realistic stories and writes the transcripts those pages are built from (41/41 calls on both labs with 2.0.9).
+
 ## [v2.0.9] — 2026-09-03
 
 A consistency pass over the 41 tools added since 2.0.2, done before documenting them publicly. Two real dual-era bugs came out of it.
@@ -338,6 +349,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.10]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.10
 [v2.0.9]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.9
 [v2.0.8]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.8
 [v2.0.7]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.7

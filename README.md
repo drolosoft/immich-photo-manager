@@ -14,15 +14,15 @@
 </p>
 <p align="center">
   <a href="tests/live/"><img src="https://img.shields.io/badge/tested_live_on_Immich-2.7.5_%7C_3.1.0-2ea44f" alt="Tested live on Immich 2.7.5 and 3.1.0"></a>
-  <a href="tests/"><img src="https://img.shields.io/badge/unit_tests-348_on_every_push-2ea44f" alt="348 unit tests on every push"></a>
-  <a href="doc/demos/"><img src="https://img.shields.io/badge/demos-12_real_sessions-blue" alt="12 demos from real sessions"></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/unit_tests-349_on_every_push-2ea44f" alt="349 unit tests on every push"></a>
+  <a href="doc/demos/"><img src="https://img.shields.io/badge/demos-18_real_sessions-blue" alt="18 demos from real sessions"></a>
 </p>
 
 > **MCP server for intelligent photo management with [Immich](https://immich.app) — your self-hosted library, understood.**
 
 If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance — search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally and talks only to your Immich; your originals stay on your server (see [what leaves your network](#what-leaves-your-network)).
 
-> **Tested, not assumed.** Every push runs 348 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 94 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras — the legacy handshake and stateless 2026-07-28 — are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Details: [How it's tested](#how-its-tested).
+> **Tested, not assumed.** Every push runs 349 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 94 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras — the legacy handshake and stateless 2026-07-28 — are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Demos [13 to 18](doc/demos/README.md) cover everything added in 2.x (library discovery, OCR and people search, memories and stacks, partners and downloads, asset notes, the Docker image) from real sessions. Details: [How it's tested](#how-its-tested).
 
 <p align="center"><img src="./assets/demo.gif" alt="immich-photo-manager demo" width="800"></p>
 
@@ -277,7 +277,7 @@ Immich is excellent at storing and viewing your photos. But managing a large lib
 
 ## How it's tested
 
-- **Unit suite, every push**: 348 pytest cases on Python 3.10 and 3.13 (HTTP mocked), plus ruff. Releases are tagged only when this gate is green.
+- **Unit suite, every push**: 349 pytest cases on Python 3.10 and 3.13 (HTTP mocked), plus ruff. Releases are tagged only when this gate is green.
 - **Live, every tool, two Immich versions**: [`tests/live/`](tests/live/) starts real Immich **2.7.5** and **3.1.0** in Docker, fills them with a small library, and drives all 94 tools over the MCP protocol, re-reading state after each write. Run before every release; last full run 2026-09-03, 132/132 checks on both.
 - **In use**: [PyPI](https://pypi.org/project/immich-photo-manager/) downloads, merged PRs from four outside contributors, and the demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions.
 

@@ -134,7 +134,7 @@ class StoryRecorder:
         await self.call("get_capabilities")
         await self.call("search_explore")
         await self.call("search_cities")
-        await self.call("search_suggestions", type="city")
+        await self.call("search_suggestions", suggestion_type="city")
         await self.call("search_statistics", make="LabCam")
         await self.call("search_random", size=3)
 
