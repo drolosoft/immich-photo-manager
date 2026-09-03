@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-The Immich Photo Manager MCP server exposes 87 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
+The Immich Photo Manager MCP server exposes 89 tools that Claude can use to interact with your Immich instance. These tools are the building blocks that all skills use internally.
 
 ---
 
@@ -15,13 +15,14 @@ The Immich Photo Manager MCP server exposes 87 tools that Claude can use to inte
 | `get_capabilities` | What this server can do: version, feature flags (OCR, smart search...), known 2.x/3.x quirks | Capability report |
 | `get_statistics` | Get library-wide statistics | Photo count, video count, storage used |
 
-### Assets (8)
+### Assets (9)
 
 | Tool | Description | Returns |
 |------|-------------|---------|
 | `get_asset_info` | Get full metadata for a specific asset | EXIF data, GPS, dates, dimensions, file info |
 | `reverse_geocode` | Resolve GPS coordinates to city/state/country (Immich's offline geodata) | Place candidates |
 | `update_asset_metadata` | Update asset metadata (dates, GPS, description, favorites, rating) | Updated asset object |
+| `update_assets_metadata` | The same fields on MANY assets in one call (a scanned roll gets its date, a trip its GPS) | {success, updated} |
 | `rotate_assets` | Rotate assets by album or IDs (90°, 180°, 270°) — non-destructive | Count of rotated/failed assets |
 | `revert_asset_edits` | Remove all edits (rotation, crop, mirror) from assets — revert to original | Count of reverted/failed assets |
 | `get_map_markers` | Get GPS markers for all geotagged assets | Array of {lat, lng, id} for mapping |
@@ -56,6 +57,9 @@ The Immich Photo Manager MCP server exposes 87 tools that Claude can use to inte
 | `asset_type` | string | "IMAGE" or "VIDEO" |
 | `is_favorite` | boolean | true |
 | `ocr` | string | "boarding pass" (text recognized inside the image; needs OCR enabled on the server) |
+| `person_ids` | string[] | ids from `list_people` — only assets showing all of them |
+| `tag_ids` | string[] | ids from `list_tags` |
+| `album_ids` | string[] | only assets inside these albums |
 | `page` | number | 1 |
 | `size` | number | 50 (max 200) |
 
@@ -70,6 +74,7 @@ The Immich Photo Manager MCP server exposes 87 tools that Claude can use to inte
 | `taken_after` | ISO date | "2023-06-01" |
 | `taken_before` | ISO date | "2023-06-30" |
 | `ocr` | string | "Renfe" (text recognized inside the image, combined with the visual query) |
+| `person_ids` / `tag_ids` / `album_ids` | string[] | same filters as `search_metadata` |
 | `page` | number | 1 |
 | `size` | number | 50 (max 200) |
 
@@ -125,7 +130,7 @@ Immich's "on this day" collections — photos from the same date in past years.
 | `update_memory` | Save/unsave a memory, move its date, mark it seen | Yes |
 | `delete_memory` | Delete a memory (the photos stay in the library) | Yes |
 
-### Timeline (2)
+### Timeline (3)
 
 The cheap way to browse by date: one call maps the whole library month by month.
 
@@ -133,6 +138,7 @@ The cheap way to browse by date: one call maps the whole library month by month.
 |------|-------------|---------|
 | `get_timeline_buckets` | One bucket per month with its asset count (filterable by album, person, tag) | {timeBucket, count} rows |
 | `get_timeline_bucket` | The assets of one month bucket | {asset_id, date, is_image, city...} rows |
+| `get_calendar_heatmap` | Photos per day over a range — gaps and busy periods at a glance. Native on Immich 3.x, built from the timeline on 2.x | {source, total, series[{date, count}]} |
 
 ### Albums (7)
 
@@ -206,7 +212,7 @@ Turn an album or a selection into a PDF, built on the machine running the server
 | `list_people` | List all recognized people (paginated, supports hidden) | No |
 | `get_person` | Get full details for a specific person | No |
 | `update_person` | Update person name, birth date, hidden/favorite status, color | Yes |
-| `merge_people` | Merge multiple people into one (DESTRUCTIVE — cannot be undone) | Yes |
+| `merge_people` | Merge multiple people into one (DESTRUCTIVE — cannot be undone). Previews names first; `confirm=true` merges | Yes |
 | `search_people` | Search people by name | No |
 | `get_person_thumbnail` | Get base64-encoded face thumbnail for a person | No |
 | `get_asset_faces` | Get all detected faces in an asset with person assignments | No |

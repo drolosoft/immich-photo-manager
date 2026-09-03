@@ -176,7 +176,7 @@ RECOMMENDATIONS
 - **Flag unnamed clusters** — use `get_person_thumbnail` to show faces and ask user to name them
 - **Co-occurrence graph** — HTML visualization showing people connections (optional)
 - **Name a cluster** — use `update_person(person_id, name="...")` to name an unnamed cluster directly via MCP
-- **Merge duplicates** — use `merge_people(person_id="<person-to-keep>", merge_ids=["<dup-1>", "<dup-2>"])` to fold duplicate clusters into the one to keep
+- **Merge duplicates** — use `merge_people(person_id="<person-to-keep>", merge_ids=["<dup-1>", "<dup-2>"])` to fold duplicate clusters into the one to keep — the first call only previews the names; repeat with `confirm=true` once the user agrees
 - **Fix misidentified faces** — use `reassign_face(face_id, person_id)` to correct wrong assignments
 
 ## Important Notes
