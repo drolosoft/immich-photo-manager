@@ -36,7 +36,6 @@
     {
       "registryType": "oci",
       "identifier": "ghcr.io/drolosoft/immich-photo-manager:2.0.11",
-      "version": "2.0.11",
       "runtimeHint": "docker",
       "transport": {
         "type": "streamable-http",

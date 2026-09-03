@@ -29,11 +29,15 @@ def test_server_json_version_matches_pyproject():
 
 
 def test_every_package_in_server_json_carries_the_release_version():
+    # The registry refuses a "version" field on OCI packages (the tag in the
+    # identifier is the version); every other package type carries it.
     version = _pyproject_version()
     for package in SERVER_JSON["packages"]:
-        assert package["version"] == version, package["registryType"]
         if package["registryType"] == "oci":
+            assert "version" not in package
             assert package["identifier"].endswith(":" + version), package["identifier"]
+        else:
+            assert package["version"] == version, package["registryType"]
 
 
 def test_plugin_manifest_and_package_init_carry_the_release_version():
