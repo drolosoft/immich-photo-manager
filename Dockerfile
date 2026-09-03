@@ -11,6 +11,11 @@
 
 FROM python:3.13-slim
 
+# The official MCP registry (registry.modelcontextprotocol.io) verifies that
+# the publisher owns this image by reading this label; its value must equal
+# the "name" in server.json.
+LABEL io.modelcontextprotocol.server.name="io.github.drolosoft/immich-photo-manager"
+
 # PyAV, Pillow and fpdf2 all ship manylinux wheels for amd64 and arm64, so the
 # image needs no compiler and no system ffmpeg.
 WORKDIR /build

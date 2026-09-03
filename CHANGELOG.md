@@ -6,6 +6,15 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **`server.json` for the official MCP registry** (registry.modelcontextprotocol.io): the PyPI package (`uvx`, stdio) and the Docker image (Streamable HTTP on 8626) under the name `io.github.drolosoft/immich-photo-manager`. The two ownership proofs the registry checks are in place: the `mcp-name` token in the README (what PyPI renders) and the `io.modelcontextprotocol.server.name` label on the image. `tests/test_registry_metadata.py` keeps the name and every version in `server.json` equal to `pyproject.toml`, and pins the plugin manifest and package `__init__` to the same version on the way. The first publish waits for the next release, since the registry verifies the published artifacts.
+- **Tools section in the README**: the 94 tools by area, one line each, in front of the comparison table. Directories that extract the tool list from the README (mcp.so) showed none.
+
+### Fixed
+
+- **ghcr package page without description.** `docker/metadata-action` writes the repository description as a label, but GitHub reads the description of a multi-arch image from the index annotations, which the workflow did not set. `docker.yml` now emits annotations at manifest and index level. Effective from the next tagged image.
+
 ## [v2.0.10] - 2026-09-03
 
 ### Fixed
