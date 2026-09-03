@@ -14,7 +14,7 @@
 </p>
 <p align="center">
   <a href="tests/live/"><img src="https://img.shields.io/badge/tested_live_on_Immich-2.7.5_%7C_3.1.0-2ea44f" alt="Tested live on Immich 2.7.5 and 3.1.0"></a>
-  <a href="tests/"><img src="https://img.shields.io/badge/unit_tests-258_on_every_push-2ea44f" alt="258 unit tests on every push"></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/unit_tests-272_on_every_push-2ea44f" alt="272 unit tests on every push"></a>
   <a href="doc/demos/"><img src="https://img.shields.io/badge/demos-12_real_sessions-blue" alt="12 demos from real sessions"></a>
 </p>
 
@@ -22,7 +22,7 @@
 
 If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance — search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally and talks only to your Immich; your originals stay on your server (see [what leaves your network](#what-leaves-your-network)).
 
-> **Tested, not assumed.** Every push runs 258 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 89 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras — the legacy handshake and stateless 2026-07-28 — are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Details: [How it's tested](#how-its-tested).
+> **Tested, not assumed.** Every push runs 272 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 94 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras — the legacy handshake and stateless 2026-07-28 — are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Details: [How it's tested](#how-its-tested).
 
 <p align="center"><img src="./assets/demo.gif" alt="immich-photo-manager demo" width="800"></p>
 
@@ -148,7 +148,7 @@ Use the package entry point directly with `uvx`:
 
 ### 🐳 Run as a Docker container
 
-The server also ships as a multi-arch image (amd64 + arm64) on GitHub Container Registry, serving MCP over HTTP on port 8626 — both protocol eras, same 89 tools:
+The server also ships as a multi-arch image (amd64 + arm64) on GitHub Container Registry, serving MCP over HTTP on port 8626 — both protocol eras, same 94 tools:
 
 ```sh
 docker run -d -p 8626:8626 \
@@ -191,7 +191,7 @@ Model:  gemma4-26b-it (local, LM Studio)
 Query:  "Show me my Lanzarote albums"
 
 1. Getting MCP tool schemas...
-   89 MCP tools available
+   94 MCP tools available
 
 2. Asking Gemma 4...
    Gemma 4 chose: list_albums({})
@@ -267,7 +267,7 @@ Immich is excellent at storing and viewing your photos. But managing a large lib
 ## How it's tested
 
 - **Unit suite, every push**: 88 pytest cases on Python 3.10 and 3.13 (HTTP mocked), plus ruff. Releases are tagged only when this gate is green.
-- **Live, every tool, two Immich versions**: [`tests/live/`](tests/live/) starts real Immich **2.7.5** and **3.1.0** in Docker, fills them with a small library, and drives all 89 tools over the MCP protocol, re-reading state after each write. Run before every release; last full run 2026-09-03, 123/123 checks on both.
+- **Live, every tool, two Immich versions**: [`tests/live/`](tests/live/) starts real Immich **2.7.5** and **3.1.0** in Docker, fills them with a small library, and drives all 94 tools over the MCP protocol, re-reading state after each write. Run before every release; last full run 2026-09-03, 129/129 checks on both.
 - **In use**: [PyPI](https://pypi.org/project/immich-photo-manager/) downloads, merged PRs from four outside contributors, and the demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions.
 
 ## Built with Claude
@@ -281,7 +281,7 @@ This is a Claude plugin, and Claude is a collaborator on the code: the design, t
 | **[Getting Started](doc/GETTING-STARTED.md)** | Installation, manual MCP setup, deployment options, and troubleshooting |
 | **[Environment Setup](doc/GETTING-STARTED.md#environment-setup-detailed)** | Detailed setup: git, Python, venv, HTTP/stdio launch, Open WebUI, and common issues |
 | **[Skills Reference](doc/SKILLS.md)** | All 13 skills — workflows, triggers, parameters, output formats |
-| **[MCP Tools Reference](doc/MCP-TOOLS.md)** | All 89 MCP tools — parameters, return types, examples |
+| **[MCP Tools Reference](doc/MCP-TOOLS.md)** | All 94 MCP tools — parameters, return types, examples |
 | **[Architecture](doc/ARCHITECTURE.md)** | How base64-embedded thumbnails solve the Cowork sandbox restriction |
 | **[MCP 2026-07-28](doc/MCP-2026-07-28.md)** | Dual-era support: legacy handshake and the stateless revision from one server, and how it is verified |
 | **[CORS Setup Guide](doc/CORS-SETUP.md)** | Optional — enable direct URL thumbnail loading for browser-viewed galleries |

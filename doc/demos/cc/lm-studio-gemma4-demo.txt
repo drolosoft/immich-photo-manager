@@ -1,4 +1,4 @@
-Historical transcript — recorded on v1.1.0 (22 tools at the time; the server now exposes 89).
+Historical transcript — recorded on v1.1.0 (22 tools at the time; the server now exposes 94).
 
 
 ============================================================
