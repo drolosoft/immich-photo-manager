@@ -23,7 +23,7 @@ claude plugin marketplace add ~/immich-photo-manager
 claude plugin install immich-photo-manager
 ```
 
-If that works, you're done. If not, read on — the fixes below address every error we encountered.
+If that works, you're done. If not, read on. The fixes below address every error we encountered.
 
 ## Common Errors and Fixes
 
@@ -123,7 +123,7 @@ manifest file at .claude-plugin/plugin.json. Validation errors:
 : Unrecognized key: "icon"
 ```
 
-**Cause:** Claude Code uses strict schema validation on `plugin.json`. Any field not in the official schema causes a hard failure — there's no "ignore unknown fields" behavior.
+**Cause:** Claude Code uses strict schema validation on `plugin.json`. Any field not in the official schema causes a hard failure. There's no "ignore unknown fields" behavior.
 
 **Fix:** Remove the `"icon"` field from `.claude-plugin/plugin.json`.
 
@@ -148,7 +148,7 @@ Valid `plugin.json`:
 ```
 
 Fields that are **NOT** allowed (will cause validation failure):
-- `"icon"` — not in the schema, even though it seems like it should be
+- `"icon"`: not in the schema, even though it seems like it should be
 - Any other custom/undocumented field
 
 ### Error 4: `claude install` vs `claude plugin install`
@@ -232,15 +232,15 @@ claude plugin list
 
 ## File Reference
 
-### `.claude-plugin/plugin.json` — Plugin manifest
+### `.claude-plugin/plugin.json`: Plugin manifest
 
 Defines the plugin name, version, description, MCP server config, and author. No unknown keys allowed.
 
-### `.claude-plugin/marketplace.json` — Self-hosted marketplace manifest
+### `.claude-plugin/marketplace.json`: Self-hosted marketplace manifest
 
 Required for `claude plugin marketplace add`. Must include `$schema`, `name`, `owner` (object), and `plugins[]` with `author` (object) and `source` (object).
 
-### `.mcp.json` — MCP server configuration
+### `.mcp.json`: MCP server configuration
 
 Tells Claude Code how to connect to the Immich MCP server:
 

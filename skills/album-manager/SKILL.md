@@ -13,7 +13,7 @@ version: 1.1.0
 
 # Album Manager
 
-## ⚠️ Connection Required — ALWAYS CHECK FIRST
+## ⚠️ Connection Required: ALWAYS CHECK FIRST
 
 **Before doing ANYTHING else in this skill, call `ping` on the Immich MCP server.**
 
@@ -31,7 +31,7 @@ version: 1.1.0
 
 **Do NOT skip this check. Do NOT try to run any other tool first. Always ping, always block if it fails.**
 
-Intelligent album creation and curation for Immich photo libraries. Organizes photos **geographically by default** — albums represent places, not dates.
+Intelligent album creation and curation for Immich photo libraries. Organizes photos **geographically by default**: albums represent places, not dates.
 
 ## Core Principle
 
@@ -41,31 +41,31 @@ Intelligent album creation and curation for Immich photo libraries. Organizes ph
 
 Use the Immich MCP tools for all API interactions:
 
-- `search_metadata` — Search by city, state, country, camera make/model, date range (`taken_after`/`taken_before`), favorites, or asset type
-- `search_smart` — CLIP semantic search from a natural language description (e.g. "Colosseum Rome Italy")
-- `get_map_markers` — Get GPS markers (up to 500) for all geotagged assets; filter by coordinates client-side
-- `create_album` — Create a new album with name and description
-- `add_assets_to_album` — Add photos/videos to an album by asset IDs
-- `remove_assets_from_album` — Remove assets from an album
-- `list_albums` — List all albums with asset counts
-- `get_album` — Get album details including all assets
-- `delete_album` — Delete an album (does NOT delete the photos)
-- `create_shared_link` — Create a public shared link for an album (makes it visible in Gallery)
-- `get_asset_info` — Get full metadata for a specific asset (GPS, EXIF, dates)
-- `get_statistics` — Get library statistics (total photos, videos, storage)
-- `get_asset_thumbnail` — Get base64 thumbnail for an asset (used for gallery HTML generation)
-- `create_stack` / `list_stacks` — Group near-identical shots under one cover asset instead of dropping them; the album shows the stack as a single item
-- `get_download_info` — Size of the zip an album would make, before building it
-- `download_archive` — Write the album's originals to a zip on the machine running the server
+- `search_metadata`: Search by city, state, country, camera make/model, date range (`taken_after`/`taken_before`), favorites, or asset type
+- `search_smart`: CLIP semantic search from a natural language description (e.g. "Colosseum Rome Italy")
+- `get_map_markers`: Get GPS markers (up to 500) for all geotagged assets; filter by coordinates client-side
+- `create_album`: Create a new album with name and description
+- `add_assets_to_album`: Add photos/videos to an album by asset IDs
+- `remove_assets_from_album`: Remove assets from an album
+- `list_albums`: List all albums with asset counts
+- `get_album`: Get album details including all assets
+- `delete_album`: Delete an album (does NOT delete the photos)
+- `create_shared_link`: Create a public shared link for an album (makes it visible in Gallery)
+- `get_asset_info`: Get full metadata for a specific asset (GPS, EXIF, dates)
+- `get_statistics`: Get library statistics (total photos, videos, storage)
+- `get_asset_thumbnail`: Get base64 thumbnail for an asset (used for gallery HTML generation)
+- `create_stack` / `list_stacks`: Group near-identical shots under one cover asset instead of dropping them; the album shows the stack as a single item
+- `get_download_info`: Size of the zip an album would make, before building it
+- `download_archive`: Write the album's originals to a zip on the machine running the server
 
 ## Album Creation Workflow
 
 ### 1. Discover photos for a location
 
-There is no radius/coordinate search parameter — combine these four approaches:
+There is no radius/coordinate search parameter, so combine these four approaches:
 
 ```
-# Location text search (most reliable — uses EXIF reverse-geocoded names)
+# Location text search (most reliable, uses EXIF reverse-geocoded names)
 search_metadata(city="Roma")
 search_metadata(country="Italy")
 
@@ -77,7 +77,7 @@ get_map_markers()
 # Then filter the returned coordinates yourself, e.g. keep markers
 # within ~0.5° of Rome (41.90, 12.49) and collect their asset IDs
 
-# Date-based (supplement — trip windows)
+# Date-based (supplement, trip windows)
 search_metadata(taken_after="2023-06-01", taken_before="2023-06-15")
 
 # Combined: location text + date window
@@ -92,7 +92,7 @@ From the search results, filter out:
 - Blurry or very dark photos (if quality metadata available)
 - Photos that don't match the location theme
 
-Near-duplicates do not have to be dropped. When several shots are the same moment, `create_stack(asset_ids=[...])` groups them behind the best one: the album reads clean and nothing is thrown away. The first id passed becomes the cover.
+Near-duplicates do not have to be dropped. When several shots are the same moment, `create_stack(asset_ids=[...])` groups them behind the best one: the album shows one photo and nothing is deleted. The first id passed becomes the cover.
 
 Prefer photos that:
 - Have strong composition or visual interest
@@ -146,7 +146,7 @@ When creating multiple albums at once (e.g., "create albums for all my trips"):
 4. Create albums one by one, reporting progress
 5. Summarize all created albums at the end
 
-Always err on the side of creating MORE albums — the user can merge or delete later. It's easier to remove an unwanted album than to discover a missing one.
+Always err on the side of creating MORE albums: the user can merge or delete later. It's easier to remove an unwanted album than to discover a missing one.
 
 ## Handling Missing GPS Data
 
@@ -155,7 +155,7 @@ Many photos (especially older ones or screenshots) lack GPS coordinates. Strateg
 1. First search by geocoded location text (`search_metadata` with city/country) for photos that have it
 2. Then search by date range (`taken_after`/`taken_before`) to find photos taken during the same trip
 3. Use CLIP semantic search as a fallback (`search_smart`: "beach Lanzarote", "pyramid Egypt")
-4. Flag photos without GPS that were found by date/CLIP — they may or may not belong
+4. Flag photos without GPS that were found by date/CLIP: they may or may not belong
 
 ## Album Maintenance
 
@@ -176,7 +176,7 @@ When the user asks to **"show me photos from [album]"**, **"generate a gallery f
 
 Use the gallery template at `assets/viewer-template.html` (from the plugin root). This is a self-contained, single-file HTML gallery with:
 
-- **Triple theme support** — Light, System (auto-detects), and Dark modes
+- **Triple theme support**: Light, System (auto-detects), and Dark modes
 - **5 view modes**: detail grid, icon grid, list, masonry, compact
 - **Full-screen gallery overlay** with keyboard navigation (arrows, Escape, Space for slideshow)
 - **Touch/swipe gestures** for mobile
@@ -216,13 +216,13 @@ Each entry in `{{PHOTO_ENTRIES}}` includes the full thumbnail data:
 - `name`: Original filename (displayed as label)
 - `date`: ISO date string from the asset metadata
 
-**Always use `size="thumbnail"` (250px)** — never `preview` (1440px). Thumbnails average ~18KB each, so 50 photos ≈ 0.9MB HTML file.
+**Always use `size="thumbnail"` (250px)**, never `preview` (1440px). Thumbnails average ~18KB each, so 50 photos ≈ 0.9MB HTML file.
 
 Entries are comma-separated, one per line.
 
 ### Albums JSON Format
 
-`{{ALBUMS_JSON}}` is injected raw into JS. It can be either a JSON **array** `[{...}]` or a single **object** `{...}` — the template handles both. Use standard JSON with quoted keys:
+`{{ALBUMS_JSON}}` is injected raw into JS. It can be either a JSON **array** `[{...}]` or a single **object** `{...}`, and the template handles both. Use standard JSON with quoted keys:
 
 ```javascript
 [{"id":"<album-id>","name":"<Album Name>","total":<count>}]
@@ -233,21 +233,21 @@ Each album object needs: `id` (string), `name` (string), `total` (integer).
 ### Generation Workflow
 
 1. **Get album data**: Call `get_album` to get the album ID, name, and full asset list (IDs, filenames, dates)
-2. **Fetch thumbnails**: Call `get_thumbnails_batch(asset_ids=[...], size="thumbnail", limit=50)` — call in batches of 50 if needed
+2. **Fetch thumbnails**: Call `get_thumbnails_batch(asset_ids=[...], size="thumbnail", limit=50)`, in batches of 50 if needed
 3. **Read the template**: Read `assets/viewer-template.html` from the plugin root
 4. **Replace placeholders**: Fill in all `{{...}}` placeholders
 5. **Build `{{PHOTO_ENTRIES}}`**: `{src:'data:...',id:'...',name:'...',date:'...'}` for each asset with base64 thumbnail
 6. **Write the HTML**: Save to the outputs directory as `<album-name-slug>.html` (~0.9MB for 50 photos)
 7. **Present to user**: Share the file link via `computer://`
 
-**`get_thumbnails_batch` is REQUIRED.** The Cowork sandbox blocks all external requests — base64 is the only way.
+**`get_thumbnails_batch` is REQUIRED.** The Cowork sandbox blocks all external requests, so base64 is the only way.
 
 ### ⚠️ Placeholder Rules (IMPORTANT)
 
 - **`{{PAGE_SIZE}}`**, **`{{PHOTO_COUNT}}`**, **`{{ALBUM_TOTAL}}`**: Must be **plain integers** (e.g. `200`, not `200+` or `"200"`). These are injected directly into JavaScript.
 - **`{{ALBUM_NAME}}`**, **`{{SEARCH_QUERY}}`**, **`{{IMMICH_URL}}`**: Can be any string (they are placed inside HTML or JS string literals).
 - **`{{PHOTO_ENTRIES}}`**: Must be valid JS object literals, comma-separated.
-- **`{{ALBUMS_JSON}}`**: Must be comma-separated JSON objects (NOT wrapped in array brackets — the template adds `[...]`). Example: `{"id":"abc","name":"My Album","total":50}`. If no related albums, use empty string.
+- **`{{ALBUMS_JSON}}`**: Must be comma-separated JSON objects (NOT wrapped in array brackets, the template adds `[...]`). Example: `{"id":"abc","name":"My Album","total":50}`. If no related albums, use empty string.
 
 ### CRITICAL: Related Albums = REAL Albums Only
 
@@ -259,7 +259,7 @@ When generating a gallery for an album, find OTHER real albums that are related 
 
 - **PAGE_SIZE**: Keep at 20 for initial load. Pagination is manual ("Load more" button)
 - **PHOTO_COUNT**: Limit to ~50 photos per gallery for reasonable file size (~0.9MB)
-- **Thumbnails**: Embedded as base64 via `get_thumbnails_batch(size="thumbnail")` — ~18KB avg each
+- **Thumbnails**: Embedded as base64 via `get_thumbnails_batch(size="thumbnail")`, ~18KB avg each
 - For albums with 100+ photos, show first 50 and tell the user the total count
 
 ### Example: Generating a gallery
@@ -285,6 +285,6 @@ User: "Show me photos from Lanzarote Verde"
 
 ## Reference Files
 
-- `references/geographic-search-patterns.md` — Location names and GPS reference coordinates of common destinations, plus search strategies
-- `assets/index-template.html` — Dashboard template listing all saved gallery HTML files
-- `assets/viewer-template.html` — Self-contained HTML gallery template with dark/light themes, multiple view modes, slideshow, Cowork Actions Panel, and keyboard navigation
+- `references/geographic-search-patterns.md`: Location names and GPS reference coordinates of common destinations, plus search strategies
+- `assets/index-template.html`: Dashboard template listing all saved gallery HTML files
+- `assets/viewer-template.html`: Self-contained HTML gallery template with dark/light themes, multiple view modes, slideshow, Cowork Actions Panel, and keyboard navigation

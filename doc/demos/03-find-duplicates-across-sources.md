@@ -2,7 +2,7 @@
 
 > **The same photo, re-encoded by Apple Photos and Google Photos.** Checksums don't match. CLIP similarity misses it. Perceptual hashing catches it.
 
-When you merge photo libraries from multiple platforms, you get duplicates that traditional detection can't find — because each platform re-encodes the JPEG differently.
+When you merge photo libraries from multiple platforms, you get duplicates that traditional detection can't find, because each platform re-encodes the JPEG differently.
 
 ---
 
@@ -13,7 +13,7 @@ search_metadata(taken_after="2026-01-02", taken_before="2026-01-03", size=200)
 → 20 photos found
 ```
 
-Claude looks for photos with matching timestamps and similar dimensions — the first signal of a potential duplicate.
+Claude looks for photos with matching timestamps and similar dimensions, the first signal of a potential duplicate.
 
 ## Step 2: Spot the pair
 
@@ -29,13 +29,13 @@ DUPLICATE CANDIDATE
 ═══════════════════
 
 File A: 20260102_212804.jpg (Google Fotos import)
-        3,736,112 bytes — checksum: Plo4rfr8Vqg...
+        3,736,112 bytes, checksum: Plo4rfr8Vqg...
         
 File B: 20260102_212804.jpg (CLI upload)
-        3,736,112 bytes — checksum: ThyCAEz97WF...
+        3,736,112 bytes, checksum: ThyCAEz97WF...
 
 Same filename, same timestamp, same dimensions (4000×3000).
-Different checksums — re-encoded by different platforms.
+Different checksums, re-encoded by different platforms.
 
 Confidence: HIGH (timestamp + dimensions + filename match)
 ```

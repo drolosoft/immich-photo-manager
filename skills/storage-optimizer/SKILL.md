@@ -1,7 +1,7 @@
 ---
 name: storage-optimizer
 description: >
-  Analyze disk usage in an Immich photo library and identify opportunities to reclaim storage —
+  Analyze disk usage in an Immich photo library and identify opportunities to reclaim storage:
   redundant RAW+JPEG pairs, oversized videos, bloated sidecar files, and format inefficiencies.
   Use when the user says "storage", "disk space", "what's eating my disk", "free up space",
   "storage report", "disk usage", "large files", "optimize storage", "space analysis",
@@ -11,7 +11,7 @@ version: 1.1.0
 
 # Storage Optimizer
 
-## ⚠️ Connection Required — ALWAYS CHECK FIRST
+## ⚠️ Connection Required: ALWAYS CHECK FIRST
 
 **Before doing ANYTHING else in this skill, call `ping` on the Immich MCP server.**
 
@@ -182,8 +182,8 @@ GROWTH RATE
 RECOMMENDATIONS
   1. Empty trash immediately → 12.3 GB freed
   2. Review RAW+JPEG pairs → keep JPEGs, remove RAWs for 15.8 GB
-  3. Review 43 videos >100MB — any worth compressing?
-  4. 234 large screenshots — worth keeping?
+  3. Review 43 videos >100MB, any worth compressing?
+  4. 234 large screenshots, worth keeping?
 ```
 
 ## Optimization Actions (User-Approved)
@@ -198,7 +198,7 @@ RECOMMENDATIONS
 ## Important Notes
 
 - Storage calculations use EXIF fileSizeInByte which reflects the original file, not Immich's generated thumbnails/previews
-- Immich also stores thumbnails, preview images, and ML embeddings — these are NOT included in the analysis but do consume disk space
+- Immich also stores thumbnails, preview images, and ML embeddings. They are NOT included in the analysis but do consume disk space
 - RAW+JPEG detection uses filename matching (base name without extension)
-- Video transcoding recommendations depend on the user's quality preferences — always ask
+- Video transcoding recommendations depend on the user's quality preferences, so always ask
 - Growth projection assumes linear growth, which may not hold for seasonal photographers

@@ -12,7 +12,7 @@
 What happens in the video luna.mov?
 ```
 
-Claude finds the asset and calls `get_video_frames` with the default 6 frames. Each frame is one image in the conversation (~1.6k tokens as a thumbnail), so the default stays small. These are the kind of frames it gets, evenly spaced — and each slot picks the liveliest frame in its own neighbourhood, so a black or dead moment at the exact centre never wastes a slot:
+Claude finds the asset and calls `get_video_frames` with the default 6 frames. Each frame is one image in the conversation (~1.6k tokens as a thumbnail), so the default stays small. These are the kind of frames it gets, evenly spaced, and each slot picks the liveliest frame in its own neighbourhood, so a black or dead moment at the exact centre never wastes a slot:
 
 <p align="center">
 <img src="assets/12/01_001.0s.jpg" width="160"> <img src="assets/12/05_008.8s.jpg" width="160"> <img src="assets/12/08_014.7s.jpg" width="160"> <img src="assets/12/10_018.7s.jpg" width="160">
@@ -46,17 +46,17 @@ Cut 8 frames between second 8 and 12
 Make a PDF photobook of this video. Pick the best moments and caption each one.
 ```
 
-Before building anything, Claude can ask how you want it: `get_export_preview` returns every choice `export_pdf` accepts (layout, cover pages, which video moments, captions, image quality, language...) with its default, so when you just say "a PDF" it knows what to ask — and when you already gave specs, or answer "defaults are fine", it exports directly. Everything is also settable in one prompt: *"photobook, no cover or index, moments at 1s, 8.8s and 18.7s, one caption per moment, in Spanish"*.
+Before building anything, Claude can ask how you want it: `get_export_preview` returns every choice `export_pdf` accepts (layout, cover pages, which video moments, captions, image quality, language...) with its default, so when you just say "a PDF" it knows what to ask, and when you already gave specs, or answer "defaults are fine", it exports directly. Everything is also settable in one prompt: *"photobook, no cover or index, moments at 1s, 8.8s and 18.7s, one caption per moment, in Spanish"*.
 
-Then Claude looks at the frames, chooses the moments (`frame_times`), writes the captions, and `export_pdf` builds the file on your machine — the PDF never enters the conversation:
+Then Claude looks at the frames, chooses the moments (`frame_times`), writes the captions, and `export_pdf` builds the file on your machine, so the PDF never enters the conversation:
 
-- `layout="photobook"`: full-page images, fitted without cropping (letterbox, never a crop that cuts edges off). A video with several chosen frames unfolds into **one full page per frame**, each with its timestamp and its own caption (`frame_captions`) — the clip reads like a photo story. For [`luna.mov`](assets/12/luna.mov) that is five pages: sunset, dusk, the moon appearing, the moon high over the water, and gone.
+- `layout="photobook"`: full-page images, fitted without cropping (letterbox, never a crop that cuts edges off). A video with several chosen frames unfolds into **one full page per frame**, each with its timestamp and its own caption (`frame_captions`). The clip becomes a photo story. For [`luna.mov`](assets/12/luna.mov) that is five pages: sunset, dusk, the moon appearing, the moon high over the water, and gone.
 - `layout="detail"` keeps the compact look instead: one page per asset with a frame strip (timestamps under each frame) and the metadata block.
-- The `cover`, `index` and `places` pages can each be turned off, the footer can shrink to just the page number or disappear (`footer="pages"` / `"none"`), and a small title header on every page is available (`header=true`) — a print-ready photobook can be bare pages only.
+- The `cover`, `index` and `places` pages can each be turned off, the footer can shrink to just the page number or disappear (`footer="pages"` / `"none"`), and a small title header on every page is available (`header=true`). A print-ready photobook can be bare pages only.
 - Frames that go into the PDF cost no tokens, up to 120 per video, and quality there is free: frames go in at preview size (1440px) and photos at the stored file's quality (capped at 3000px) by default.
 - Albums read oldest to newest, like the frames inside a video, and a hand-picked selection mixing videos months apart asks for confirmation first (your own albums export as they are), one story per PDF. Live Photos count once, `language="es"` prints the page labels in Spanish, and the Places page draws an OpenStreetMap map on its own whenever the assets carry GPS (`map=false` to keep everything local).
 
-The result for this clip: [`luna-photobook.pdf`](assets/12/luna-photobook.pdf) — the five moon pages, each with its caption.
+The result for this clip is [`luna-photobook.pdf`](assets/12/luna-photobook.pdf): the five moon pages, each with its caption.
 
 ## 5. The complete album report
 
@@ -67,7 +67,7 @@ then every photo in order, one caption each, title on every page.
 
 The everything-on use case: the same clip plus eight stills of the evening in one album, exported with the defaults doing the work. The video opens the document as a six-frame strip (`videos_position="first"`), each slot picking the liveliest frame of its neighbourhood; the photos follow oldest to newest, at the stored file's quality, each with its caption; the Places page draws the map on its own from the GPS; the title repeats on every page (`header=true`).
 
-The result: [`moon-evening-report.pdf`](assets/12/moon-evening-report.pdf) — 12 pages, built by the published package against a real Immich, untouched.
+The result is [`moon-evening-report.pdf`](assets/12/moon-evening-report.pdf): 12 pages, built by the published package against a real Immich, untouched.
 
 ## What leaves your network
 

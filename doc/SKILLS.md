@@ -34,15 +34,15 @@ Complete documentation for all 13 skills in the Immich Photo Manager plugin. Eac
 
 ### What it does
 
-Creates and curates Immich albums organized **geographically by default**. Albums represent places, not dates — if you visited Barcelona twice, you get one "Barcelona" album, not "Barcelona 2019" and "Barcelona 2023".
+Creates and curates Immich albums organized **geographically by default**. Albums represent places, not dates. If you visited Barcelona twice, you get one "Barcelona" album, not "Barcelona 2019" and "Barcelona 2023".
 
 ### Workflow
 
-1. **Discover** — Searches for photos at a location using GPS coordinates, CLIP semantic search, or date ranges
-2. **Filter** — Removes screenshots, duplicates, and low-quality images from candidates
-3. **Curate** — Selects 20-50 representative photos (configurable)
-4. **Create** — Names the album with country emoji + place name (e.g., "🇮🇹 Cinque Terre, Italia")
-5. **Share** — Creates a shared link to make the album visible in the Gallery frontend
+1. **Discover**: Searches for photos at a location using GPS coordinates, CLIP semantic search, or date ranges
+2. **Filter**: Removes screenshots, duplicates, and low-quality images from candidates
+3. **Curate**: Selects 20-50 representative photos (configurable)
+4. **Create**: Names the album with country emoji + place name (e.g., "🇮🇹 Cinque Terre, Italia")
+5. **Share**: Creates a shared link to make the album visible in the Gallery frontend
 
 ### Naming Convention
 
@@ -111,7 +111,7 @@ Natural language photo search that translates your intent into optimal Immich AP
 
 ```
 Found 147 photos matching "sunset photos in Spain"
-Spanning: June 2019 — August 2024
+Spanning: June 2019 to August 2024
 Locations: Lanzarote (89), Barcelona (34), Sevilla (24)
 12 appear to be screenshots (flagged)
 → Want me to create an album from these?
@@ -131,7 +131,7 @@ Detects screenshots, duplicates, and low-quality images using multi-signal analy
 
 #### Screenshots (highest impact)
 
-Candidates are surfaced with CLIP (`search_smart("screenshot")`) and filename patterns, then scored by combining multiple signals (dimensions and EXIF checked per asset via `get_asset_info` — they are not searchable):
+Candidates are surfaced with CLIP (`search_smart("screenshot")`) and filename patterns, then scored by combining multiple signals (dimensions and EXIF checked per asset via `get_asset_info`, since they are not searchable):
 
 | Signal | Weight | Method |
 |--------|--------|--------|
@@ -158,7 +158,7 @@ Known screen resolutions: iPhone (750x1334 through 1290x2796), Mac (1920x1080 th
 
 #### Low Quality
 
-Very dark, very blurry, tiny resolution (<640x480), corrupt files. Always flagged for review, never auto-removed — some intentionally dark/blurry photos are artistic.
+Very dark, very blurry, tiny resolution (<640x480), corrupt files. Always flagged for review, never auto-removed. Some intentionally dark/blurry photos are artistic.
 
 ### Quick Scan Report
 
@@ -185,7 +185,7 @@ Very dark, very blurry, tiny resolution (<640x480), corrupt files. Always flagge
 
 ### What it does
 
-Deep cross-source duplicate analysis using **perceptual hashing** (pHash). The only reliable method for finding duplicates across Apple Photos and Google Photos, where the same photo gets re-encoded by each platform — making checksums useless.
+Deep cross-source duplicate analysis using **perceptual hashing** (pHash). The only reliable method for finding duplicates across Apple Photos and Google Photos, where the same photo gets re-encoded by each platform, which makes checksums useless.
 
 ### Why not checksums?
 
@@ -197,18 +197,18 @@ When you import the same photo from Apple Photos and Google Takeout, the files a
 pip3 install Pillow imagehash pillow-heif
 ```
 
-- `pillow-heif` is critical — without it, 40%+ of Apple Photos (HEIC format) can't be processed
-- Must use `ThreadPoolExecutor` (not `ProcessPoolExecutor`) — native HEIF libs deadlock on fork on macOS
+- `pillow-heif` is critical: without it, 40%+ of Apple Photos (HEIC format) can't be processed
+- Must use `ThreadPoolExecutor` (not `ProcessPoolExecutor`): native HEIF libs deadlock on fork on macOS
 
 ### Workflow
 
-1. **Discover sources** — Query Immich DB for distinct import paths (Apple, Google, manual, etc.)
-2. **Hash scan** — Compute 256-bit perceptual hashes for all photos (~500 files/30s on Apple Silicon)
-3. **Cross-match** — Find hashes that appear in multiple sources
-4. **Internal scan** — Find hashes that appear multiple times within a single source
-5. **Report** — Present overlap stats, unique counts, recommendations
-6. **Remove** (user-approved) — Permanent delete from Immich + physical file removal
-7. **Verify** — Post-cleanup count comparison
+1. **Discover sources**: Query Immich DB for distinct import paths (Apple, Google, manual, etc.)
+2. **Hash scan**: Compute 256-bit perceptual hashes for all photos (~500 files/30s on Apple Silicon)
+3. **Cross-match**: Find hashes that appear in multiple sources
+4. **Internal scan**: Find hashes that appear multiple times within a single source
+5. **Report**: Present overlap stats, unique counts, recommendations
+6. **Remove** (user-approved): permanent delete from Immich + physical file removal
+7. **Verify**: Post-cleanup count comparison
 
 ### Report Format
 
@@ -244,12 +244,12 @@ Comprehensive health assessment of your Immich library. Covers asset inventory, 
 
 ### Report Sections
 
-1. **Asset Inventory** — Total photos, videos, trash contents, storage used
-2. **Import Sources** — Where photos came from (Apple, Google, manual, etc.) with date ranges
-3. **Metadata Completeness** — GPS coverage %, EXIF date %, suspicious timestamps (noon/midnight), camera info %
-4. **Time Distribution** — Year-by-year photo counts with anomaly detection
-5. **File Format Breakdown** — Formats by count and size (HEIC, JPEG, PNG, RAW, etc.)
-6. **Recommendations** — Actionable suggestions based on findings (links to other skills)
+1. **Asset Inventory**: Total photos, videos, trash contents, storage used
+2. **Import Sources**: Where photos came from (Apple, Google, manual, etc.) with date ranges
+3. **Metadata Completeness**: GPS coverage %, EXIF date %, suspicious timestamps (noon/midnight), camera info %
+4. **Time Distribution**: Year-by-year photo counts with anomaly detection
+5. **File Format Breakdown**: Formats by count and size (HEIC, JPEG, PNG, RAW, etc.)
+6. **Recommendations**: suggestions to act on, based on the findings (links to other skills)
 
 ### Example Output
 
@@ -257,7 +257,7 @@ Comprehensive health assessment of your Immich library. Covers asset inventory, 
 METADATA QUALITY
   GPS coverage:        72.3% (28,616 of 39,596 photos)
   EXIF dates:          89.1%
-  Suspicious dates:    1,204 (noon/midnight — likely recovered from paths)
+  Suspicious dates:    1,204 (noon/midnight, likely recovered from paths)
   Camera info:         68.4%
 
 RECOMMENDATIONS
@@ -269,9 +269,9 @@ RECOMMENDATIONS
 
 ### Output Formats
 
-- **Inline** — formatted text in conversation
-- **Markdown file** — saved to vault/workspace
-- **HTML dashboard** — interactive with charts
+- **Inline**: formatted text in conversation
+- **Markdown file**: saved to vault/workspace
+- **HTML dashboard**: interactive with charts
 
 ---
 
@@ -287,8 +287,8 @@ Analyzes your photo timeline month by month to detect empty periods, sparse mont
 
 | Status | Rule | Meaning |
 |--------|------|---------|
-| **EMPTY** | 0 photos | Critical gap — check backups |
-| **SPARSE** | <10% of monthly average | Suspicious — possible failed import |
+| **EMPTY** | 0 photos | Critical gap, check backups |
+| **SPARSE** | <10% of monthly average | Suspicious, possible failed import |
 | **SINGLE-SOURCE** | One source has >90% | Dependency risk if that source is deleted |
 | **NORMAL** | Above thresholds | All good |
 
@@ -336,7 +336,7 @@ Scans for broken or suspicious photo metadata and proposes corrections. Focuses 
 
 ### Fix Strategies
 
-- **Neighbor interpolation**: For timestamp fixes — sorts photos by filename, finds nearest neighbor with real EXIF time, interpolates
+- **Neighbor interpolation**: For timestamp fixes, sorts photos by filename, finds nearest neighbor with real EXIF time, interpolates
 - **GPS inference**: Copies GPS from nearest photo on the same day, same camera (only if gap < 2 hours)
 - **Timezone correction**: Looks up timezone from GPS coordinates, compares with EXIF offset
 
@@ -382,7 +382,7 @@ Only photos scoring > 0.6 are suggested.
 
 ### Scheduled Mode
 
-Can run on a schedule: "Run album curation every Sunday at 9am" — scans for new photos added in the past week and generates a suggestions report.
+Can run on a schedule: "Run album curation every Sunday at 9am". It scans for new photos added in the past week and generates a suggestions report.
 
 ---
 
@@ -396,7 +396,7 @@ Identifies the biggest storage consumers and recommends strategies to reclaim sp
 
 ### Key Analyses
 
-- **RAW+JPEG pairs**: RAW files that have a matching JPEG — RAW is often 10x larger
+- **RAW+JPEG pairs**: RAW files that have a matching JPEG, and the RAW is often 10x larger
 - **Video size tiers**: Groups videos by size (>1GB, 500MB-1GB, 100-500MB, etc.)
 - **Format efficiency**: Which formats use the most space relative to count
 - **Growth projection**: At current import rate, how many months until disk is full
@@ -435,7 +435,7 @@ Immich's face detection and recognition must be enabled (ML container running) a
 - **Unnamed clusters**: Largest unnamed face clusters likely representing real people worth naming
 - **Coverage improvement**: "Naming these 15 clusters would increase coverage from 58% to 82%"
 - **Co-occurrence**: Who appears together most often (e.g., "María & Sam: 1,204 photos together")
-- **Timeline per person**: `get_timeline_buckets(person_id="<id>")` brackets when each person first and last appears, and shows the months they show up most
+- **Timeline per person**: `get_timeline_buckets(person_id="<id>")` gives the first and last month each person appears in, and the months they appear most
 
 ### Privacy Note
 
@@ -480,14 +480,14 @@ The map reveals where you live, work, and travel. Auth is recommended before hos
 
 ### What it does
 
-Bulk rotate photos by album or asset IDs. Non-destructive — uses Immich's built-in edits API so originals are never touched. Rotation is visible in the web UI, mobile app, and shared links.
+Bulk rotate photos by album or asset IDs. Non-destructive: it uses Immich's built-in edits API so originals are never touched. Rotation is visible in the web UI, mobile app, and shared links.
 
 ### Workflow
 
-1. **Select** — In Immich, pick the wrongly-rotated photos and add them to a temp album
-2. **Rotate** — `rotate_assets(album_id="...", angle=90)` rotates the entire album
-3. **Verify** — Check the Immich UI; thumbnails update to show the rotation
-4. **Adjust** — Rotate again if needed (accumulates: 90+90=180), or `revert_asset_edits` to undo
+1. **Select**: In Immich, pick the wrongly-rotated photos and add them to a temp album
+2. **Rotate**: `rotate_assets(album_id="...", angle=90)` rotates the entire album
+3. **Verify**: Check the Immich UI; thumbnails update to show the rotation
+4. **Adjust**: Rotate again if needed (accumulates: 90+90=180), or `revert_asset_edits` to undo
 
 ### Key Behavior
 
@@ -517,11 +517,11 @@ Turns an album or a selection into a PDF: metadata per photo (date, place, camer
 
 ### Workflow
 
-1. **Preview** — `get_export_preview(album_id="...")` (or `asset_ids=[...]` from a search) lists what would be included: count, type, and video durations
-2. **Look** — `get_album_images` for photos, `get_video_frames(asset_id, count=6)` for each video
-3. **Narrow** — for a video that needs a closer look, `get_video_frames` again with `start`/`end` or `interval=1`; above 12 frames the tool asks for confirmation first
-4. **Caption** — one line per asset, in the user's language, collected into `captions={asset_id: text}`
-5. **Build** — `export_pdf(album_id="...", captions=..., frames_per_video=6)` writes the PDF and reports the path, page count, and any warnings
+1. **Preview**: `get_export_preview(album_id="...")` (or `asset_ids=[...]` from a search) lists what would be included: count, type, and video durations
+2. **Look**: `get_album_images` for photos, `get_video_frames(asset_id, count=6)` for each video
+3. **Narrow**: for a video that needs a closer look, `get_video_frames` again with `start`/`end` or `interval=1`; above 12 frames the tool asks for confirmation first
+4. **Caption**: one line per asset, in the user's language, collected into `captions={asset_id: text}`
+5. **Build**: `export_pdf(album_id="...", captions=..., frames_per_video=6)` writes the PDF and reports the path, page count, and any warnings
 
 ### PDF Structure
 
@@ -568,11 +568,11 @@ travel-map ←── metadata-fixer        (better GPS = better map)
 
 ## Recommended Workflow for New Users
 
-1. **Start with**: `library-health-report` — understand your library
-2. **Then**: `duplicate-report` — clean up cross-source duplicates
-3. **Then**: `photo-cleanup` — remove screenshots and junk
-4. **Then**: `metadata-fixer` — repair dates and GPS
-5. **Then**: `timeline-gaps` — verify nothing is missing
-6. **Then**: `storage-optimizer` — reclaim space
-7. **Finally**: `album-manager` + `travel-map` — organize and visualize
-8. **Ongoing**: `auto-album-curator` + `people-report` — maintenance
+1. **Start with**: `library-health-report` (understand your library)
+2. **Then**: `duplicate-report` (clean up cross-source duplicates)
+3. **Then**: `photo-cleanup` (remove screenshots and junk)
+4. **Then**: `metadata-fixer` (repair dates and GPS)
+5. **Then**: `timeline-gaps` (verify nothing is missing)
+6. **Then**: `storage-optimizer` (reclaim space)
+7. **Finally**: `album-manager` + `travel-map` (organize and visualize)
+8. **Ongoing**: `auto-album-curator` + `people-report` (maintenance)

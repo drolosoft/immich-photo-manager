@@ -12,7 +12,7 @@ version: 1.2.0
 
 # Photo Search
 
-## Connection Required — ALWAYS CHECK FIRST
+## Connection Required: ALWAYS CHECK FIRST
 
 **Before doing ANYTHING else in this skill, call `ping` on the Immich MCP server.**
 
@@ -54,16 +54,16 @@ If the user is browsing rather than looking for something specific ("what's in h
 
 Use `search_metadata` and/or `search_smart` to find matching assets.
 
-**IMPORTANT — Immich EXIF location quirks:**
-- Immich stores cities as **municipalities**, not tourist names. "Tikal" does not exist as a city — it's in the municipality of **"Flores"** (state: **"Petén"**, country: **"Guatemala"**).
-- "Lanzarote" does not exist as a city — look for municipalities like "Arrecife", "Yaiza", "Teguise", "Haría", etc. (state: **"Canary Islands"**, country: **"Spain"**).
+**IMPORTANT: how Immich stores place names:**
+- Immich stores cities as **municipalities**, not tourist names. "Tikal" does not exist as a city; it's in the municipality of **"Flores"** (state: **"Petén"**, country: **"Guatemala"**).
+- "Lanzarote" does not exist as a city; look for municipalities like "Arrecife", "Yaiza", "Teguise", "Haría", etc. (state: **"Canary Islands"**, country: **"Spain"**).
 - When a place-name search returns 0 results, try broader terms: search by **state** or **country** instead of city, then filter. Or use `search_smart` with the place name as a CLIP query.
-- Do not guess spellings. `search_cities` lists every city that actually appears in the library, and `search_suggestions(suggestion_type="city", country="Spain")` returns the exact strings `search_metadata` expects. One call is cheaper than three failed searches, and the same trick works for `camera-make` and `camera-model`.
+- Do not guess spellings. `search_cities` lists every city that appears in the library, and `search_suggestions(suggestion_type="city", country="Spain")` returns the exact strings `search_metadata` expects. One call is cheaper than three failed searches, and the same works for `camera-make` and `camera-model`.
 
 Search strategy priority:
-1. `search_metadata(city=...)` — fastest, most precise if the city name matches
-2. `search_metadata(state=...)` or `search_metadata(country=...)` — broader, catches municipalities
-3. `search_smart(query="...")` — AI/CLIP semantic search, catches things without GPS
+1. `search_metadata(city=...)`: fastest, most precise if the city name matches
+2. `search_metadata(state=...)` or `search_metadata(country=...)`: broader, catches municipalities
+3. `search_smart(query="...")`: AI/CLIP semantic search, catches things without GPS
 
 ### Step 3: Find REAL matching albums
 
@@ -71,7 +71,7 @@ Call `list_albums()` and **fuzzy-match** album names/descriptions against the us
 
 Examples:
 - User asks "photos of Tikal" -> match album "Tikal & Petén" (and possibly "Guatemala")
-- User asks "fotos de la Barceloneta" -> match album "Barcelona — Barceloneta / Playa"
+- User asks "fotos de la Barceloneta" -> match album "Barcelona - Barceloneta / Playa"
 - User asks "Valle del Jerte" -> match album "Valle del Jerte & Hervás"
 - User asks "Lanzarote" -> match albums containing "Lanzarote" in their name
 
@@ -85,12 +85,12 @@ Matching rules:
 
 **Two paths depending on whether a real album was found:**
 
-#### Path A — Real album found (preferred)
+#### Path A: real album found (preferred)
 Use `get_album(album_id)` to get the full asset list. Extract `id`, `originalFileName`, and `fileCreatedAt` from each asset.
 This is the best path because the user curated these albums intentionally.
 
-#### Path B — No matching album (orphan photos)
-Use the search results directly — they already contain `id`, `originalFileName`, and `fileCreatedAt` for each asset.
+#### Path B: no matching album (orphan photos)
+Use the search results directly: they already contain `id`, `originalFileName`, and `fileCreatedAt` for each asset.
 **Do NOT create an album. Just show the photos.**
 
 **Fetch thumbnails as base64** using `get_thumbnails_batch(asset_ids=[...], size="thumbnail", limit=50)`. The Cowork viewer runs in an `about:` sandbox that blocks ALL external network requests, so thumbnails MUST be embedded as base64 `data:` URIs.
@@ -161,7 +161,7 @@ Use the canonical template at `assets/viewer-template.html`. Read the template f
 
 There are three strategies for delivering thumbnails to the gallery viewer, with different trade-offs. The strategy used depends on the user's Immich setup and the viewing context.
 
-#### Strategy 1: Base64 Embedded (Default — Always Works)
+#### Strategy 1: Base64 Embedded (Default, Always Works)
 
 The Cowork viewer runs in an `about:` protocol sandbox that blocks ALL external network requests (`fetch`, `<img src>`, etc.). Therefore, the **default and always-safe strategy** is to embed thumbnails as base64 `data:` URIs directly in the HTML.
 
@@ -176,13 +176,13 @@ Each photo entry in `{{PHOTO_ENTRIES}}` includes the full thumbnail data:
 - `name`: Original filename (displayed as label)
 - `date`: ISO date string from the asset metadata
 
-**Always use `size="thumbnail"` (250px)** — never `preview` (1440px). Thumbnails average ~18KB each, so 50 photos ≈ 0.9MB HTML file.
+**Always use `size="thumbnail"` (250px)**, never `preview` (1440px). Thumbnails average ~18KB each, so 50 photos ≈ 0.9MB HTML file.
 
 **How to get thumbnails:** Call `get_thumbnails_batch(asset_ids=[...], size="thumbnail", limit=50)`. If more than 50 photos, call in batches of 50.
 
 **Limitations:** HTML file size grows linearly with photo count (~18KB per photo). Not ideal for albums with hundreds of photos. Maximum practical limit is ~50 thumbnails per gallery file.
 
-#### CORS-Enabled Direct URLs (Optional — Requires User Setup)
+#### CORS-Enabled Direct URLs (Optional, Requires User Setup)
 
 If the user has configured CORS headers on their Immich reverse proxy, the gallery HTML can use JavaScript `fetch()` with the `x-api-key` header to load thumbnails on demand, converting responses to blob URLs. This enables full URL-based delivery for **any** photos, not just albums.
 
@@ -200,21 +200,21 @@ Always use Base64 Embedded (Strategy 1) as the default:
   └─ >50 photos → Embed first 50 in batches, warn user about file size and total count
 ```
 
-**Note:** CORS-enabled direct URLs (Strategy 3) are an opt-in enhancement for users who open galleries in a regular browser. They do NOT work inside the Cowork sandbox. Never mention strategy numbers or internal labels in user-facing output — just generate the gallery silently using the correct approach.
+**Note:** CORS-enabled direct URLs (Strategy 3) are an opt-in enhancement for users who open galleries in a regular browser. They do NOT work inside the Cowork sandbox. Never mention strategy numbers or internal labels in user-facing output. Just generate the gallery silently using the correct approach.
 
 ### Template lazy loading
 
-The first page (PAGE_SIZE photos) loads immediately. Subsequent pages use IntersectionObserver to set `src` from `dataset.src` only when scrolled into view. Pagination is manual via "Load more" button (no infinite scroll). This works with both base64 and URL-based strategies.
+The first page (PAGE_SIZE photos) loads immediately. The next pages use IntersectionObserver to set `src` from `dataset.src` only when scrolled into view. Pagination is manual via "Load more" button (no infinite scroll). This works with both base64 and URL-based strategies.
 
 ### Albums JSON Format
 
-`{{ALBUMS_JSON}}` — a JSON array of REAL albums:
+`{{ALBUMS_JSON}}` is a JSON array of REAL albums:
 
 ```
 {"id":"abc123","name":"Tikal & Petén","total":169},{"id":"xyz789","name":"Guatemala","total":392}
 ```
 
-Comma-separated JSON objects — NO outer array brackets (the template adds `[...]`). If no real albums match, use empty string.
+Comma-separated JSON objects, NO outer array brackets (the template adds `[...]`). If no real albums match, use empty string.
 
 ### Generation Workflow (Concrete Example)
 

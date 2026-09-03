@@ -18,11 +18,11 @@
   <a href="doc/demos/"><img src="https://img.shields.io/badge/demos-18_real_sessions-blue" alt="18 demos from real sessions"></a>
 </p>
 
-> **MCP server for intelligent photo management with [Immich](https://immich.app) — your self-hosted library, understood.**
+> **MCP server for intelligent photo management with [Immich](https://immich.app): your self-hosted library, understood.**
 
-If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance — search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally and talks only to your Immich; your originals stay on your server (see [what leaves your network](#what-leaves-your-network)).
+If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance: search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally and talks only to your Immich; your originals stay on your server (see [what leaves your network](#what-leaves-your-network)).
 
-> **Tested, not assumed.** Every push runs 349 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 94 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras — the legacy handshake and stateless 2026-07-28 — are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Demos [13 to 18](doc/demos/README.md) cover everything added in 2.x (library discovery, OCR and people search, memories and stacks, partners and downloads, asset notes, the Docker image) from real sessions. Details: [How it's tested](#how-its-tested).
+> **Tested, not assumed.** Every push runs 349 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 94 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras (the legacy handshake and stateless 2026-07-28) are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Demos [13 to 18](doc/demos/README.md) cover everything added in 2.x (library discovery, OCR and people search, memories and stacks, partners and downloads, asset notes, the Docker image) from real sessions. Details: [How it's tested](#how-its-tested).
 
 <p align="center"><img src="./assets/demo.gif" alt="immich-photo-manager demo" width="800"></p>
 
@@ -34,7 +34,7 @@ Say **"create albums for all my trips"** and watch it work:
 
 <p align="center"><img src="./assets/screenshot-06-geographic-albums.png" alt="Geographic album creation" width="700"></p>
 
-GPS coordinates, CLIP visual search, and temporal matching — combined in one request to create dozens of curated albums. No scripts, no manual sorting.
+GPS coordinates, CLIP visual search, and temporal matching, combined in one request to create dozens of curated albums. No scripts, no manual sorting.
 
 ---
 
@@ -99,25 +99,25 @@ After pulling a new version, run `pip3 install -r src/requirements.txt` again: 1
 
 The plugin process runs on your machine and only talks to your Immich. But everything the assistant *reads* through it goes to the model you use: filenames, dates, EXIF, album lists, and, when you ask it to look at pictures, thumbnails (250px by default, 1440px previews on request). Originals are never fetched. With Claude that means those thumbnails leave your network; with a local model over MCP (LM Studio, Ollama) nothing does. Nothing is sent unless you ask for it: listing albums or fixing dates moves text only, "tell me what's in these photos" moves images.
 
-A PDF report follows the same rule: `export_pdf` writes the file to disk on the machine running the server, and it is not sent anywhere unless you pass `return_base64=true`. The file goes where `output_path` says (default your Desktop); existing files are never overwritten. Frames that only go into the PDF never leave your machine and cost no tokens; only the frames you ask the model to look at do. When the assets carry GPS, the Places page draws a map with tiles from `tile.openstreetmap.org` — the only third-party call this plugin makes; pass `map=false` to skip it and keep everything inside your network.
+A PDF report follows the same rule: `export_pdf` writes the file to disk on the machine running the server, and it is not sent anywhere unless you pass `return_base64=true`. The file goes where `output_path` says (default your Desktop); existing files are never overwritten. Frames that only go into the PDF never leave your machine and cost no tokens; only the frames you ask the model to look at do. When the assets carry GPS, the Places page draws a map with tiles from `tile.openstreetmap.org`, the only third-party call this plugin makes; pass `map=false` to skip it and keep everything inside your network.
 
-### Connect, check, switch — all by talking
+### Connect, check, switch: all by talking
 
 You never edit config files after setup. The connection is managed in conversation:
 
 | You say | What happens |
 |---|---|
 | **"What Immich version am I connected to?"** | Reports the server version and the URL it's talking to |
-| **"Update my Immich credentials to `https://photos.example.com` with API key `…`"** | Validates the key against that server, hot-swaps the live connection, persists it — no restart |
+| **"Update my Immich credentials to `https://photos.example.com` with API key `...`"** | Validates the key against that server, hot-swaps the live connection, persists it, no restart |
 | **"Show my Immich connection"** | URL + masked API key |
 
 One connection at a time: to work with a second Immich (a test instance, a friend's server), say the *update* sentence again; say it once more to go back. Wrong URL or key? It tells you, and keeps the previous connection.
 
-> Try the full walkthrough: **[Demo 11 — Album Walkthrough](doc/demos/11-album-walkthrough.md)** — read an album item by item, find who repeats, create a sub-album, tag and describe every photo.
+> Try the full walkthrough: **[Demo 11, Album Walkthrough](doc/demos/11-album-walkthrough.md)**. Read an album item by item, find who repeats, create a sub-album, tag and describe every photo.
 
 ### Works in Claude Code
 
-The same plugin runs in **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** — search your library, curate albums, and generate galleries right from the terminal.
+The same plugin runs in **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)**: search your library, curate albums, and generate galleries right from the terminal.
 
 <p align="center"><img src="./doc/demos/cc/claude-code-conversation.png" alt="Split screen: Claude Code terminal generating a photo gallery on the left, browser showing the resulting gallery with album cards on the right" width="800"></p>
 
@@ -125,7 +125,7 @@ The same plugin runs in **[Claude Code](https://docs.anthropic.com/en/docs/claud
 
 ### Works with Any MCP Client
 
-immich-photo-manager is an **MCP server** — it works with any AI assistant that speaks the Model Context Protocol, not just Claude.
+immich-photo-manager is an **MCP server**: it works with any AI assistant that speaks the Model Context Protocol, not just Claude.
 
 Use the package entry point directly with `uvx`:
 
@@ -148,7 +148,7 @@ Use the package entry point directly with `uvx`:
 
 ### 🐳 Run as a Docker container
 
-The server also ships as a multi-arch image (amd64 + arm64) on GitHub Container Registry, serving MCP over HTTP on port 8626 — both protocol eras, same 94 tools:
+The server also ships as a multi-arch image (amd64 + arm64) on GitHub Container Registry, serving MCP over HTTP on port 8626, both protocol eras, same 94 tools:
 
 ```sh
 docker run -d -p 8626:8626 \
@@ -158,9 +158,9 @@ docker run -d -p 8626:8626 \
   ghcr.io/drolosoft/immich-photo-manager
 ```
 
-Point any Streamable HTTP client at `http://localhost:8626/mcp`. Liveness is at `/health` (no credentials needed, wired as the image's `HEALTHCHECK`). The tools that write files (`export_pdf`, `download_archive`) drop them in `/data`, so mount a volume there. Reaching the container under a name other than localhost (a reverse proxy, another container) needs that name in `-e MCP_ALLOWED_HOSTS=...` — DNS-rebinding protection stays on.
+Point any Streamable HTTP client at `http://localhost:8626/mcp`. Liveness is at `/health` (no credentials needed, wired as the image's `HEALTHCHECK`). The tools that write files (`export_pdf`, `download_archive`) drop them in `/data`, so mount a volume there. Reaching the container under a name other than localhost (a reverse proxy, another container) needs that name in `-e MCP_ALLOWED_HOSTS=...`. DNS-rebinding protection stays on.
 
-The env variables are optional: a container started without them still serves, every tool answers "No Immich credentials configured" with the fix, and one `update_credentials` call (base_url + api_key) connects it — persisted under `/data`, so with the volume mounted it survives restarts and re-creations.
+The env variables are optional: a container started without them still serves, every tool answers "No Immich credentials configured" with the fix, and one `update_credentials` call (base_url + api_key) connects it, persisted under `/data`, so with the volume mounted it survives restarts and re-creations.
 
 The same as a Compose service, next to an Immich stack or on its own:
 
@@ -208,10 +208,10 @@ Query:  "Show me my Lanzarote albums"
      ...
 
 4. Gemma 4 interpreting results...
-   "I found 14 Lanzarote albums — 7 color-themed with
+   "I found 14 Lanzarote albums, 7 color-themed with
     1,190 photos and 7 location-specific albums."
 
-RESULT: Zero cloud dependency — fully self-hosted stack.
+RESULT: Zero cloud dependency, fully self-hosted stack.
 ```
 
 | Client | Status |
@@ -227,26 +227,26 @@ RESULT: Zero cloud dependency — fully self-hosted stack.
 
 ## Highlights
 
-- **AI-powered search** — natural language photo search via CLIP ("sunset at the beach", "birthday cake")
-- **Geographic albums** — create albums organized by place, combining GPS + CLIP + temporal matching
-- **Metadata repair** — fix noon/midnight timestamps, infer missing GPS from neighboring photos, correct timezone offsets
-- **Library cleanup** — detect screenshots, duplicates, and low-quality images with multi-signal analysis; near-duplicates and bursts can be stacked behind the best shot instead of deleted, which is reversible
-- **Duplicate detection** — cross-source analysis using perceptual hashing (finds re-encoded copies across Apple Photos, Google Photos, and other imports)
-- **Bulk rotation** — rotate entire albums or selections at once (90°/180°/270°); non-destructive, accumulates across calls, one-click revert
-- **PDF reports** — album or selection to a PDF with metadata, video frames and Claude's captions, built on your machine; the photobook layout gives each chosen video moment a full page with its own caption, and the cover/index/places pages are optional
-- **Video frames** — cut evenly spaced frames out of any clip, or a segment (`start`/`end`) down to one frame per second (`interval`), so Claude can describe what happens in it; Immich itself keeps one poster per video
-- **People & face management** — list, search, merge, and organize recognized people; reassign misidentified faces; view face thumbnails
-- **Trash & asset lifecycle** — safely delete assets to trash, permanently remove, restore from trash; complete asset lifecycle management
-- **Library health** — one command for asset inventory, metadata quality, storage breakdown, and recommendations
-- **Tags & organization** — create, apply, and manage tags across your library; bulk tag and untag assets
-- **Server-aware** — one call reports the Immich version, which features are actually switched on (OCR, smart search, faces, map) and the quirks of that major, so nothing is offered that the server cannot do
-- **Search that reads** — OCR finds the text inside a photo (a ticket, a sign, a menu), and the explore, city and suggestion calls hand back the exact spellings the filters expect instead of guesses
-- **Dates in one call** — month-by-month buckets, a calendar heatmap that shows gaps and busy days, and Immich's "on this day" memories
-- **Sharing, both directions** — partner libraries (Immich's family sharing) and the comments and likes people leave on a shared album
-- **Originals out** — an album or a selection as one zip on your machine, with the size reported before the download starts
-- **Notes that outlive the session** — verdicts and actions stored on each asset, so the next cleanup skips what an earlier pass already reviewed
-- **Runs in Docker** — multi-arch image serving MCP over HTTP on port 8626, both protocol eras, same 94 tools
-- **Interactive galleries** — self-contained HTML pages with embedded thumbnails, 3 themes, 4 view modes, and a Cowork Actions Panel for batch operations
+- **AI-powered search**: natural language photo search via CLIP ("sunset at the beach", "birthday cake")
+- **Geographic albums**: create albums organized by place, combining GPS + CLIP + temporal matching
+- **Metadata repair**: fix noon/midnight timestamps, infer missing GPS from neighboring photos, correct timezone offsets
+- **Library cleanup**: detect screenshots, duplicates, and low-quality images with multi-signal analysis; near-duplicates and bursts can be stacked behind the best shot instead of deleted, which is reversible
+- **Duplicate detection**: cross-source analysis using perceptual hashing (finds re-encoded copies across Apple Photos, Google Photos, and other imports)
+- **Bulk rotation**: rotate entire albums or selections at once (90°/180°/270°); non-destructive, accumulates across calls, one-click revert
+- **PDF reports**: album or selection to a PDF with metadata, video frames and Claude's captions, built on your machine; the photobook layout gives each chosen video moment a full page with its own caption, and the cover/index/places pages are optional
+- **Video frames**: cut evenly spaced frames out of any clip, or a segment (`start`/`end`) down to one frame per second (`interval`), so Claude can describe what happens in it; Immich itself keeps one poster per video
+- **People & face management**: list, search, merge, and organize recognized people; reassign misidentified faces; view face thumbnails
+- **Trash & asset lifecycle**: safely delete assets to trash, permanently remove, restore from trash; complete asset lifecycle management
+- **Library health**: one command for asset inventory, metadata quality, storage breakdown, and recommendations
+- **Tags & organization**: create, apply, and manage tags across your library; bulk tag and untag assets
+- **Server-aware**: one call reports the Immich version, which features are switched on (OCR, smart search, faces, map) and the known behaviour of that major, so nothing is offered that the server cannot do
+- **Text inside photos**: OCR finds the text in a photo (a ticket, a street sign), and the explore, city and suggestion calls return the exact spellings the filters expect instead of guesses
+- **Dates in one call**: month-by-month buckets, a calendar heatmap that shows gaps and busy days, and Immich's "on this day" memories
+- **Sharing, both directions**: partner libraries (Immich's family sharing) and the comments and likes people leave on a shared album
+- **Originals out**: an album or a selection as one zip on your machine, with the size reported before the download starts
+- **Notes between sessions**: verdicts and actions stored on each asset, so the next cleanup skips what an earlier pass already reviewed
+- **Runs in Docker**: multi-arch image serving MCP over HTTP on port 8626, both protocol eras, same 94 tools
+- **Interactive galleries**: self-contained HTML pages with embedded thumbnails, 3 themes, 4 view modes, and a Cowork Actions Panel for batch operations
 
 <p align="center"><img src="./assets/screenshot-03-gallery-selection.png" alt="Interactive gallery with Cowork Actions" width="700"></p>
 
@@ -256,22 +256,22 @@ RESULT: Zero cloud dependency — fully self-hosted stack.
 
 ## Why immich-photo-manager?
 
-Immich is excellent at storing and viewing your photos. But managing a large library — deduplication, metadata repair, album curation, storage analysis — still requires manual effort or custom scripts.
+Immich is excellent at storing and viewing your photos. But managing a large library (deduplication, metadata repair, album curation, storage analysis) still requires manual effort or custom scripts.
 
 | | Manual / scripts | immich-photo-manager |
 |:---:|---|---|
-| 🔍 | Write API calls, parse JSON | **Natural language** — "find my sunset photos from Italy" |
-| 🗺️ | Export GPS, cluster manually | **Geographic albums** — automatic GPS + CLIP + temporal matching |
-| 🧹 | Hash files, diff checksums | **Perceptual hashing** — finds re-encoded duplicates across import sources |
-| 🔧 | Edit EXIF one file at a time | **Metadata repair** — batch-fix timestamps, infer GPS, correct timezones |
-| 📊 | Query database, build reports | **Library health** — one command for metadata quality, storage, recommendations |
-| 🔄 | Rotate one photo at a time | **Bulk rotation** — rotate entire albums at once, non-destructive |
-| 🏷️ | No tag management in UI | **Tags** — create, bulk apply/remove across assets |
-| 📅 | Scroll the timeline looking for holes | **Timeline map** — month buckets and a calendar heatmap in one call, gaps included |
-| 🔤 | Grep filenames and hope | **OCR search** — find a photo by the text inside it |
-| 📦 | SSH in and zip the files by hand | **Download archive** — album originals as one zip, size known in advance |
-| 🧠 | Re-decide the same photos every session | **Asset notes** — the verdict stays on the asset, the next pass skips it |
-| 🛡️ | Manual review of every action | **Safety first** — shows findings, asks before acting |
+| 🔍 | Write API calls, parse JSON | **Natural language**: "find my sunset photos from Italy" |
+| 🗺️ | Export GPS, cluster manually | **Geographic albums**: automatic GPS + CLIP + temporal matching |
+| 🧹 | Hash files, diff checksums | **Perceptual hashing**: finds re-encoded duplicates across import sources |
+| 🔧 | Edit EXIF one file at a time | **Metadata repair**: batch-fix timestamps, infer GPS, correct timezones |
+| 📊 | Query database, build reports | **Library health**: one command for metadata quality, storage, recommendations |
+| 🔄 | Rotate one photo at a time | **Bulk rotation**: rotate entire albums at once, non-destructive |
+| 🏷️ | No tag management in UI | **Tags**: create, bulk apply/remove across assets |
+| 📅 | Scroll the timeline looking for holes | **Timeline map**: month buckets and a calendar heatmap in one call, gaps included |
+| 🔤 | Grep filenames and hope | **OCR search**: find a photo by the text inside it |
+| 📦 | SSH in and zip the files by hand | **Download archive**: album originals as one zip, size known in advance |
+| 🧠 | Re-decide the same photos every session | **Asset notes**: the verdict stays on the asset, the next pass skips it |
+| 🛡️ | Manual review of every action | **Safety first**: shows findings, asks before acting |
 
 ---
 
@@ -291,11 +291,11 @@ This is a Claude plugin, and Claude is a collaborator on the code: the design, t
 |----------|-------------|
 | **[Getting Started](doc/GETTING-STARTED.md)** | Installation, manual MCP setup, deployment options, and troubleshooting |
 | **[Environment Setup](doc/GETTING-STARTED.md#environment-setup-detailed)** | Detailed setup: git, Python, venv, HTTP/stdio launch, Open WebUI, and common issues |
-| **[Skills Reference](doc/SKILLS.md)** | All 13 skills — workflows, triggers, parameters, output formats |
-| **[MCP Tools Reference](doc/MCP-TOOLS.md)** | All 94 MCP tools — parameters, return types, examples |
+| **[Skills Reference](doc/SKILLS.md)** | All 13 skills: workflows, triggers, parameters, output formats |
+| **[MCP Tools Reference](doc/MCP-TOOLS.md)** | All 94 MCP tools: parameters, return types, examples |
 | **[Architecture](doc/ARCHITECTURE.md)** | How base64-embedded thumbnails solve the Cowork sandbox restriction |
 | **[MCP 2026-07-28](doc/MCP-2026-07-28.md)** | Dual-era support: legacy handshake and the stateless revision from one server, and how it is verified |
-| **[CORS Setup Guide](doc/CORS-SETUP.md)** | Optional — enable direct URL thumbnail loading for browser-viewed galleries |
+| **[CORS Setup Guide](doc/CORS-SETUP.md)** | Optional, enable direct URL thumbnail loading for browser-viewed galleries |
 
 ---
 
@@ -309,15 +309,15 @@ This is a Claude plugin, and Claude is a collaborator on the code: the design, t
 
 ## Contributing
 
-Contributions are welcome — bug fixes, new skills, feature ideas. Open an issue or submit a PR.
+Contributions are welcome: bug fixes, new skills, feature ideas. Open an issue or submit a PR.
 
-If immich-photo-manager helps manage your library, consider giving it a star on GitHub — it helps others discover the project.
+If immich-photo-manager helps manage your library, consider giving it a star on GitHub. It helps others discover the project.
 
 ---
 
 ## Support
 
-If immich-photo-manager saved you time or made your photo library easier to manage, consider buying me a coffee — it keeps the next one coming!
+If immich-photo-manager saved you time or made your photo library easier to manage, consider buying me a coffee. It keeps the next one coming!
 
 <p align="center">
 <a href="https://buymeacoffee.com/juan.andres.morenorub.io"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50"></a>
@@ -327,6 +327,6 @@ If immich-photo-manager saved you time or made your photo library easier to mana
 
 ## License
 
-**MIT License** — free to use, modify, and distribute.
+**MIT License**: free to use, modify, and distribute.
 
 **Forged by [Drolosoft](https://drolosoft.com)** · *Tools we wish existed*

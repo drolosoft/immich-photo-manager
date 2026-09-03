@@ -13,7 +13,7 @@ version: 1.1.0
 
 # Auto-Album Curator
 
-## ⚠️ Connection Required — ALWAYS CHECK FIRST
+## ⚠️ Connection Required: ALWAYS CHECK FIRST
 
 **Before doing ANYTHING else in this skill, call `ping` on the Immich MCP server.**
 
@@ -69,7 +69,7 @@ For each album, build a profile:
 - Is it a single event (1-3 days) or ongoing collection?
 - For event albums, new photos should be within the date range
 - For collection albums, any date is valid
-- `get_timeline_buckets(album_id=…)` settles that question without fetching a single asset: one or two buckets means an event, buckets spread across years mean a collection
+- `get_timeline_buckets(album_id=...)` settles that question without fetching a single asset: one or two buckets means an event, buckets spread across years mean a collection
 
 **Visual Profile:**
 - Use `search_smart` (CLIP) with descriptive terms derived from album name
@@ -83,7 +83,7 @@ For each album, search for unassigned photos that match its profile:
 candidates = []
 
 # GPS-based matching (for location albums)
-# There is no radius search parameter — pull the map markers and
+# There is no radius search parameter, so pull the map markers and
 # filter by distance client-side (up to 500 geotagged assets)
 if album.gps_center:
     markers = get_map_markers()
@@ -144,7 +144,7 @@ ALBUM CURATION SUGGESTIONS
    ...
 
 📁 Lanzarote 2024 (156 photos, event: Oct 2024)
-   0 new photos — album appears complete
+   0 new photos, album appears complete
 
 SUMMARY: 8 photos suggested for 2 albums
 Add all? [Yes / Review one by one / Skip]
@@ -179,8 +179,8 @@ This skill can be configured to run periodically via the `schedule` skill:
 
 ## Important Notes
 
-- **Never adds photos automatically** — always presents suggestions for approval
-- Respects album boundaries — won't suggest adding a screenshot to a travel album
+- **Never adds photos automatically**: always presents suggestions for approval
+- Respects album boundaries: won't suggest adding a screenshot to a travel album
 - For shared albums (published via Immich shared links), suggests additions but warns about public visibility
 - CLIP search requires the Immich ML container to be running
 - Large libraries (>50K) may take 2-5 minutes to analyze all albums

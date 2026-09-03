@@ -1,17 +1,17 @@
 ---
 name: library-health-report
 description: >
-  Run a comprehensive health check on an Immich photo library — asset counts, storage usage,
+  Run a full health check on an Immich photo library: asset counts, storage usage,
   metadata completeness, orphaned files, and quality indicators.
   Use when the user says "library health", "health report", "library status", "library audit",
   "how healthy is my library", "photo stats", "library overview", "what's in my library",
-  "library report", or any variation of wanting a comprehensive overview of their photo library's state.
+  "library report", or any variation of wanting a full overview of their photo library's state.
 version: 1.1.0
 ---
 
 # Library Health Report
 
-## ⚠️ Connection Required — ALWAYS CHECK FIRST
+## ⚠️ Connection Required: ALWAYS CHECK FIRST
 
 **Before doing ANYTHING else in this skill, call `ping` on the Immich MCP server.**
 
@@ -29,7 +29,7 @@ version: 1.1.0
 
 **Do NOT skip this check. Do NOT try to run any other tool first. Always ping, always block if it fails.**
 
-Generate a comprehensive health assessment of an Immich photo library. Covers asset inventory, storage breakdown, metadata quality, and actionable recommendations.
+Generate a full health assessment of an Immich photo library. Covers asset inventory, storage breakdown, metadata quality, and recommendations to act on.
 
 ## When to Use
 
@@ -42,11 +42,11 @@ Generate a comprehensive health assessment of an Immich photo library. Covers as
 
 ### Section 0: What this server can do
 
-Call `get_capabilities` once before anything else: it reports the server version, which features are actually enabled (OCR, smart search, facial recognition, map) and the quirks of that Immich major. A health report that says "GPS coverage 0%" is misleading when the map feature is simply off, and a section about OCR text makes no sense on a server without OCR. Mention the version in the report header.
+Call `get_capabilities` once before anything else: it reports the server version, which features are switched on (OCR, smart search, facial recognition, map) and the quirks of that Immich major. A health report that says "GPS coverage 0%" is misleading when the map feature is simply off, and a section about OCR text makes no sense on a server without OCR. Mention the version in the report header.
 
 ### Section 1: Asset Inventory
 
-Start with `get_statistics`. It is the official Immich count of photos, videos and storage used, in one call and with no database access. `search_statistics(...)` answers any narrower count ("how many videos", "how many favorites") the same cheap way.
+Start with `get_statistics`. It is the official Immich count of photos, videos and storage used, in one call and with no database access. `search_statistics(...)` answers any narrower count ("how many videos", "how many favorites") with one more call.
 
 The query below is an optional fallback for the columns the API does not expose, such as the trash breakdown by type. The plugin never provides database access, so it only applies if you already have `psql` on your own Immich:
 
@@ -129,14 +129,14 @@ Present as:
 METADATA QUALITY
   GPS coverage:        72.3% (28,616 of 39,596 photos)
   EXIF dates:          89.1% (35,280 photos)
-  Suspicious dates:    1,204 (noon/midnight — likely recovered from paths)
+  Suspicious dates:    1,204 (noon/midnight, likely recovered from paths)
   Camera info:         68.4% (27,072 photos)
   Lens info:           52.1% (20,623 photos)
 ```
 
 ### Section 4: Time Distribution
 
-`get_timeline_buckets()` returns one bucket per month with its asset count in a single call, which is the whole year-by-year picture already: sum the buckets per year and the low years stand out. `get_calendar_heatmap(from_date=…, to_date=…)` adds the per-day detail for a year worth looking at more closely. Pass an explicit range: on Immich 2.x the counts are built from the timeline, one request per month in range, and an omitted bound falls back to the last 365 days.
+`get_timeline_buckets()` returns one bucket per month with its asset count in a single call, which is the whole year-by-year picture already: sum the buckets per year and the low years stand out. `get_calendar_heatmap(from_date=..., to_date=...)` adds the per-day detail for a year that needs a closer look. Pass an explicit range: on Immich 2.x the counts are built from the timeline, one request per month in range, and an omitted bound falls back to the last 365 days.
 
 The query below is the optional fallback when the photo/video split per year matters:
 
@@ -164,7 +164,7 @@ LIMIT 15;
 
 ### Section 6: Recommendations
 
-Based on findings, generate actionable recommendations:
+Based on findings, generate recommendations the user can act on:
 
 - **Low GPS coverage?** → Suggest metadata-fixer skill
 - **Suspicious dates?** → Suggest metadata-fixer skill
@@ -176,15 +176,15 @@ Based on findings, generate actionable recommendations:
 ## Output Format
 
 The report can be presented as:
-1. **Inline** — formatted text in the conversation
-2. **Markdown file** — saved to the user's vault/workspace
-3. **HTML dashboard** — interactive file with charts (uses Chart.js or Recharts)
+1. **Inline**: formatted text in the conversation
+2. **Markdown file**: saved to the user's vault/workspace
+3. **HTML dashboard**: interactive file with charts (uses Chart.js or Recharts)
 
 Always ask the user which format they prefer.
 
 ## Important Notes
 
-- This skill is **read-only** — it never modifies assets or metadata
+- This skill is **read-only**: it never modifies assets or metadata
 - The whole report can be produced with the MCP tools alone: `get_capabilities`, `get_statistics`, `search_statistics`, `get_timeline_buckets` and `get_calendar_heatmap`
 - The SQL blocks are an optional fallback for the few columns Immich's API does not expose (original paths, format breakdown). The plugin exposes no database tool, so running them means the user's own `psql` against their own Immich. Never ask for database credentials
 - For libraries >50K assets, some queries may take 10-30 seconds

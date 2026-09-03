@@ -1,7 +1,7 @@
 ---
 name: duplicate-report
 description: >
-  Run a comprehensive duplicate analysis on an Immich photo library using perceptual hashing.
+  Run a full duplicate analysis on an Immich photo library using perceptual hashing.
   Finds cross-source duplicates (e.g. Apple Photos vs Google Photos exports), internal duplicates,
   and generates a detailed report with removal recommendations.
   Use when the user says "find duplicates", "duplicate report", "how many duplicates",
@@ -13,7 +13,7 @@ version: 1.2.0
 
 # Duplicate Report
 
-## ⚠️ Connection Required — ALWAYS CHECK FIRST
+## ⚠️ Connection Required: ALWAYS CHECK FIRST
 
 **Before doing ANYTHING else in this skill, call `ping` on the Immich MCP server.**
 
@@ -31,13 +31,13 @@ version: 1.2.0
 
 **Do NOT skip this check. Do NOT try to run any other tool first. Always ping, always block if it fails.**
 
-Generate a comprehensive duplicate analysis of an Immich photo library. Uses perceptual hashing to find visually identical photos even when they have different checksums (common when photos are exported from Apple Photos and Google Photos).
+Generate a full duplicate analysis of an Immich photo library. Uses perceptual hashing to find visually identical photos even when they have different checksums (common when photos are exported from Apple Photos and Google Photos).
 
 ## Why Perceptual Hashing?
 
 When users import the same photo library from multiple sources (Apple Photos export, Google Takeout, manual folder copies), the files are often **re-encoded** by each platform. This means:
 
-- **Checksums differ** — same photo, different binary → SHA/MD5 won't match
+- **Checksums differ**: same photo, different binary → SHA/MD5 won't match
 - **Immich's built-in CLIP duplicate detection** uses too strict a threshold for re-encoded content
 - **Filename matching** catches only a fraction (filenames often differ across platforms)
 
@@ -51,9 +51,9 @@ The user's machine needs:
 pip3 install Pillow imagehash pillow-heif --break-system-packages
 ```
 
-- `Pillow` — image loading
-- `imagehash` — perceptual hashing
-- `pillow-heif` — HEIC/HEIF support (critical for Apple Photos)
+- `Pillow`: image loading
+- `imagehash`: perceptual hashing
+- `pillow-heif`: HEIC/HEIF support (critical for Apple Photos)
 
 ## Analysis Workflow
 
@@ -67,9 +67,9 @@ result = get_duplicates()
 
 This returns groups of visually similar assets detected by Immich's ML engine. Present the count and let the user resolve obvious duplicates immediately using `resolve_duplicates`.
 
-This is fast (no disk scan needed) but may miss re-encoded copies across import sources. For comprehensive cross-source analysis, proceed to Step 1.
+This is fast (no disk scan needed) but may miss re-encoded copies across import sources. For the full cross-source analysis, proceed to Step 1.
 
-> Note: `resolve_duplicates` handles Immich ML duplicates natively. Perceptual hashing (Steps 1–3 below) catches cross-source re-encoded duplicates that ML may miss.
+> Note: `resolve_duplicates` handles Immich ML duplicates natively. Perceptual hashing (Steps 1 to 3 below) catches cross-source re-encoded duplicates that ML may miss.
 
 ### Step 1: Discover Import Sources
 
@@ -109,7 +109,7 @@ def compute_phash(filepath):
 
 **Key parameters:**
 - `hash_size=16` → 256-bit hash (high accuracy, very few false positives)
-- Use `ThreadPoolExecutor` (NOT `ProcessPoolExecutor` — native HEIF libs deadlock on fork)
+- Use `ThreadPoolExecutor` (NOT `ProcessPoolExecutor`, native HEIF libs deadlock on fork)
 - 4 workers is optimal for most machines
 - Report progress every 500 files
 
@@ -159,7 +159,7 @@ TOTAL REMOVABLE
 RECOMMENDATION
   Keep: [Source with better metadata/folder structure]
   Remove: [Other source] copies where match exists
-  Review: [count] [other]-only photos are NOT duplicates — keep them
+  Review: [count] [other]-only photos are NOT duplicates, keep them
 ```
 
 ### Step 5: Removal (User-Approved)
@@ -170,14 +170,14 @@ RECOMMENDATION
 2. Ask user which categories to remove
 3. Confirm the exact count
 4. Execute removal in two steps:
-   a. Move to Immich trash: `delete_assets(asset_ids=[...], force=False)` — safer, recoverable via `restore_assets` or `restore_trash`
+   a. Move to Immich trash: `delete_assets(asset_ids=[...], force=False)`, safer and recoverable via `restore_assets` or `restore_trash`
    b. Physical file removal from disk (`os.remove()`) only after user confirms trash is correct
-   c. For permanent deletion (user explicitly requests): `delete_assets(asset_ids=[...], force=True)` — irreversible
+   c. For permanent deletion (user explicitly requests): `delete_assets(asset_ids=[...], force=True)`, irreversible
 5. Log everything to a JSON file for audit
 
 Batch Immich deletions in groups of 100 assets per call. For ML-detected duplicates, prefer `resolve_duplicates` which handles them natively in Immich.
 
-For near-duplicates the user hesitates over (a burst, three tries at the same shot), offer `create_stack(asset_ids=[...])` as the middle option: the shots stay in the library but show as one item fronted by the first id passed. It is reversible with `delete_stack`, so it is the safe answer when "which one is best?" has no clear winner.
+For near-duplicates the user hesitates over (a burst, three tries at the same shot), offer `create_stack(asset_ids=[...])` as the middle option: the shots stay in the library but show as one item, with the first id passed as the cover. It is reversible with `delete_stack`, so it is the safe answer when "which one is best?" has no clear winner.
 
 ### Step 5b: Leave notes for the next pass
 
@@ -212,7 +212,7 @@ SELECT count(*) FROM (
 Scans actual files on disk. Catches re-encoded duplicates. Requires filesystem access and Python dependencies. Takes 10-20 minutes for ~40K photos on Apple Silicon.
 
 ### Year-by-Year Breakdown
-Shows which source dominates each year — helps users understand their photo ecosystem history:
+Shows which source dominates each year, and helps users see where their photos came from over time:
 
 ```sql
 SELECT year, source_a_count, source_b_count,
@@ -228,8 +228,8 @@ FROM (
 
 ## Important Notes
 
-- **Perceptual hashing has rare false positives** — two visually very similar (but different) photos may share a hash. The 256-bit hash size minimizes this, but users should spot-check a few matches before bulk removal.
-- **Videos are excluded** from perceptual hashing — they need a different approach (frame extraction + hashing).
-- **HEIC support is essential** — without `pillow-heif`, Apple Photos libraries will have massive error rates (50%+ of files).
-- **ThreadPoolExecutor, not ProcessPoolExecutor** — native HEIF libraries deadlock when forked on macOS. Always use threads.
+- **Perceptual hashing has rare false positives**: two visually very similar (but different) photos may share a hash. The 256-bit hash size minimizes this, but users should spot-check a few matches before bulk removal.
+- **Videos are excluded** from perceptual hashing: they need a different approach (frame extraction + hashing).
+- **HEIC support is essential**: without `pillow-heif`, Apple Photos libraries will have massive error rates (50%+ of files).
+- **ThreadPoolExecutor, not ProcessPoolExecutor**: native HEIF libraries deadlock when forked on macOS. Always use threads.
 - **Background Immich scanning** may add new assets during analysis. Note this in the report if the post-cleanup count seems off.

@@ -1,8 +1,8 @@
 # 🏥 Library Health Report
 
-> **"How healthy is my photo library?"** — one command, full diagnostic.
+> **"How healthy is my photo library?"**: one command, full diagnostic.
 
-A comprehensive assessment of your Immich library: asset inventory, metadata quality, storage breakdown, and actionable recommendations.
+A full assessment of your Immich library: asset inventory, metadata quality, storage breakdown, and recommendations you can act on.
 
 ---
 
@@ -64,7 +64,7 @@ LIBRARY HEALTH REPORT
 ✅ RECOMMENDATIONS
    1. Fix 4,307 suspicious timestamps with metadata-fixer
    2. Infer GPS for ~9,200 photos that have neighbors with coordinates
-   3. Review 3,456 screenshots — consider moving to a separate album
+   3. Review 3,456 screenshots, consider moving to a separate album
    4. Check 17,794 photos with no camera info (possible downloads/imports)
 ```
 
@@ -81,6 +81,6 @@ LIBRARY HEALTH REPORT
 
 ## What you get
 
-- **Numbers, not guesses** — actual counts for every metric
-- **Actionable next steps** — each finding links to a skill that can fix it
-- **Repeatable** — run it monthly to track improvement
+- **Numbers, not guesses**: actual counts for every metric
+- **Concrete next steps**: each finding links to a skill that can fix it
+- **Repeatable**: run it monthly to track improvement

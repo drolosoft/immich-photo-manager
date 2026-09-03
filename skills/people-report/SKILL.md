@@ -1,7 +1,7 @@
 ---
 name: people-report
 description: >
-  Generate a report on people in your Immich photo library — unique faces detected, photos per person,
+  Generate a report on people in your Immich photo library: unique faces detected, photos per person,
   unnamed faces, people appearing together, and face recognition quality.
   Use when the user says "people report", "faces report", "who's in my library",
   "unnamed faces", "face recognition", "how many people", "people stats",
@@ -12,7 +12,7 @@ version: 1.2.0
 
 # People Report
 
-## ⚠️ Connection Required — ALWAYS CHECK FIRST
+## ⚠️ Connection Required: ALWAYS CHECK FIRST
 
 **Before doing ANYTHING else in this skill, call `ping` on the Immich MCP server.**
 
@@ -30,7 +30,7 @@ version: 1.2.0
 
 **Do NOT skip this check. Do NOT try to run any other tool first. Always ping, always block if it fails.**
 
-Analyze Immich's face recognition data to generate a report on people in the library — who appears most, unnamed face clusters, co-occurrence patterns, and recognition quality.
+Analyze Immich's face recognition data to generate a report on people in the library: who appears most, unnamed face clusters, co-occurrence patterns, and recognition quality.
 
 ## Prerequisites
 
@@ -47,7 +47,7 @@ Use the `list_people` MCP tool to get all people with pagination:
 ```
 # Get all people (including hidden clusters)
 result = list_people(page=1, size=200, with_hidden=true)
-# Repeat with page=2, 3, … until result.hasNextPage is false
+# Repeat with page=2, 3, ... until result.hasNextPage is false
 
 # Named: people where name is not empty
 named = [p for p in result.people if p.name]
@@ -85,7 +85,7 @@ top_pairs = sorted(co_occurrence.items(), key=lambda x: x[1], reverse=True)[:15]
 
 ### Step 3: Per-Person Profiles
 
-Per-person data comes from `list_people` and `get_person`; to pull the actual photos of a person, pass their id to `search_metadata(person_ids=["<id>"])`. The same filter works on `search_smart` when the query is visual:
+Per-person data comes from `list_people` and `get_person`; to get the photos of a person, pass their id to `search_metadata(person_ids=["<id>"])`. The same filter works on `search_smart` when the query is visual:
 
 ```
 # get_person returns name, birthDate, faceCount, and hidden status
@@ -101,14 +101,14 @@ for person in named:
     })
 ```
 
-For first and last appearance, call `get_timeline_buckets(person_id="<id>")`: the oldest and newest buckets bracket the person's span, and the counts per month show when they appear most. For per-person browsing (every photo, in order) link the user to the person's page in the Immich web UI (`/people/{id}`).
+For first and last appearance, call `get_timeline_buckets(person_id="<id>")`: the oldest and newest buckets give the first and last month the person appears, and the counts per month show when they appear most. For per-person browsing (every photo, in order) link the user to the person's page in the Immich web UI (`/people/{id}`).
 
 ### Step 4: Recognition Quality
 
 Use `list_people` with `with_hidden=True` to surface hidden clusters, and `get_person_thumbnail` to visually inspect unnamed ones:
 
 ```
-# Hidden clusters — often low-confidence or suppressed by Immich
+# Hidden clusters, often low-confidence or suppressed by Immich
 all_people = list_people(page=1, size=500, with_hidden=True)
 hidden = [p for p in all_people.people if p.isHidden]
 
@@ -146,7 +146,7 @@ TOP PEOPLE (by face count)
   (browse any person's full timeline via their Immich page: /people/{id})
 
 UNNAMED CLUSTERS WORTH NAMING
-  Cluster #45:  189 faces — likely a real person
+  Cluster #45:  189 faces, likely a real person
   Cluster #112:  87 faces
   Cluster #78:   64 faces
   ...12 more clusters with >20 faces
@@ -167,20 +167,20 @@ RECOMMENDATIONS
   1. Name the top 15 unnamed clusters → big coverage improvement
   2. Review 2,341 unassigned faces in Immich UI
   3. Consider merging similar unnamed clusters
-  4. 4,521 small faces may produce false matches — review if face groups seem wrong
+  4. 4,521 small faces may produce false matches, review if face groups seem wrong
 ```
 
 ## Actions Available
 
-- **Export people list** — CSV with name, face count, birth date (if set), Immich URL
-- **Flag unnamed clusters** — use `get_person_thumbnail` to show faces and ask user to name them
-- **Co-occurrence graph** — HTML visualization showing people connections (optional)
-- **Name a cluster** — use `update_person(person_id, name="...")` to name an unnamed cluster directly via MCP
-- **Merge duplicates** — use `merge_people(person_id="<person-to-keep>", merge_ids=["<dup-1>", "<dup-2>"])` to fold duplicate clusters into the one to keep — the first call only previews the names; repeat with `confirm=true` once the user agrees
-- **Fix misidentified faces** — use `reassign_face(face_id, person_id)` to correct wrong assignments
+- **Export people list**: CSV with name, face count, birth date (if set), Immich URL
+- **Flag unnamed clusters**: use `get_person_thumbnail` to show faces and ask user to name them
+- **Co-occurrence graph**: HTML visualization showing people connections (optional)
+- **Name a cluster**: use `update_person(person_id, name="...")` to name an unnamed cluster directly via MCP
+- **Merge duplicates**: use `merge_people(person_id="<person-to-keep>", merge_ids=["<dup-1>", "<dup-2>"])` to fold duplicate clusters into the one to keep. The first call only previews the names; repeat with `confirm=true` once the user agrees
+- **Fix misidentified faces**: use `reassign_face(face_id, person_id)` to correct wrong assignments
 
 ## Important Notes
 
-- **This skill can now name people, merge duplicates, and reassign faces using MCP tools — always confirm with user before modifying.**
-- Co-occurrence analysis can be slow on libraries with many faces (>50K) — sample assets rather than scanning all
-- Privacy consideration: face data is sensitive — reports should not be shared without consent
+- **This skill can now name people, merge duplicates, and reassign faces using MCP tools. Always confirm with the user before modifying.**
+- Co-occurrence analysis can be slow on libraries with many faces (>50K), so sample assets rather than scanning all
+- Privacy consideration: face data is sensitive, so reports should not be shared without consent

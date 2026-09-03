@@ -1,4 +1,4 @@
-# GPS Neighbor Inference — Step by Step
+# GPS Neighbor Inference: Step by Step
 
 How the plugin detects missing GPS and infers coordinates from neighboring photos. This is a real session using the MCP tools on a live Immich library.
 
@@ -6,7 +6,7 @@ How the plugin detects missing GPS and infers coordinates from neighboring photo
 
 ## Step 1: Scan the day
 
-Two MCP calls in parallel — one gets all GPS markers, the other gets all photos:
+Two MCP calls in parallel. One gets all GPS markers, the other gets all photos:
 
 ```
 get_map_markers(file_created_after="2026-01-02", file_created_before="2026-01-03")
@@ -49,7 +49,7 @@ City:      Arrecife, Canary Islands
 Camera:    Samsung Galaxy S24
 ```
 
-**Time gap: 1 hour 15 minutes — within the 2-hour window.**
+**Time gap: 1 hour 15 minutes, within the 2-hour window.**
 
 ## Step 4: Propose the fix (nothing written yet)
 
@@ -60,11 +60,11 @@ METADATA FIX PROPOSAL
 ══════════════════════
 
 Target:   Screenshot_20260102_224330_Edge.jpg
-          2026-01-02 22:43 — NO GPS
+          2026-01-02 22:43 - NO GPS
 
 Neighbor: 20260102_212804.jpg
-          2026-01-02 21:28 — Arrecife (28.9582, -13.5558)
-          Gap: 1h 15m — SAFE TO INFER
+          2026-01-02 21:28 - Arrecife (28.9582, -13.5558)
+          Gap: 1h 15m - SAFE TO INFER
 
 Proposed: Copy GPS → latitude 28.958244, longitude -13.55575
 
@@ -115,7 +115,7 @@ Immich resolved the city and timezone automatically from the coordinates.
 
 ## Safety rules
 
-- Gap must be **under 2 hours** — if the gap is larger, the user may have traveled
-- Claude **shows the proposal before writing** — nothing is modified without approval
+- Gap must be **under 2 hours**: if the gap is larger, the user may have traveled
+- Claude **shows the proposal before writing**: nothing is modified without approval
 - The original values are logged so fixes can be reverted
 - Photos in bursts (< 5 seconds apart) always share GPS

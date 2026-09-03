@@ -13,7 +13,7 @@ version: 1.1.0
 
 # Travel Map
 
-## ⚠️ Connection Required — ALWAYS CHECK FIRST
+## ⚠️ Connection Required: ALWAYS CHECK FIRST
 
 **Before doing ANYTHING else in this skill, call `ping` on the Immich MCP server.**
 
@@ -96,7 +96,7 @@ def cluster_locations(photos, radius_km=15):
     return clusters
 ```
 
-Alternatively, use the reverse-geocoded city/country from EXIF. `search_cities` lists every city that appears in the library with its country and one representative asset, and `search_statistics(city=…)` gives the photo count for each one, so the place list needs no database access. The query below is the optional fallback when the first and last visit dates and the cluster centre are wanted in one pass; the plugin never provides database access, so it only applies to a user who already has `psql` on their own Immich.
+Alternatively, use the reverse-geocoded city/country from EXIF. `search_cities` lists every city that appears in the library with its country and one representative asset, and `search_statistics(city=...)` gives the photo count for each one, so the place list needs no database access. The query below is the optional fallback when the first and last visit dates and the cluster centre are wanted in one pass; the plugin never provides database access, so it only applies to a user who already has `psql` on their own Immich.
 
 ```sql
 SELECT
@@ -154,7 +154,7 @@ Create a standalone HTML file using Leaflet.js:
         .bindPopup(`
           <strong>${loc.name}</strong><br>
           ${loc.photos} photos<br>
-          ${loc.first_visit} — ${loc.last_visit}<br>
+          ${loc.first_visit} &mdash; ${loc.last_visit}<br>
           ${loc.visits} visit(s)
         `);
       markers.addLayer(marker);
@@ -196,17 +196,17 @@ Search bar to find a specific location on the map.
 
 ## Map Styles
 
-- **Cluster map** — markers clustered by proximity, expand on zoom (default)
-- **Heatmap** — density visualization, good for overview
-- **Pin map** — individual pins for every location (best for <100 clusters)
-- **Country choropleth** — countries colored by photo count
+- **Cluster map**: markers clustered by proximity, expand on zoom (default)
+- **Heatmap**: density visualization, good for overview
+- **Pin map**: individual pins for every location (best for <100 clusters)
+- **Country choropleth**: countries colored by photo count
 
 ## Important Notes
 
-- **Read-only** — this skill never modifies assets
+- **Read-only**: this skill never modifies assets
 - Requires photos to have GPS data (check with library-health-report first)
-- Leaflet.js and MarkerCluster are loaded from CDN — HTML file needs internet access
+- Leaflet.js and MarkerCluster are loaded from CDN, so the HTML file needs internet access
 - For very large libraries (>100K geotagged photos), use the EXIF city/country grouping instead of GPS clustering to keep the HTML file manageable
-- OpenStreetMap tiles are free but have usage limits — for high-traffic hosted maps, consider a tile provider
-- Privacy: the map reveals where the user lives, works, and travels — remind them before sharing publicly
+- OpenStreetMap tiles are free but have usage limits. For high-traffic hosted maps, consider a tile provider
+- Privacy: the map reveals where the user lives, works, and travels, so remind them before sharing publicly
 - Photos without GPS are excluded (noted in the report as "X photos not mapped")

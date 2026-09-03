@@ -1,8 +1,8 @@
 # 🧠 Natural Language Search
 
-> **"Find my sunset photos from Italy"** — CLIP-powered visual search through conversation.
+> **"Find my sunset photos from Italy"**: CLIP-powered visual search through conversation.
 
-Immich has CLIP built in. The plugin lets you search with natural language and combine it with metadata filters — dates, locations, cameras — in a single request.
+Immich has CLIP built in. The plugin lets you search with natural language and combine it with metadata filters (dates, locations, cameras) in a single request.
 
 ---
 
@@ -49,7 +49,7 @@ search_smart(
     city="Barcelona",
     size=30
 )
-→ 15 results — all food photos geotagged in Barcelona
+→ 15 results, all food photos geotagged in Barcelona
 ```
 
 ## Example 4: Metadata-only search
@@ -65,7 +65,7 @@ search_metadata(
 → 1,247 results
 ```
 
-No CLIP needed — pure EXIF filtering.
+No CLIP needed, pure EXIF filtering.
 
 ---
 

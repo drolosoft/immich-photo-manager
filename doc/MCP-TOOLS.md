@@ -23,8 +23,8 @@ The Immich Photo Manager MCP server exposes 94 tools that Claude can use to inte
 | `reverse_geocode` | Resolve GPS coordinates to city/state/country (Immich's offline geodata) | Place candidates |
 | `update_asset_metadata` | Update asset metadata (dates, GPS, description, favorites, rating) | Updated asset object |
 | `update_assets_metadata` | The same fields on MANY assets in one call (a scanned roll gets its date, a trip its GPS) | {success, updated} |
-| `rotate_assets` | Rotate assets by album or IDs (90°, 180°, 270°) — non-destructive | Count of rotated/failed assets |
-| `revert_asset_edits` | Remove all edits (rotation, crop, mirror) from assets — revert to original | Count of reverted/failed assets |
+| `rotate_assets` | Rotate assets by album or IDs (90°, 180°, 270°), non-destructive | Count of rotated/failed assets |
+| `revert_asset_edits` | Remove all edits (rotation, crop, mirror) from assets, revert to original | Count of reverted/failed assets |
 | `get_map_markers` | Get GPS markers for all geotagged assets | Array of {lat, lng, id} for mapping |
 | `upload_asset` | Upload a local file to Immich (25MB limit, extension filter, optional album) | Uploaded asset object with ID |
 | `list_assets` | List assets with filters (favorites, archived, trashed, type) | Paginated asset list |
@@ -41,7 +41,7 @@ The Immich Photo Manager MCP server exposes 94 tools that Claude can use to inte
 | `search_suggestions` | Distinct values present in the library for one field (city, camera-make...) | String list |
 | `search_random` | Random assets, optionally filtered (city, camera, favorite, OCR) | Asset list (max 100) |
 | `search_statistics` | Count matching assets WITHOUT fetching them | {total} |
-| `search_large_assets` | Biggest files first — what is eating storage | {asset_id, filename, size_mb, date} rows |
+| `search_large_assets` | Biggest files first, what is using the most storage | {asset_id, filename, size_mb, date} rows |
 
 **`search_metadata` parameters:**
 
@@ -57,7 +57,7 @@ The Immich Photo Manager MCP server exposes 94 tools that Claude can use to inte
 | `asset_type` | string | "IMAGE" or "VIDEO" |
 | `is_favorite` | boolean | true |
 | `ocr` | string | "boarding pass" (text recognized inside the image; needs OCR enabled on the server) |
-| `person_ids` | string[] | ids from `list_people` — only assets showing all of them |
+| `person_ids` | string[] | ids from `list_people`, only assets showing all of them |
 | `tag_ids` | string[] | ids from `list_tags` |
 | `album_ids` | string[] | only assets inside these albums |
 | `page` | number | 1 |
@@ -80,7 +80,7 @@ The Immich Photo Manager MCP server exposes 94 tools that Claude can use to inte
 
 ### Stacks (5)
 
-Group near-identical shots (bursts, retries of the same scene) under one cover asset — a gentler cleanup than deleting.
+Group near-identical shots (bursts, retries of the same scene) under one cover asset, a gentler cleanup than deleting.
 
 | Tool | Description | Modifies? |
 |------|-------------|-----------|
@@ -121,21 +121,21 @@ Comments and likes on shared albums.
 
 ### Notes (5)
 
-The plugin's own memory on each asset, stored in Immich's per-asset metadata under one key (`immich-photo-manager`). Invisible in the Immich UI and not searchable — tags stay the visible state; notes carry the why, and let a later session skip what was already reviewed.
+The plugin's own memory on each asset, stored in Immich's per-asset metadata under one key (`immich-photo-manager`). Invisible in the Immich UI and not searchable. Tags stay the visible state; notes carry the why, and let a later session skip what was already reviewed.
 
 | Tool | Description | Modifies? |
 |------|-------------|-----------|
 | `review_assets` | Remember a verdict (`keep`, `delete_candidate`, `duplicate_of`, `needs_check`) with its reason; last 10 kept | Yes |
 | `record_action` | Remember what the plugin did to assets and why (album, date fix, rotation); last 10 kept | Yes |
 | `get_asset_notes` | One asset's reviews and actions | No |
-| `get_assets_notes` | Which of many assets already carry notes, with their last verdict — the "skip what I reviewed" call | No |
+| `get_assets_notes` | Which of many assets already carry notes, with their last verdict (the "skip what I reviewed" call) | No |
 | `clear_asset_notes` | Forget the plugin's notes (other apps' metadata untouched) | Yes |
 
 `get_asset_info(asset_id, with_notes=true)` includes the same notes inline.
 
 ### Memories (4)
 
-Immich's "on this day" collections — photos from the same date in past years.
+Immich's "on this day" collections: photos from the same date in past years.
 
 | Tool | Description | Modifies? |
 |------|-------------|-----------|
@@ -152,7 +152,7 @@ The cheap way to browse by date: one call maps the whole library month by month.
 |------|-------------|---------|
 | `get_timeline_buckets` | One bucket per month with its asset count (filterable by album, person, tag) | {timeBucket, count} rows |
 | `get_timeline_bucket` | The assets of one month bucket | {asset_id, date, is_image, city...} rows |
-| `get_calendar_heatmap` | Photos per day over a range — gaps and busy periods at a glance. Native on Immich 3.x, built from the timeline on 2.x | {source, total, series[{date, count}]} |
+| `get_calendar_heatmap` | Photos per day over a range, gaps and busy periods. Native on Immich 3.x, built from the timeline on 2.x | {source, total, series[{date, count}]} |
 
 ### Albums (7)
 
@@ -186,7 +186,7 @@ The cheap way to browse by date: one call maps the whole library month by month.
 
 ### Images (3)
 
-Image-block variants of the thumbnail tools — return MCP `ImageContent` for clients that render images inline (Open WebUI, Claude Desktop). The `get_*_thumbnail(s)` tools above stay the default and return base64 JSON for HTML gallery embedding.
+Image-block variants of the thumbnail tools. They return MCP `ImageContent` for clients that render images inline (Open WebUI, Claude Desktop). The `get_*_thumbnail(s)` tools above stay the default and return base64 JSON for HTML gallery embedding.
 
 | Tool | Description | Returns |
 |------|-------------|---------|
@@ -209,7 +209,7 @@ Turn an album or a selection into a PDF, built on the machine running the server
 
 | Tool | Description | Returns |
 |------|-------------|---------|
-| `get_export_preview` | List what `export_pdf` would include (id, type, filename, date, place, people, video duration) — read-only | JSON |
+| `get_export_preview` | List what `export_pdf` would include (id, type, filename, date, place, people, video duration), read-only | JSON |
 | `export_pdf` | Build the PDF (cover, index, places, one section per asset) from an album or asset IDs | JSON {path, pages, bytes, ...} |
 
 ### Configuration (2)
@@ -226,7 +226,7 @@ Turn an album or a selection into a PDF, built on the machine running the server
 | `list_people` | List all recognized people (paginated, supports hidden) | No |
 | `get_person` | Get full details for a specific person | No |
 | `update_person` | Update person name, birth date, hidden/favorite status, color | Yes |
-| `merge_people` | Merge multiple people into one (DESTRUCTIVE — cannot be undone). Previews names first; `confirm=true` merges | Yes |
+| `merge_people` | Merge multiple people into one (DESTRUCTIVE, cannot be undone). Previews names first; `confirm=true` merges | Yes |
 | `search_people` | Search people by name | No |
 | `get_person_thumbnail` | Get base64-encoded face thumbnail for a person | No |
 | `get_asset_faces` | Get all detected faces in an asset with person assignments | No |
@@ -246,7 +246,7 @@ Turn an album or a selection into a PDF, built on the machine running the server
 | Tool | Description | Modifies? |
 |------|-------------|-----------|
 | `get_duplicates` (optional `album_id`) | Get all ML-detected duplicate groups with similarity scores | No |
-| `resolve_duplicates` | Resolve duplicate groups — specify which to keep, which to trash | Yes |
+| `resolve_duplicates` | Resolve duplicate groups: specify which to keep, which to trash | Yes |
 
 ### Tags (7)
 
@@ -285,7 +285,7 @@ Turn an album or a selection into a PDF, built on the machine running the server
 }
 ```
 
-Batch version of `get_asset_thumbnail` — fetches thumbnails for assets in an album in a single call. Returns album info and a list of thumbnail entries with asset IDs, base64 data, filenames, and dates. Default limit is 20, max 50. This is the primary tool for gallery HTML generation when working with albums.
+Batch version of `get_asset_thumbnail`: fetches thumbnails for assets in an album in a single call. Returns album info and a list of thumbnail entries with asset IDs, base64 data, filenames, and dates. Default limit is 20, max 50. This is the primary tool for gallery HTML generation when working with albums.
 
 ### `get_thumbnails_batch`
 
@@ -297,11 +297,11 @@ Batch version of `get_asset_thumbnail` — fetches thumbnails for assets in an a
 }
 ```
 
-Like `get_album_thumbnails` but works with arbitrary asset IDs — no album needed. Use this when displaying search results or orphan photos that aren't in any album. Default limit is 20, max 50.
+Like `get_album_thumbnails` but works with arbitrary asset IDs, no album needed. Use this when displaying search results or orphan photos that aren't in any album. Default limit is 20, max 50.
 
 ### `get_asset_image` / `get_album_images` / `get_images_batch`
 
-Image-block variants of `get_asset_thumbnail`, `get_album_thumbnails`, and `get_thumbnails_batch`. Same parameters, but they return MCP `ImageContent` blocks instead of base64 JSON, so clients that render images inline (Open WebUI, Claude Desktop) show the photos directly. They carry no filenames/dates — for HTML gallery generation (which needs the metadata and embeds base64 as `data:` URIs), keep using the JSON `get_*_thumbnail(s)` tools. These are additive; the JSON tools remain the default.
+Image-block variants of `get_asset_thumbnail`, `get_album_thumbnails`, and `get_thumbnails_batch`. Same parameters, but they return MCP `ImageContent` blocks instead of base64 JSON, so clients that render images inline (Open WebUI, Claude Desktop) show the photos directly. They carry no filenames/dates. For HTML gallery generation (which needs the metadata and embeds base64 as `data:` URIs), keep using the JSON `get_*_thumbnail(s)` tools. These are additive; the JSON tools remain the default.
 
 ### `get_video_frames` / `get_video_frames_json`
 
@@ -310,13 +310,13 @@ Image-block variants of `get_asset_thumbnail`, `get_album_thumbnails`, and `get_
 - `count` (int, optional): Frames to extract, evenly spaced over the segment. Default 6. Ignored when `interval > 0`.
 - `size` (string, optional): `"thumbnail"` (250px, ~1.6k tokens/frame, default) or `"preview"` (1440px, ~6.4k tokens/frame)
 - `start` / `end` (float, optional): Segment bounds in seconds (default 0 / 0, where `end=0` means to the end of the clip)
-- `interval` (float, optional): One frame every N seconds instead of `count` (e.g. `interval=1` for one frame per second — the maximum granularity)
+- `interval` (float, optional): One frame every N seconds instead of `count` (e.g. `interval=1` for one frame per second, the maximum granularity)
 - `confirm` (bool, optional): Required (`true`) when the plan produces more than 12 frames
 - `sheet` (bool, optional): pack the frames into contact sheets (30 per image, the timestamp burned under each); a long video becomes one or two images and needs no confirmation
 
 Frames are taken at the centre of equal time bins within the segment, so a 3 s clip with `count=3` yields 0.5 s, 1.5 s, 2.5 s (never the black first frame). `get_video_frames` returns JPEG image blocks in time order; `get_video_frames_json` returns `{asset_id, duration, backend, count, frames: [{timestamp, data, type}]}` for HTML galleries.
 
-**Confirmation gate:** a plan over 12 frames is not extracted automatically. Instead the tool returns `{confirm_required: true, asset_id, duration, segment: [start, end], frames_planned, estimated_tokens, hint}` — tell the user the number of frames and the estimated tokens, and call again with `confirm=true` only if they agree. The hard cap is 120 frames per call regardless of `confirm`.
+**Confirmation gate:** a plan over 12 frames is not extracted automatically. Instead the tool returns `{confirm_required: true, asset_id, duration, segment: [start, end], frames_planned, estimated_tokens, hint}`. Tell the user the number of frames and the estimated tokens, and call again with `confirm=true` only if they agree. The hard cap is 120 frames per call regardless of `confirm`.
 
 **Cost:** every frame is one image for the model. Six thumbnail frames are cheap; a `interval=1` pass over a long clip is not. Start with the default and narrow with `start`/`end` or `interval` only for the clips that need it.
 
@@ -337,12 +337,12 @@ Turn an album or a selection into a PDF (cover, index, places, one section per a
 - `album_id` (string) or `asset_ids` (list of strings): exactly one of the two must be passed
 - `limit` (int, optional): max assets, 1-500, default 100
 
-**`get_export_preview` returns:** JSON `{title, count, assets: [{id, type, filename, taken_at, place, people, duration}], warnings: []}` — nothing here costs tokens on images, it is metadata only.
+**`get_export_preview` returns:** JSON `{title, count, assets: [{id, type, filename, taken_at, place, people, duration}], warnings: []}`. Nothing here costs tokens on images, it is metadata only.
 
 **`export_pdf` parameters:**
-- `output_path` (string, optional): where to write the file, on the machine running the server. Default `~/Desktop/<title>.pdf`. A directory is accepted (the file is placed inside it as `<title>.pdf`); a path with no `.pdf` extension gets one appended. An existing file is never overwritten — `report.pdf` becomes `report-2.pdf`, `report-3.pdf`, ...
+- `output_path` (string, optional): where to write the file, on the machine running the server. Default `~/Desktop/<title>.pdf`. A directory is accepted (the file is placed inside it as `<title>.pdf`); a path with no `.pdf` extension gets one appended. An existing file is never overwritten: `report.pdf` becomes `report-2.pdf`, `report-3.pdf`, ...
 - `title` (string, optional): cover title. Default: the album's name, or `"Immich export <date>"`.
-- `captions` (dict, optional): `{asset_id: text}` — Claude's own description of each photo/video after looking at it. Immich's own metadata (date, place, camera, people, tags) is always included regardless of captions.
+- `captions` (dict, optional): `{asset_id: text}`, Claude's own description of each photo/video after looking at it. Immich's own metadata (date, place, camera, people, tags) is always included regardless of captions.
 - `layout` (string, optional): `"detail"` (one asset per page with its data, default), `"grid"` (six per page) or `"photobook"` (one full-page image per asset, fitted without cropping, caption under it; pair with `frames_per_video=1` so a video reads like a photo)
 - `frames_per_video` (int, optional): frames per video, evenly spaced, 0-120, default 4 (`0` = poster only)
 - `frame_interval` (float, optional): one frame every N seconds instead of `frames_per_video` (same 120 cap)
@@ -359,7 +359,7 @@ Turn an album or a selection into a PDF (cover, index, places, one section per a
 
 **PDF structure:** cover page (title, subtitle, first image) → index (one line per asset, each linking to its page) → Places (a table of country/city/count, plus a stitched OpenStreetMap image when `map=true` and GPS data exists) → one detail page per asset in `"detail"` layout (metadata block plus the photo or, for a video, its frames laid out four per row with a timestamp under each), a six-per-page grid in `"grid"` layout, or one full-page image with the caption under it in `"photobook"` → a footer with the plugin version, server URL, and page number on every page.
 
-**Cost:** frames that go into the PDF cost no tokens — they never enter the conversation. Only the frames you look at while writing captions do. A PDF with `frames_per_video=120` on ten videos costs nothing extra over the default; looking at 120 frames to caption them does.
+**Cost:** frames that go into the PDF cost no tokens: they never enter the conversation. Only the frames you look at while writing captions do. A PDF with `frames_per_video=120` on ten videos costs nothing extra over the default; looking at 120 frames to caption them does.
 
 **What leaves the network:** Immich → your machine (metadata and images, same as any other tool). The PDF itself stays on disk and is not sent anywhere unless `return_base64=true`, in which case it goes back over MCP like any other tool result. `map=true` is the only call that reaches outside your Immich: it fetches tiles from `tile.openstreetmap.org`.
 
@@ -383,7 +383,7 @@ Turn an album or a selection into a PDF (cover, index, places, one section per a
 }
 ```
 
-Updates metadata fields on a single asset. Only provided fields are modified — omitted fields are left unchanged. Supports:
+Updates metadata fields on a single asset. Only provided fields are modified, and omitted fields are left unchanged. Supports:
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -395,7 +395,7 @@ Updates metadata fields on a single asset. Only provided fields are modified —
 | `is_favorite` | boolean | Mark as favorite |
 | `rating` | integer (1-5) | Star rating |
 
-Used by the metadata-fixer skill to repair timestamps, infer GPS from neighboring photos, and correct timezone offsets — all with user approval before any change is applied.
+Used by the metadata-fixer skill to repair timestamps, infer GPS from neighboring photos, and correct timezone offsets, all with user approval before any change is applied.
 
 > **Known limitation:** Immich writes a `.xmp` sidecar file when updating EXIF data. If your photos are in an external library whose path contains special characters (e.g., emojis), exiftool may fail to create the sidecar and the update will silently revert. Photos uploaded directly through Immich are not affected.
 
@@ -408,7 +408,7 @@ Used by the metadata-fixer skill to repair timestamps, infer GPS from neighborin
 }
 ```
 
-Applies a non-destructive rotation to one or more assets. The original file is never modified — Immich stores the transform as a display edit. Supports bulk operations: pass multiple asset IDs to rotate an entire selection in one call.
+Applies a non-destructive rotation to one or more assets. The original file is never modified: Immich stores the transform as a display edit. Supports bulk operations: pass multiple asset IDs to rotate an entire selection in one call.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -440,12 +440,12 @@ Returns `{reverted: count, failed: count, album?: name}`.
 ```json
 {
   "name": "🇮🇹 Roma, Italia",
-  "description": "Summer 2023 — 45 photos across historic center, Trastevere, and Vatican",
+  "description": "Summer 2023, 45 photos across historic center, Trastevere, and Vatican",
   "asset_ids": ["uuid-1", "uuid-2"]
 }
 ```
 
-Returns: Album object with `id` for use with other tools. `asset_ids` is optional — pass it to add photos at creation time.
+Returns: Album object with `id` for use with other tools. `asset_ids` is optional: pass it to add photos at creation time.
 
 ### `add_assets_to_album`
 
@@ -479,7 +479,7 @@ Returns: Shared link URL that can be accessed without authentication.
 }
 ```
 
-Updates the Immich connection credentials at runtime. The new credentials are persisted to disk and take effect immediately — no restart required. Use this when the API key has been rotated or when switching Immich instances.
+Updates the Immich connection credentials at runtime. The new credentials are persisted to disk and take effect immediately, no restart required. Use this when the API key has been rotated or when switching Immich instances.
 
 ### `list_people`
 
@@ -491,7 +491,7 @@ Updates the Immich connection credentials at runtime. The new credentials are pe
 }
 ```
 
-Returns `{total, page, people: [...]}` with person objects containing `id`, `name`, `birthDate`, `isHidden`, `thumbnailPath`, and face count. Paginated — iterate pages for large libraries.
+Returns `{total, page, people: [...]}` with person objects containing `id`, `name`, `birthDate`, `isHidden`, `thumbnailPath`, and face count. Paginated: iterate pages for large libraries.
 
 ### `update_person`
 
@@ -503,7 +503,7 @@ Returns `{total, page, people: [...]}` with person objects containing `id`, `nam
 }
 ```
 
-Only provided fields are updated — omitted fields are left unchanged. Supports: `name`, `birth_date`, `is_hidden`, `is_favorite`, `feature_face_asset_id`, `color`.
+Only provided fields are updated, and omitted fields are left unchanged. Supports: `name`, `birth_date`, `is_hidden`, `is_favorite`, `feature_face_asset_id`, `color`.
 
 ### `merge_people`
 
@@ -536,11 +536,11 @@ Corrects face recognition mistakes. Get face IDs from `get_asset_faces`, then re
 }
 ```
 
-With `force=false` (default): moves assets to trash — recoverable with `restore_assets`. With `force=true`: **permanently deletes** assets — cannot be recovered. Returns `{deleted: count, force: bool, warning: "..."}`.
+With `force=false` (default): moves assets to trash, recoverable with `restore_assets`. With `force=true`: **permanently deletes** assets, which cannot be recovered. Returns `{deleted: count, force: bool, warning: "..."}`.
 
 ### `get_duplicates`
 
-Returns all duplicate groups detected by Immich's ML engine. Each group contains visually similar assets with similarity scores. No parameters — Immich manages detection automatically. Use this to find duplicates, then `resolve_duplicates` to act on them.
+Returns all duplicate groups detected by Immich's ML engine. Each group contains visually similar assets with similarity scores. No parameters. Immich manages detection automatically. Use this to find duplicates, then `resolve_duplicates` to act on them.
 
 ### `resolve_duplicates`
 
@@ -558,7 +558,7 @@ Returns all duplicate groups detected by Immich's ML engine. Each group contains
 
 Resolves duplicate groups by specifying which assets to keep and which to trash (the legacy keys `assetIds`/`trashIds` are still accepted). Uses `POST /duplicates/resolve` (Immich ≥ 2.6); on older servers the rejected assets are trashed and the duplicate flag cleared. Trashed assets can be restored via `restore_assets` or `restore_trash`.
 
-### `search_metadata` — Pagination
+### `search_metadata`: Pagination
 
 Results are paginated. First call returns `total` count:
 
@@ -572,7 +572,7 @@ Results are paginated. First call returns `total` count:
 
 For large result sets, iterate pages: `page=1`, `page=2`, etc., with `size=200` for maximum efficiency.
 
-### `search_smart` — CLIP Search
+### `search_smart`: CLIP Search
 
 Uses Immich's machine learning container to find visually similar photos. Requires the ML container to be running. Can be combined with location and date filters for more precise results.
 
@@ -591,7 +591,7 @@ A scoped API key can be allowed to read the version and still be refused the fea
 
 The two "what is in this library?" calls, for a library nobody has described yet. `search_explore` is Immich's own Explore page: one representative asset per city and per detected concept. `search_cities` is the same idea for places only, without Immich's five-asset threshold, so it is the reliable one on a small library. Neither takes parameters.
 
-`search_explore` returns `{total, fields}`, with `total` counting the fields that came back and each field carrying its name (`exifInfo.city`, and the concept field) and `items` pairing each value with one representative `asset_id`. `search_cities` returns `{total, cities}` with `{city, country, asset_id, date}` per row. Feed the ids to `get_thumbnails_batch` to actually show them.
+`search_explore` returns `{total, fields}`, with `total` counting the fields that came back and each field carrying its name (`exifInfo.city`, and the concept field) and `items` pairing each value with one representative `asset_id`. `search_cities` returns `{total, cities}` with `{city, country, asset_id, date}` per row. Feed the ids to `get_thumbnails_batch` to show them.
 
 ### `search_suggestions`
 
@@ -626,11 +626,11 @@ Counting without fetching. "How many photos from Spain?" costs one integer here,
 
 Accepts `city`, `state`, `country`, `make`, `model`, `is_favorite`, `ocr`, `created_after` and `created_before`. Returns `{total}`.
 
-> **Upload date, not capture date.** `created_after` / `created_before` bound the date the asset reached Immich, which is what Immich's count endpoint accepts. There is no `taken_after` here, so "how many photos did I take in 2019?" cannot be answered by this tool. Use `search_metadata(taken_after=…, taken_before=…)` and read its `total`, or `get_timeline_buckets` and sum the months.
+> **Upload date, not capture date.** `created_after` / `created_before` bound the date the asset reached Immich, which is what Immich's count endpoint accepts. There is no `taken_after` here, so "how many photos did I take in 2019?" cannot be answered by this tool. Use `search_metadata(taken_after=..., taken_before=...)` and read its `total`, or `get_timeline_buckets` and sum the months.
 
 ### `search_large_assets`
 
-What is eating storage, biggest first. This is the one call behind most of the storage-optimizer skill.
+What is using the most storage, biggest first. This is the one call behind most of the storage-optimizer skill.
 
 ```json
 {
@@ -659,12 +659,12 @@ Returns `{total, places}`, a list of `{city, state, country}` candidates for tho
 
 The cheap way to navigate by date. `get_timeline_buckets` maps the whole library in one request: one bucket per month with its asset count. `get_timeline_bucket` then fetches the assets of a single month. Together they walk a large library without a single search.
 
-Both accept the same filters, and this is where the pair earns its keep:
+Both accept the same filters, which is what makes the pair useful:
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `album_id` | string | Only assets in this album (an event album gives one or two buckets, a collection spans years) |
-| `person_id` | string | Only assets showing this person, so the oldest and newest buckets bracket when they appear |
+| `person_id` | string | Only assets showing this person, so the oldest and newest buckets show when they first and last appear |
 | `tag_id` | string | Only assets carrying this tag |
 | `is_favorite` | boolean | Only favorites |
 | `order` | string | `desc` for newest month first (the default), `asc` for oldest first |
@@ -677,11 +677,11 @@ Both accept the same filters, and this is where the pair earns its keep:
 }
 ```
 
-`get_timeline_buckets` returns `{total_buckets, buckets}` with `{timeBucket, count}` rows. `get_timeline_bucket` returns `{time_bucket, total, assets}`, one row per asset with `asset_id`, `date`, `is_image`, `is_favorite`, `duration`, `city` and `country`. Immich answers that endpoint columnar (one array per field); the tool zips it back into rows so it can be read.
+`get_timeline_buckets` returns `{total_buckets, buckets}` with `{timeBucket, count}` rows. `get_timeline_bucket` returns `{time_bucket, total, assets}`, one row per asset with `asset_id`, `date`, `is_image`, `is_favorite`, `duration`, `city` and `country`. Immich answers that endpoint columnar (one array per field); the tool turns it back into rows so it can be read.
 
 ### `get_calendar_heatmap`
 
-Photos per day over a range: gaps, busy periods and library health at a glance, without listing a single asset.
+Photos per day over a range: gaps, busy periods and library health, without listing a single asset.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -698,11 +698,11 @@ Photos per day over a range: gaps, busy periods and library health at a glance, 
 
 Returns `{source, total, series}`, where `series` holds `{date, count}` for the days that had activity, oldest first. A day missing from the series had nothing. `source` says where the numbers came from: `"immich"` on 3.x, which answers natively, or `"timeline"` on 2.x, where the same shape is built from the timeline buckets (capture dates only, so `heatmap_type="Upload"` returns an explanatory error there instead).
 
-> **Pass the narrowest range that answers the question.** The 2.x fallback costs one request per month in range, so a wide range is a slow call. An omitted bound means the server default on 3.x, but the last 365 days on 2.x, precisely so that an open-ended call does not walk every month the library has ever held.
+> **Pass the narrowest range that answers the question.** The 2.x fallback costs one request per month in range, so a wide range is a slow call. An omitted bound means the server default on 3.x, but the last 365 days on 2.x, so that an open-ended call does not walk every month the library has ever held.
 
 ### `list_memories` / `create_memory` / `update_memory` / `delete_memory`
 
-Immich's "on this day" collections: photos from the same date in past years. Use them to build a "tal día como hoy" story, album or PDF, and to save the ones worth keeping.
+Immich's "on this day" collections: photos from the same date in past years. Use them to build a "tal día como hoy" story, album or PDF, and to save the ones the user wants to keep.
 
 `list_memories(for_date, is_saved, size)`: `for_date` is an ISO date and returns the memories Immich would show on that day (pass today for the classic feed); `is_saved` filters to saved or unsaved only; `size` caps the count, default 50. Returns `{total, memories}`, each memory carrying `id`, `type`, `memory_at`, the `year` it looks back to, `is_saved`, `asset_count` and a trimmed `assets` list of `{asset_id, filename, date}`.
 
@@ -720,7 +720,7 @@ Immich's "on this day" collections: photos from the same date in past years. Use
 
 ### `create_stack` / `list_stacks` / `get_stack` / `update_stack` / `delete_stack`
 
-Stacking is the gentler alternative to deleting. A burst, three tries at the same shot, a photo and its edit: group them and the library shows one item fronted by the primary asset, with every frame still there. It is reversible, which makes it the right offer when the user cannot decide which copy is best.
+Stacking is the gentler alternative to deleting. A burst, three tries at the same shot, a photo and its edit: group them and the library shows one item, with the primary asset as the cover and every frame still there. It is reversible, which makes it the right offer when the user cannot decide which copy is best.
 
 ```json
 {
@@ -792,9 +792,9 @@ The plugin's own memory on an asset, so a second cleanup session does not redo t
 }
 ```
 
-`review_assets` records a verdict with its reason. `verdict` is a closed vocabulary so that sessions stay comparable: `keep`, `delete_candidate`, `duplicate_of`, `needs_check`. `record_action(asset_ids, action, detail)` records what the plugin did instead of what it decided: `action` is a short label like `added_to_album`, `date_fixed` or `rotated`, and `detail` holds the context worth keeping (which album, the previous value, the user's request). Each list keeps only the 10 newest entries per asset; this is a memory, not an audit log.
+`review_assets` records a verdict with its reason. `verdict` is a closed vocabulary so that sessions stay comparable: `keep`, `delete_candidate`, `duplicate_of`, `needs_check`. `record_action(asset_ids, action, detail)` records what the plugin did instead of what it decided: `action` is a short label like `added_to_album`, `date_fixed` or `rotated`, and `detail` holds the context to keep (which album, the previous value, the user's request). Each list keeps only the 10 newest entries per asset; this is a memory, not an audit log.
 
-`get_asset_notes(asset_id)` reads one asset's `reviews` and `actions`, newest last. `get_assets_notes(asset_ids)` is the call that makes the whole thing worth using: it returns `{checked, annotated}`, one compact row per asset that already carries notes with its `last_verdict`, `last_reason` and `last_review_at`, so a 500-asset pass can skip everything an earlier session already judged. `clear_asset_notes(asset_ids)` forgets them again.
+`get_asset_notes(asset_id)` reads one asset's `reviews` and `actions`, newest last. `get_assets_notes(asset_ids)` is the bulk read: it returns `{checked, annotated}`, one compact row per asset that already carries notes with its `last_verdict`, `last_reason` and `last_review_at`, so a 500-asset pass can skip everything an earlier session already judged. `clear_asset_notes(asset_ids)` forgets them again.
 
 The bulk calls work asset by asset and do not stop at the first bad id: each one returns a `failed` array of `{asset_id, error}` alongside its count, and `success` is true only when that array is empty. An empty `asset_ids` is rejected rather than silently reported as zero.
 
@@ -811,7 +811,7 @@ Claude ←→ MCP (stdio) ←→ Python Server ←→ Immich REST API
 
 - **Protocol**: stdio (standard MCP transport for Claude Code / Cowork)
 - **Auth**: Immich API key passed via environment variable (never exposed to Claude)
-- **Thumbnail delivery**: Base64 data URIs embedded directly in self-contained HTML galleries — required because the Cowork viewer runs in an `about:` sandbox that blocks all external network requests
+- **Thumbnail delivery**: Base64 data URIs embedded directly in self-contained HTML galleries, required because the Cowork viewer runs in an `about:` sandbox that blocks all external network requests
 
 For a detailed explanation of the thumbnail delivery architecture and why base64 embedding is the only viable approach in Cowork, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -823,6 +823,6 @@ The MCP server does not impose its own rate limits, but Immich may:
 
 - Search operations: Generally unlimited for self-hosted instances
 - Bulk operations (add 2000 assets to album): May take 2-5 seconds
-- CLIP search: Depends on ML container resources — may be slower on first query
+- CLIP search: Depends on ML container resources and may be slower on first query
 
 For bulk operations, skills automatically batch requests (typically 100-2000 items per call) and report progress.

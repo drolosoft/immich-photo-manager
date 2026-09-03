@@ -1,4 +1,4 @@
-# Architecture — How Photos Reach the User
+# Architecture: How Photos Reach the User
 
 Technical explanation of how immich-photo-manager delivers photo galleries to users in Cowork sessions without requiring any additional server setup, browser extensions, or authentication dance.
 
@@ -8,11 +8,11 @@ Technical explanation of how immich-photo-manager delivers photo galleries to us
 
 A Cowork session runs inside a sandboxed environment. The HTML viewer operates under an `about:` protocol origin, which means:
 
-1. **No outbound network requests** — `fetch()`, `XMLHttpRequest`, and even `<img src="https://...">` are all blocked by the browser sandbox.
-2. **No cookies or auth headers** — Even if requests weren't blocked, the viewer has no way to attach an Immich API key to image requests.
-3. **No CORS negotiation** — The `about:` origin cannot participate in CORS preflight, so `Access-Control-Allow-Origin: *` on the Immich server does not help inside the Cowork sandbox. However, if CORS headers are configured on the reverse proxy, direct URL-based thumbnail loading works when the gallery is opened in a regular browser — see [CORS Setup Guide](./CORS-SETUP.md) for details.
+1. **No outbound network requests**: `fetch()`, `XMLHttpRequest`, and even `<img src="https://...">` are all blocked by the browser sandbox.
+2. **No cookies or auth headers**: Even if requests weren't blocked, the viewer has no way to attach an Immich API key to image requests.
+3. **No CORS negotiation**: The `about:` origin cannot participate in CORS preflight, so `Access-Control-Allow-Origin: *` on the Immich server does not help inside the Cowork sandbox. However, if CORS headers are configured on the reverse proxy, direct URL-based thumbnail loading works when the gallery is opened in a regular browser. See [CORS Setup Guide](./CORS-SETUP.md) for details.
 
-This means the traditional approach of serving `<img src="https://immich-server/api/assets/{id}/thumbnail">` simply does not work.
+This means the traditional approach of serving `<img src="https://immich-server/api/assets/{id}/thumbnail">` does not work.
 
 ---
 
@@ -24,7 +24,7 @@ Instead of referencing external URLs, the plugin embeds every thumbnail directly
 <img src="data:image/jpeg;base64,/9j/4AAQSkZJRg..." />
 ```
 
-The HTML file becomes a **fully self-contained document** — no network requests needed to render any image. It works the same whether opened from a local file, an `about:` sandbox, or a regular browser tab.
+The HTML file becomes a **fully self-contained document**: no network requests are needed to render any image. It works the same whether opened from a local file, an `about:` sandbox, or a regular browser tab.
 
 ---
 
@@ -54,15 +54,15 @@ The HTML file becomes a **fully self-contained document** — no network request
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Step 1 — Search
+### Step 1: Search
 
-Claude calls `search_metadata(city="Barcelona")` or `search_smart(query="sunset")` via the MCP server. Immich returns a paginated list of asset objects containing IDs, filenames, dates, and EXIF metadata. This is lightweight JSON — a few KB even for hundreds of results.
+Claude calls `search_metadata(city="Barcelona")` or `search_smart(query="sunset")` via the MCP server. Immich returns a paginated list of asset objects containing IDs, filenames, dates, and EXIF metadata. This is lightweight JSON, a few KB even for hundreds of results.
 
-### Step 2 — Thumbnail Fetch
+### Step 2: Thumbnail Fetch
 
-Claude calls `get_thumbnails_batch(asset_ids=[...], size="thumbnail", limit=50)`. The MCP server iterates over the asset IDs, calling `GET /api/assets/{id}/thumbnail?size=thumbnail` for each one. Each thumbnail is a ~250px JPEG weighing 3–25 KB. The MCP server returns them as base64 strings.
+Claude calls `get_thumbnails_batch(asset_ids=[...], size="thumbnail", limit=50)`. The MCP server iterates over the asset IDs, calling `GET /api/assets/{id}/thumbnail?size=thumbnail` for each one. Each thumbnail is a ~250px JPEG weighing 3-25 KB. The MCP server returns them as base64 strings.
 
-### Step 3 — HTML Generation
+### Step 3: HTML Generation
 
 Claude reads the gallery template (`assets/viewer-template.html`) and replaces placeholders:
 
@@ -77,9 +77,9 @@ Claude reads the gallery template (`assets/viewer-template.html`) and replaces p
 | `{{IMMICH_URL}}` | Immich server URL for "Open in Immich" links |
 | `{{SEARCH_QUERY}}` | Original search terms |
 
-### Step 4 — Delivery
+### Step 4: Delivery
 
-The completed HTML is written to the outputs directory and presented to the user via a `computer://` link. The user clicks it and sees the gallery immediately — no loading spinners, no auth prompts, no server configuration.
+The completed HTML is written to the outputs directory and presented to the user via a `computer://` link. The user clicks it and sees the gallery immediately: no loading spinners, no auth prompts, no server configuration.
 
 ---
 
@@ -92,7 +92,7 @@ The completed HTML is written to the outputs directory and presented to the user
 | **Service Worker** | No | No | Not available in `about:` |
 | **Base64 data URIs** | **Yes** | **No** | Self-contained, zero dependencies |
 
-Base64 encoding increases file size by ~33% compared to raw binary, but for thumbnails averaging 18 KB this means ~24 KB per image in base64 — perfectly acceptable for galleries of 50–100 photos (~1.2–2.4 MB total HTML).
+Base64 encoding increases file size by ~33% compared to raw binary, but for thumbnails averaging 18 KB this means ~24 KB per image in base64, which is fine for galleries of 50-100 photos (~1.2-2.4 MB total HTML).
 
 ---
 
@@ -104,7 +104,7 @@ Base64 encoding increases file size by ~33% compared to raw binary, but for thum
 | Average thumbnail size (base64) | ~24 KB |
 | 50-photo gallery HTML | ~1.2 MB |
 | 100-photo gallery HTML | ~2.4 MB |
-| Thumbnail fetch time (50 photos) | ~8–15 seconds |
+| Thumbnail fetch time (50 photos) | ~8-15 seconds |
 | Gallery render time (browser) | < 1 second |
 
 ### Lazy Loading
@@ -163,11 +163,11 @@ This produces identical results to the MCP-based workflow. The only difference i
 
 The gallery template (`assets/viewer-template.html`) is a single self-contained HTML file with:
 
-- **Triple theme support** — Light, System (auto-detects via `prefers-color-scheme`), and Dark modes with CSS custom properties
-- **Responsive grid** — Adapts from 1 to 4+ columns based on viewport
-- **Lazy loading** — IntersectionObserver-based progressive image loading
-- **Album navigation** — Links to related real albums in the user's Immich library
-- **"Open in Immich" links** — Each photo links back to the full-resolution version in the Immich web UI
-- **Keyboard navigation** — Arrow keys for fullscreen browsing
+- **Triple theme support**: Light, System (auto-detects via `prefers-color-scheme`), and Dark modes with CSS custom properties
+- **Responsive grid**: Adapts from 1 to 4+ columns based on viewport
+- **Lazy loading**: IntersectionObserver-based progressive image loading
+- **Album navigation**: Links to related real albums in the user's Immich library
+- **"Open in Immich" links**: Each photo links back to the full-resolution version in the Immich web UI
+- **Keyboard navigation**: Arrow keys for fullscreen browsing
 
 The template is read once, placeholders are replaced, and the result is written as a static HTML file. No build step, no bundling, no dependencies.

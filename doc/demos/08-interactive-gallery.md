@@ -2,7 +2,7 @@
 
 > **Self-contained HTML galleries with embedded thumbnails, 3 themes, and a Cowork Actions Panel for batch operations.**
 
-The plugin generates HTML pages that work anywhere — no server needed, no external requests. Thumbnails are base64-embedded directly in the file.
+The plugin generates HTML pages that work anywhere: no server needed, no external requests. Thumbnails are base64-embedded directly in the file.
 
 ---
 
@@ -12,7 +12,7 @@ From an album:
 
 ```
 get_album(album_id="abc123-...")
-→ "🇪🇸 Lanzarote, Jan 2026" — 186 photos
+→ "🇪🇸 Lanzarote, Jan 2026", 186 photos
 ```
 
 Or from a search:
@@ -35,10 +35,10 @@ Each thumbnail is ~5-15 KB of base64 data embedded directly in the HTML. No exte
 
 Claude builds a self-contained HTML file with:
 
-- **3 themes** — Light, Dark, Auto (follows system preference)
-- **4 view modes** — Grid, List, Timeline, Map
-- **Selection mode** — Click photos to select them
-- **Cowork Actions Panel** — batch operations on selected photos
+- **3 themes**: Light, Dark, Auto (follows system preference)
+- **4 view modes**: Grid, List, Timeline, Map
+- **Selection mode**: Click photos to select them
+- **Cowork Actions Panel**: batch operations on selected photos
 
 ```html
 <!-- The gallery is a single HTML file, ~500KB for 50 photos -->
@@ -53,11 +53,11 @@ Select photos in the gallery, then click an action button:
 ┌─────────────────────────────┐
 │  ✅ 12 photos selected       │
 │                              │
-│  [Add to Album]              │
-│  [Create New Album]          │
-│  [Remove from Album]         │
-│  [Generate Share Link]       │
-│  [Copy Asset IDs]            │
+│  [ Add to Album ]            │
+│  [ Create New Album ]        │
+│  [ Remove from Album ]       │
+│  [ Generate Share Link ]     │
+│  [ Copy Asset IDs ]          │
 └─────────────────────────────┘
 ```
 

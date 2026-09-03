@@ -8,16 +8,16 @@ Step-by-step guide to installing, configuring, and running the Immich Photo Mana
 
 ### Required
 
-- **Immich instance** — Self-hosted, any recent version (v1.90+). [Installation guide](https://immich.app/docs/install/docker-compose)
-- **Immich API key** — Generated from Immich web UI → User Settings → API Keys. [How to create one](https://immich.app/docs/features/command-line-interface#obtain-the-api-key)
-- **Python 3.10+** — To run the MCP server. [Download Python](https://www.python.org/downloads/)
-- **Claude** — Desktop app with Cowork mode, or Claude Code CLI
-- **uv** — Required only for the `uvx` install path. [Installation guide](https://docs.astral.sh/uv/getting-started/installation/)
+- **Immich instance**: Self-hosted, any recent version (v1.90+). [Installation guide](https://immich.app/docs/install/docker-compose)
+- **Immich API key**: Generated from Immich web UI → User Settings → API Keys. [How to create one](https://immich.app/docs/features/command-line-interface#obtain-the-api-key)
+- **Python 3.10+**: To run the MCP server. [Download Python](https://www.python.org/downloads/)
+- **Claude**: Desktop app with Cowork mode, or Claude Code CLI
+- **uv**: Required only for the `uvx` install path. [Installation guide](https://docs.astral.sh/uv/getting-started/installation/)
 
 ### Optional (for advanced skills)
 
-- **Python 3.10+** — Required for `duplicate-report` and `metadata-fixer` skills
-- **PostgreSQL client** — Required for database-level analysis skills (`library-health-report`, `timeline-gaps`, `people-report`, `storage-optimizer`)
+- **Python 3.10+**: Required for `duplicate-report` and `metadata-fixer` skills
+- **PostgreSQL client**: Required for database-level analysis skills (`library-health-report`, `timeline-gaps`, `people-report`, `storage-optimizer`)
 - **Python packages** (for `duplicate-report`):
   ```bash
   pip3 install Pillow imagehash pillow-heif
@@ -138,7 +138,7 @@ Or `/immich-status` for the library numbers: photos, videos, storage used.
 
 This discovers all geotagged locations in your library and shows countries and cities.
 
-### Ask for something you actually want
+### Ask for something you want
 
 ```
 Which of my photos have no location?
@@ -162,11 +162,11 @@ These are set automatically by `setup-mcp.sh` inside `.mcp.json`:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `IMMICH_BASE_URL` | Yes | — | Your Immich server URL (e.g., `https://photos.example.com`) |
-| `IMMICH_API_KEY` | Yes | — | API key from Immich user settings |
-| `PYTHONPATH` | Local checkout only | — | Path to `src/` directory in the cloned repo |
+| `IMMICH_BASE_URL` | Yes | (none) | Your Immich server URL (e.g., `https://photos.example.com`) |
+| `IMMICH_API_KEY` | Yes | (none) | API key from Immich user settings |
+| `PYTHONPATH` | Local checkout only | (none) | Path to `src/` directory in the cloned repo |
 | `MCP_TRANSPORT` | No | `stdio` | Use `stdio` for MCP clients; set `http` for Streamable HTTP |
-| `MCP_ALLOWED_HOSTS` | No | — | HTTP mode only: comma-separated extra `Host` header values to accept (e.g. `immich-mcp.example.com`). Required behind a reverse proxy, which otherwise gets `421 Misdirected Request`. Localhost stays allowed and DNS-rebinding protection stays on |
+| `MCP_ALLOWED_HOSTS` | No | (none) | HTTP mode only: comma-separated extra `Host` header values to accept (e.g. `immich-mcp.example.com`). Required behind a reverse proxy, which otherwise gets `421 Misdirected Request`. Localhost stays allowed and DNS-rebinding protection stays on |
 
 ### Database Access (for advanced skills)
 
@@ -188,7 +188,7 @@ These are only needed for: `library-health-report`, `timeline-gaps`, `metadata-f
 
 ### Local development
 
-The MCP server runs automatically as a child process of Claude Code — no manual server startup needed. The configuration in `.mcp.json` tells Claude Code how to launch it.
+The MCP server runs automatically as a child process of Claude Code, so no manual server startup is needed. The configuration in `.mcp.json` tells Claude Code how to launch it.
 
 To test the server manually:
 
@@ -248,12 +248,12 @@ Environment=MCP_ALLOWED_HOSTS=immich-mcp.example.com
 
 After installation, we recommend this sequence:
 
-1. **`/immich-status`** — Verify connection
-2. **`library-health-report`** — Understand your library's current state
-3. **`duplicate-report`** — If you have multiple import sources (Apple + Google)
-4. **`photo-cleanup`** — Remove screenshots and junk
-5. **`/my-travels`** — See all your geotagged destinations
-6. **`album-manager`** — Start organizing photos into geographic albums
+1. **`/immich-status`**: Verify connection
+2. **`library-health-report`**: Understand your library's current state
+3. **`duplicate-report`**: If you have multiple import sources (Apple + Google)
+4. **`photo-cleanup`**: Remove screenshots and junk
+5. **`/my-travels`**: See all your geotagged destinations
+6. **`album-manager`**: Start organizing photos into geographic albums
 
 See [SKILLS.md](./SKILLS.md) for detailed documentation of every skill.
 
@@ -268,7 +268,7 @@ See [SKILLS.md](./SKILLS.md) for detailed documentation of every skill.
 
 ### Server pings OK but API key is rejected
 
-The `/api/server/ping` endpoint is **public** — it returns `{"res":"pong"}` without authentication. This means a successful ping does NOT confirm your API key works. To verify the key, test a protected endpoint:
+The `/api/server/ping` endpoint is **public**: it returns `{"res":"pong"}` without authentication. This means a successful ping does NOT confirm your API key works. To verify the key, test a protected endpoint:
 
 ```bash
 curl -H "x-api-key: YOUR_KEY" https://your-server/api/users/me
@@ -283,7 +283,7 @@ If you get `{"message":"Invalid API key","error":"Unauthorized","statusCode":401
 
 - Ensure PostgreSQL is accessible from where the MCP server runs
 - Check credentials with: `psql -h HOST -U immich -d immich -c "SELECT count(*) FROM asset"`
-- If using Docker, the PostgreSQL port may not be exposed — add `ports: ["5432:5432"]` to your docker-compose
+- If using Docker, the PostgreSQL port may not be exposed: add `ports: ["5432:5432"]` to your docker-compose
 
 ### HEIC files not processed (duplicate-report)
 
@@ -293,7 +293,7 @@ If you get `{"message":"Invalid API key","error":"Unauthorized","statusCode":401
 
 ### Perceptual hashing hangs (duplicate-report)
 
-- Don't use `ProcessPoolExecutor` — native HEIF libraries deadlock on fork on macOS
+- Don't use `ProcessPoolExecutor`: native HEIF libraries deadlock on fork on macOS
 - Use `ThreadPoolExecutor(max_workers=4)` instead
 
 ---
@@ -331,7 +331,7 @@ git config --global user.email "you@example.com"
 
 ### Install Python 3.10+
 
-#### Option A — Ubuntu / Debian via `deadsnakes` (recommended for a newer version)
+#### Option A: Ubuntu / Debian via `deadsnakes` (recommended for a newer version)
 
 The system `python3` on some distributions may be older than 3.10. For a reliable
 install, use the `deadsnakes` repository:
@@ -352,7 +352,7 @@ Then use `python3.12` explicitly:
 python3.12 --version
 ```
 
-#### Option B — Ubuntu / Debian with the system Python
+#### Option B: Ubuntu / Debian with the system Python
 
 ```bash
 sudo apt update
@@ -447,7 +447,7 @@ immich-photo-manager/
 
 Dependencies are declared in `pyproject.toml` and `src/requirements.txt`.
 
-#### Method A — editable (development) install, recommended for this repository
+#### Method A: editable (development) install, recommended for this repository
 
 ```bash
 source ipm/bin/activate
@@ -457,14 +457,14 @@ pip install -e .
 This installs the package in "editable" mode, so changes in `src/` take effect
 immediately without reinstalling.
 
-#### Method B — minimal dependencies only
+#### Method B: minimal dependencies only
 
 ```bash
 source ipm/bin/activate
 pip install -r src/requirements.txt
 ```
 
-#### Method C — development dependencies (tests, lint)
+#### Method C: development dependencies (tests, lint)
 
 ```bash
 source ipm/bin/activate
@@ -480,12 +480,12 @@ variables control the transport and port.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `IMMICH_BASE_URL` | Yes | — | Immich instance URL (e.g. `http://your-immich-server:2283`) |
-| `IMMICH_API_KEY` | Yes | — | Immich API key |
+| `IMMICH_BASE_URL` | Yes | (none) | Immich instance URL (e.g. `http://your-immich-server:2283`) |
+| `IMMICH_API_KEY` | Yes | (none) | Immich API key |
 | `MCP_TRANSPORT` | No | `http` (with `python -m`) | `stdio` or `http` |
 | `MCP_HOST` | No | `127.0.0.1` | Address the HTTP server listens on (`0.0.0.0` = all interfaces) |
 | `MCP_PORT` | No | `8626` | HTTP port |
-| `MCP_ALLOWED_HOSTS` | No | — | In HTTP mode: extra comma-separated `Host` header values (see §8) |
+| `MCP_ALLOWED_HOSTS` | No | (none) | In HTTP mode: extra comma-separated `Host` header values (see §8) |
 
 > Important: when you launch the server with `python3 -m immich_mcp_server`, the default
 > transport is **`http`**. When an MCP client launches it via the `immich-photo-manager`
@@ -585,7 +585,7 @@ source ipm/bin/activate
 python3 -m immich_mcp_server
 ```
 
-### `MCP_ALLOWED_HOSTS` — why it matters
+### `MCP_ALLOWED_HOSTS`: why it matters
 
 The MCP SDK automatically enables **DNS-rebinding protection**, which in HTTP mode only
 accepts a `Host` header of `127.0.0.1` / `localhost` / `::1`. If Open WebUI targets the
@@ -661,7 +661,7 @@ Open WebUI version) and add a new MCP server:
 > as `immich_` (it appends an underscore internally), but the configured ID stays
 > `immich`.
 
-Save and wait for the connection to establish — the server log should show
+Save and wait for the connection to establish. The server log should show
 `POST /mcp HTTP/1.1 200 OK`.
 
 > If the server listens on `0.0.0.0`, it is reachable via any network interface of
@@ -673,7 +673,7 @@ Save and wait for the connection to establish — the server log should show
 
 When Open WebUI runs on the **same machine** as the checkout, it can launch the
 server itself as a child process. In this mode you **must not start the server
-manually** — Open WebUI does it.
+manually**. Open WebUI does it.
 
 Configure the server in Open WebUI with a stdio entry:
 
@@ -695,7 +695,7 @@ Configure the server in Open WebUI with a stdio entry:
 ```
 
 Replace `/path/to/immich-photo-manager` with the real absolute path. This variant
-does **not** work for a remote Open WebUI — use HTTP mode instead.
+does **not** work for a remote Open WebUI. Use HTTP mode instead.
 
 ### Connecting Claude Code / LM Studio (stdio)
 
@@ -738,7 +738,7 @@ and add a server with this config. Two details matter:
 
 Replace `/path/to/immich-photo-manager` with the real absolute path of your checkout
 (e.g. `/mnt/pool/apps/immich-photo-manager`). With `MCP_TRANSPORT=stdio`, the client
-launches the server as a child process, so `MCP_HOST`/`MCP_PORT` are ignored — they
+launches the server as a child process, so `MCP_HOST`/`MCP_PORT` are ignored. They
 only apply to HTTP mode.
 
 ### Verifying it works
@@ -829,9 +829,9 @@ nano start-mcp.sh
 ## TrueNAS SCALE Deployment
 
 The project ships a `Dockerfile` and `docker-compose.yml` so you can run the server
-as a container. No image registry (GHCR) is needed — the image is built locally.
+as a container. No image registry (GHCR) is needed: the image is built locally.
 
-### Option A — docker compose (simplest on a SCALE box with a Shell)
+### Option A: docker compose (simplest on a SCALE box with a Shell)
 
 1. Clone your fork and enter the directory:
    ```bash
@@ -858,7 +858,7 @@ as a container. No image registry (GHCR) is needed — the image is built locall
 
 The MCP endpoint is `http://<truenas-ip>:8626/mcp`.
 
-### Option B — Custom App (ix-apps)
+### Option B: Custom App (ix-apps)
 
 TrueNAS SCALE's "Custom App" UI only accepts an `image:` (it does not run `build:`
 directly), so build the image once in a Shell, then reference it by its local tag.
@@ -900,6 +900,6 @@ directly), so build the image once in a Shell, then reference it by its local ta
 
 ## Further Reading
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — How base64-embedded thumbnails solve the Cowork sandbox restriction, with full data flow diagrams
-- [MCP-TOOLS.md](./MCP-TOOLS.md) — Complete reference for all 94 MCP tools
-- [SKILLS.md](./SKILLS.md) — Detailed documentation for all 13 skills
+- [ARCHITECTURE.md](./ARCHITECTURE.md): How base64-embedded thumbnails solve the Cowork sandbox restriction, with full data flow diagrams
+- [MCP-TOOLS.md](./MCP-TOOLS.md): Complete reference for all 94 MCP tools
+- [SKILLS.md](./SKILLS.md): Detailed documentation for all 13 skills

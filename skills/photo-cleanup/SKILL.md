@@ -11,7 +11,7 @@ version: 1.2.0
 
 # Photo Cleanup
 
-## ⚠️ Connection Required — ALWAYS CHECK FIRST
+## ⚠️ Connection Required: ALWAYS CHECK FIRST
 
 **Before doing ANYTHING else in this skill, call `ping` on the Immich MCP server.**
 
@@ -43,7 +43,7 @@ Intelligent photo library cleanup for Immich. Identifies and helps remove screen
 
 ### 1. Screenshot Detection
 
-Screenshots are the #1 source of library bloat. Surface candidates with `search_smart(query="screenshot")` (CLIP) plus filename patterns (`Screenshot*`, `Screen Shot*`, `Captura*`) in `search_metadata`/`list_assets` results — dimensions are NOT searchable. Then score each candidate by combining multiple signals (dimensions and EXIF come from `get_asset_info`, per asset):
+Screenshots are the #1 source of library bloat. Surface candidates with `search_smart(query="screenshot")` (CLIP) plus filename patterns (`Screenshot*`, `Screen Shot*`, `Captura*`) in `search_metadata`/`list_assets` results. Dimensions are NOT searchable. Then score each candidate by combining multiple signals (dimensions and EXIF come from `get_asset_info`, per asset):
 
 | Signal | Weight | How to detect |
 |--------|--------|--------------|
@@ -73,13 +73,13 @@ Sources of duplicates:
 - Edited versions alongside originals
 
 Detection strategy:
-1. **Immich ML duplicates**: Use `get_duplicates` tool as a fast first pass — returns groups of visually similar assets detected by Immich's ML engine. Resolve with `resolve_duplicates`.
+1. **Immich ML duplicates**: Use `get_duplicates` tool as a fast first pass, which returns groups of visually similar assets detected by Immich's ML engine. Resolve with `resolve_duplicates`.
 2. **Exact duplicates**: Same file hash (SHA-256) → safe to remove the copy
 3. **Format duplicates**: Same timestamp + same dimensions, different format → keep highest quality (HEIC > JPEG > PNG)
 4. **Near-duplicates**: Same timestamp + similar dimensions + high CLIP similarity → present to user
 5. **Burst groups**: Sequential timestamps (< 2 seconds apart) + same location → let user pick best
 
-For 4 and 5, deleting is not the only option. `create_stack(asset_ids=[...])` groups the shots behind the best one (the first id becomes the cover), so the library shows a single item and nothing is lost. Offer it before offering the trash: a stack is reversible with `delete_stack`, a deletion is not.
+For 4 and 5, deleting is not the only option. `create_stack(asset_ids=[...])` groups the shots behind the best one (the first id becomes the cover), so the library shows a single item and nothing is lost. Offer it before the trash: a stack is reversible with `delete_stack`, a deletion is not.
 
 ### 3. Low-Quality Photo Detection
 
@@ -132,7 +132,7 @@ After the quick scan, clean up category by category:
 
 ### Remember what was decided (notes)
 
-The plugin keeps its own memory on each asset (`review_assets`, `get_assets_notes`), invisible in Immich and separate from tags. Use it so a second pass — days later, another session — does not redo the work:
+The plugin keeps its own memory on each asset (`review_assets`, `get_assets_notes`), invisible in Immich and separate from tags. Use it so a second pass (days later, another session) does not redo the work:
 
 - **Before analysing a batch**, call `get_assets_notes(asset_ids)` and skip the assets that already have a `last_verdict`, unless the user asks to re-review them. Say how many were skipped.
 - **After each decision**, call `review_assets(asset_ids, verdict, reason)` with `keep`, `delete_candidate`, `duplicate_of` or `needs_check` and a short concrete reason ("near-identical to IMG_6367, that one has the bystander"). Tag the delete candidates as well (a tag is what the user sees and selects in Immich; the note is the why).
@@ -150,15 +150,15 @@ Found so far: {screenshots} screenshots, {duplicates} duplicates
 
 Since Immich imports from specific folders, cleanup can target specific sources:
 
-- **Google Photos imports** — Oldest photos, most likely to have duplicates with Apple Photos
-- **Apple Photos imports** — Higher quality (HEIC), but overlaps with Google
-- **Manual imports** — Manually organized, least likely to need cleanup
-- **Screen capture folders** — ALL screenshots by definition
+- **Google Photos imports**: Oldest photos, most likely to have duplicates with Apple Photos
+- **Apple Photos imports**: Higher quality (HEIC), but overlaps with Google
+- **Manual imports**: Manually organized, least likely to need cleanup
+- **Screen capture folders**: ALL screenshots by definition
 
 ## What NOT to Clean
 
-- Photos with faces detected (Immich's face recognition) — may be valuable memories
-- Photos in existing albums — someone already curated these
-- Favorited photos — explicitly marked as wanted
-- Videos — different cleanup criteria, handle separately
-- Photos with GPS in known "home" locations — daily life photos may seem like junk but are memories
+- Photos with faces detected (Immich's face recognition): may be valuable memories
+- Photos in existing albums: someone already curated these
+- Favorited photos: explicitly marked as wanted
+- Videos: different cleanup criteria, handle separately
+- Photos with GPS in known "home" locations: daily life photos may seem like junk but are memories

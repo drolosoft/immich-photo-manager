@@ -1,11 +1,11 @@
 # Geographic Search Patterns
 
-Reference data for searching photos by location. There is no radius/coordinate search parameter — location discovery combines four tools:
+Reference data for searching photos by location. There is no radius/coordinate search parameter, so location discovery combines four tools:
 
-1. **`search_metadata(city=..., state=..., country=...)`** — text match against EXIF reverse-geocoded names. Most reliable when geocoding exists. Names are case-sensitive (e.g. `city="Barcelona"`).
-2. **`search_smart(query=...)`** — CLIP semantic queries for places ("Colosseum Rome", "volcanic landscape Lanzarote"). Best fallback when GPS/geocoding is missing.
-3. **`get_map_markers()`** — returns up to 500 GPS markers (asset ID, lat, lon). Filter the coordinates client-side against the reference table below to cluster photos by place.
-4. **`taken_after` / `taken_before`** — trip date windows to supplement any of the above.
+1. **`search_metadata(city=..., state=..., country=...)`**: text match against EXIF reverse-geocoded names. Most reliable when geocoding exists. Names are case-sensitive (e.g. `city="Barcelona"`).
+2. **`search_smart(query=...)`**: CLIP semantic queries for places ("Colosseum Rome", "volcanic landscape Lanzarote"). Best fallback when GPS/geocoding is missing.
+3. **`get_map_markers()`**: returns up to 500 GPS markers (asset ID, lat, lon). Filter the coordinates client-side against the reference table below to cluster photos by place.
+4. **`taken_after` / `taken_before`**: trip date windows to supplement any of the above.
 
 ## Search Strategy by Location Type
 
@@ -21,7 +21,7 @@ Search each known city/region separately, then merge results. Example for Mexico
 Start with `search_metadata(city=...)`. If geocoding used a different name (local vs. English spelling), try variants, then fall back to `search_smart` with landmark queries. For marker filtering, keep points within roughly ±0.1° (~10km) of the city center.
 
 ### Island/regional visits
-`search_metadata(state=...)` or the island name as city often works. For marker filtering, use a wider window: ±0.2–0.5° (~20–50km) around the center.
+`search_metadata(state=...)` or the island name as city often works. For marker filtering, use a wider window: ±0.2-0.5° (~20-50km) around the center.
 
 ### Road trips / multi-stop
 Search each stop separately (city names + date window), then combine into a thematic album. `get_map_markers(file_created_after=..., file_created_before=...)` scoped to the trip dates gives the full GPS trail to cluster.
@@ -64,7 +64,7 @@ Use the names in `search_metadata` calls; use the coordinates to filter `get_map
 | Mérida, España | 38.9160 | -6.3440 | ±0.10° (~10km) |
 | Fuerteventura, España | 28.3587 | -14.0537 | ±0.30° (~30km) |
 
-Note: 1° of latitude ≈ 111km everywhere; 1° of longitude shrinks with latitude (≈ 111km × cos(lat)). The windows above are intentionally coarse — a simple box filter is enough to cluster trip photos.
+Note: 1° of latitude ≈ 111km everywhere; 1° of longitude shrinks with latitude (≈ 111km × cos(lat)). The windows above are intentionally coarse: a simple box filter is enough to cluster trip photos.
 
 ## CLIP Search Queries by Destination
 
@@ -83,4 +83,4 @@ When GPS and geocoded names are unavailable, use `search_smart` with these seman
 When to create sub-albums vs one album:
 - **One album**: Short trip (1-7 days), single city/island, < 80 photos
 - **Multiple albums**: Multi-city trip, > 80 photos per location, distinctly different areas
-- **Example**: "Italia" could be one album OR separate "Roma", "Cinque Terre", "Venezia" — depends on photo count per location
+- **Example**: "Italia" could be one album OR separate "Roma", "Cinque Terre", "Venezia", depending on the photo count per location

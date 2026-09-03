@@ -19,7 +19,7 @@ Claude picks an album to curate:
 get_album(album_id="abc123-...")
 → "🇪🇸 Lanzarote, Jan 2026"
    186 photos, GPS center: 29.04°N, -13.50°W
-   Date range: Jan 1–20, 2026
+   Date range: Jan 1-20, 2026
 ```
 
 ## Step 2: Search for new matches

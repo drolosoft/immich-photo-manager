@@ -1,6 +1,6 @@
 # ⏰ Fix Midnight Timestamps
 
-> **4,307 photos stuck at 00:00 or 12:00.** Folder imports lose the time component — the plugin recovers it from neighboring photos.
+> **4,307 photos stuck at 00:00 or 12:00.** Folder imports lose the time component. The plugin recovers it from neighboring photos.
 
 When photos are imported from folder structures (Google Takeout, Apple export), the date is preserved but the time often defaults to midnight (00:00) or noon (12:00). This breaks your timeline and makes chronological browsing useless.
 
@@ -15,7 +15,7 @@ search_metadata(taken_after="2023-06-01", taken_before="2023-07-01", size=200)
 Claude inspects each photo's `dateTimeOriginal`:
 
 ```
-SUSPICIOUS TIMESTAMPS — June 2023
+SUSPICIOUS TIMESTAMPS: June 2023
 ══════════════════════════════════
 
 Midnight (00:00:00):  47 photos  ⚠️
@@ -30,9 +30,9 @@ Show affected photos? [Yes / No]
 For each suspicious photo, Claude looks for the nearest photo with a real EXIF timestamp:
 
 ```
-get_asset_info(asset_id="...")  → 2023-06-14 12:00:00 (NOON — suspicious)
-get_asset_info(asset_id="...")  → 2023-06-14 15:27:33 (real EXIF — anchor)
-get_asset_info(asset_id="...")  → 2023-06-14 12:00:00 (NOON — suspicious)
+get_asset_info(asset_id="...")  → 2023-06-14 12:00:00 (NOON, suspicious)
+get_asset_info(asset_id="...")  → 2023-06-14 15:27:33 (real EXIF, anchor)
+get_asset_info(asset_id="...")  → 2023-06-14 12:00:00 (NOON, suspicious)
 ```
 
 ## Step 3: Interpolate
@@ -45,7 +45,7 @@ TIMESTAMP FIX PROPOSAL
 
 IMG_2847.jpg  12:00:00 → 15:23:41  (interpolated from IMG_2849 anchor)
 IMG_2848.jpg  12:00:00 → 15:25:12  (interpolated from IMG_2849 anchor)
-IMG_2849.jpg  15:27:33             (anchor — real EXIF time)
+IMG_2849.jpg  15:27:33             (anchor, real EXIF time)
 IMG_2850.jpg  12:00:00 → 15:29:54  (interpolated from IMG_2849 anchor)
 
 Confidence: 0.85 (anchor is 2 photos away)

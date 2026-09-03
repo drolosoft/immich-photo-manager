@@ -6,7 +6,7 @@ Enable Cross-Origin Resource Sharing on your Immich reverse proxy for faster, li
 
 ## Why Enable CORS?
 
-By default, the plugin embeds photo thumbnails as base64 data directly inside gallery HTML files. This works everywhere — including inside the Cowork sandbox — but limits galleries to ~50 photos (~1.2 MB per file).
+By default, the plugin embeds photo thumbnails as base64 data directly inside gallery HTML files. This works everywhere, including inside the Cowork sandbox, but limits galleries to ~50 photos (~1.2 MB per file).
 
 With CORS enabled, galleries opened in a **regular browser** (outside Cowork) can load thumbnails directly from your Immich server on demand. This means:
 
@@ -125,4 +125,4 @@ Using `Access-Control-Allow-Origin: *` allows any website to make requests to yo
 
 ## After Enabling CORS
 
-No plugin changes needed. The gallery viewer is designed to work with base64 by default. CORS simply enables an improved experience when viewing galleries in a regular browser.
+No plugin changes needed. The gallery viewer is designed to work with base64 by default. CORS gives a better experience when viewing galleries in a regular browser.

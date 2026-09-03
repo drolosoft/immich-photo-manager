@@ -56,7 +56,7 @@ create_album(
 → Album created with 1,892 assets
 ```
 
-The screenshots are now in their own album — out of your timeline, easy to review or bulk-delete later.
+The screenshots are now in their own album, out of your timeline and easy to review or bulk-delete later.
 
 ---
 
