@@ -8,13 +8,13 @@
     "url": "https://github.com/drolosoft/immich-photo-manager",
     "source": "github"
   },
-  "version": "2.0.11",
+  "version": "2.0.12",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "immich-photo-manager",
-      "version": "2.0.11",
+      "version": "2.0.12",
       "runtimeHint": "uvx",
       "transport": {
         "type": "stdio"
@@ -35,7 +35,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/drolosoft/immich-photo-manager:2.0.11",
+      "identifier": "ghcr.io/drolosoft/immich-photo-manager:2.0.12",
       "runtimeHint": "docker",
       "transport": {
         "type": "streamable-http",

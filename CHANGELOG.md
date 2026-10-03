@@ -6,6 +6,8 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.12] - 2026-10-03
+
 ### Changed
 
 - **Directory listing fields in the manifest**: `icon`, `documentationUrl`, `supportUrl` and `privacyPolicyUrl` (the README section on what leaves your network), and a line in the README saying the project is independent from Immich.
@@ -367,6 +369,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.12]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.12
 [v2.0.11]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.11
 [v2.0.10]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.10
 [v2.0.9]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.9
