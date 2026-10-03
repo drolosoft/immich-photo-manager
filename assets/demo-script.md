@@ -13,7 +13,7 @@
 ## How to regenerate
 
 1. Edit this file with new/updated scenes
-2. Update `assets/demo.html` to match (or ask Claude to regenerate from this script)
+2. Update `assets/demo.html` on the `gh-pages` branch to match (worktree: `git worktree add ../immich-photo-manager-pages gh-pages`), or ask Claude to regenerate it from this script
 3. Record the GIF:
 
 ```bash
@@ -35,7 +35,7 @@ npx playwright install chromium
 
 ### What the script does
 
-1. Starts a local HTTP server serving `assets/demo.html`
+1. Starts a local HTTP server serving `demo.html` from the `gh-pages` worktree, or from the path in `DEMO_HTML`
 2. Opens headless Chromium (800×520, 2× retina, dark mode)
 3. Records the full animation via Playwright's video recorder (~20s)
 4. Converts WebM → GIF with ffmpeg two-pass palette optimization

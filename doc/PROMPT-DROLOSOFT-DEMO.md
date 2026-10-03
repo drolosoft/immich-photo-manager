@@ -6,7 +6,7 @@
 
 ## Context
 
-The **immich-photo-manager** plugin has an animated demo page that shows the plugin in action. It lives in the GitHub repo `drolosoft/immich-photo-manager` under `assets/`:
+The **immich-photo-manager** plugin has an animated demo page that shows the plugin in action. It lives in the GitHub repo `drolosoft/immich-photo-manager` under `assets/` (the HTML page on the `gh-pages` branch, the rest on `main`):
 
 - **`assets/demo.html`**: Self-contained animated HTML page (~470 KB). It auto-plays on load: simulates a Cowork conversation showing server connection, photo search with an interactive gallery, photo selection, album actions, and batch geographic album creation. Duration: ~18 seconds. Contains base64-embedded real photos, CSS animations, and a JavaScript `play()` function that orchestrates the full sequence.
 
@@ -26,7 +26,7 @@ Embed the demo on the immich-photo-manager page of drolosoft.com. Two options:
         loading="lazy">
 </iframe>
 ```
-This requires GitHub Pages enabled on the `drolosoft/immich-photo-manager` repo (Settings → Pages → Deploy from branch `main`, root `/`).
+GitHub Pages is enabled on the `drolosoft/immich-photo-manager` repo and serves the `gh-pages` branch, so this URL is live.
 
 ### Option B: GIF fallback (heavier but universal)
 ```html
@@ -40,7 +40,7 @@ This requires GitHub Pages enabled on the `drolosoft/immich-photo-manager` repo 
 - The demo files (`assets/demo.html`, `assets/demo.gif`, `assets/demo-script.md`) are maintained in the `drolosoft/immich-photo-manager` repo, NOT in the drolosoft.com repo.
 - I will modify these files frequently (adding scenes, replacing photos, adjusting timing) and re-record the GIF. The drolosoft.com page doesn't need to change when that happens because it loads the demo via URL (iframe or raw GitHub).
 - The demo.html page is fully self-contained: no external dependencies, no API calls, no cookies. It just plays an animation on load.
-- If using the iframe approach, the page needs GitHub Pages enabled. The URL would be: `https://drolosoft.github.io/immich-photo-manager/assets/demo.html`
+- The iframe URL is served by GitHub Pages from the `gh-pages` branch: `https://drolosoft.github.io/immich-photo-manager/assets/demo.html`
 - The demo has a dark-themed gallery section. Make sure the surrounding page design doesn't clash. A neutral or dark section background works best.
 
 ## Suggested placement

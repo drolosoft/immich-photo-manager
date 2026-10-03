@@ -4,7 +4,7 @@
 
 ## The test video
 
-[`luna.mov`](assets/12/luna.mov) (1.7 MB, 24 seconds, shot on an iPad from a balcony in Barcelona): a time-lapse that starts at sunset, goes dark, and then the moon rises between clouds over the sea. Short, but it changes completely from start to end, which is exactly what a single poster thumbnail cannot show. Immich keeps one poster per video and no per-frame previews; the plugin downloads the file through the Immich API and cuts the frames on your machine.
+[`luna.mov`](https://drolosoft.github.io/immich-photo-manager/doc/demos/assets/12/luna.mov) (1.7 MB, 24 seconds, shot on an iPad from a balcony in Barcelona): a time-lapse that starts at sunset, goes dark, and then the moon rises between clouds over the sea. Short, but it changes completely from start to end, which is exactly what a single poster thumbnail cannot show. Immich keeps one poster per video and no per-frame previews; the plugin downloads the file through the Immich API and cuts the frames on your machine.
 
 ## 1. Look at the video
 
@@ -50,13 +50,13 @@ Before building anything, Claude can ask how you want it: `get_export_preview` r
 
 Then Claude looks at the frames, chooses the moments (`frame_times`), writes the captions, and `export_pdf` builds the file on your machine, so the PDF never enters the conversation:
 
-- `layout="photobook"`: full-page images, fitted without cropping (letterbox, never a crop that cuts edges off). A video with several chosen frames unfolds into **one full page per frame**, each with its timestamp and its own caption (`frame_captions`). The clip becomes a photo story. For [`luna.mov`](assets/12/luna.mov) that is five pages: sunset, dusk, the moon appearing, the moon high over the water, and gone.
+- `layout="photobook"`: full-page images, fitted without cropping (letterbox, never a crop that cuts edges off). A video with several chosen frames unfolds into **one full page per frame**, each with its timestamp and its own caption (`frame_captions`). The clip becomes a photo story. For [`luna.mov`](https://drolosoft.github.io/immich-photo-manager/doc/demos/assets/12/luna.mov) that is five pages: sunset, dusk, the moon appearing, the moon high over the water, and gone.
 - `layout="detail"` keeps the compact look instead: one page per asset with a frame strip (timestamps under each frame) and the metadata block.
 - The `cover`, `index` and `places` pages can each be turned off, the footer can shrink to just the page number or disappear (`footer="pages"` / `"none"`), and a small title header on every page is available (`header=true`). A print-ready photobook can be bare pages only.
 - Frames that go into the PDF cost no tokens, up to 120 per video, and quality there is free: frames go in at preview size (1440px) and photos at the stored file's quality (capped at 3000px) by default.
 - Albums read oldest to newest, like the frames inside a video, and a hand-picked selection mixing videos months apart asks for confirmation first (your own albums export as they are), one story per PDF. Live Photos count once, `language="es"` prints the page labels in Spanish, and the Places page draws an OpenStreetMap map on its own whenever the assets carry GPS (`map=false` to keep everything local).
 
-The result for this clip is [`luna-photobook.pdf`](assets/12/luna-photobook.pdf): the five moon pages, each with its caption.
+The result for this clip is [`luna-photobook.pdf`](https://drolosoft.github.io/immich-photo-manager/doc/demos/assets/12/luna-photobook.pdf): the five moon pages, each with its caption.
 
 ## 5. The complete album report
 
@@ -67,7 +67,7 @@ then every photo in order, one caption each, title on every page.
 
 The everything-on use case: the same clip plus eight stills of the evening in one album, exported with the defaults doing the work. The video opens the document as a six-frame strip (`videos_position="first"`), each slot picking the liveliest frame of its neighbourhood; the photos follow oldest to newest, at the stored file's quality, each with its caption; the Places page draws the map on its own from the GPS; the title repeats on every page (`header=true`).
 
-The result is [`moon-evening-report.pdf`](assets/12/moon-evening-report.pdf): 12 pages, built by the published package against a real Immich, untouched.
+The result is [`moon-evening-report.pdf`](https://drolosoft.github.io/immich-photo-manager/doc/demos/assets/12/moon-evening-report.pdf): 12 pages, built by the published package against a real Immich, untouched.
 
 ## What leaves your network
 

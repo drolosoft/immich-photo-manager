@@ -26,7 +26,10 @@ const { execFileSync } = require('child_process');
 
 // ── Paths ──────────────────────────────────────────────────────────────
 const ROOT = path.resolve(__dirname, '..');
-const DEMO_PATH = path.join(ROOT, 'assets', 'demo.html');
+// demo.html lives on the gh-pages branch (it is too large for the plugin
+// folder), so the default is the worktree next to the repo; DEMO_HTML overrides it.
+const DEMO_PATH = process.env.DEMO_HTML
+  || path.join(ROOT, '..', 'immich-photo-manager-pages', 'assets', 'demo.html');
 const OUTPUT_GIF = path.join(ROOT, 'assets', 'demo.gif');
 const VIDEO_DIR = path.join(require('os').tmpdir(), 'demo-video');
 const PALETTE = path.join(require('os').tmpdir(), 'demo-palette.png');
