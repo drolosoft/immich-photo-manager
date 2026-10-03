@@ -11,7 +11,11 @@
   },
   "repository": "https://github.com/drolosoft/immich-photo-manager",
   "homepage": "https://drolosoft.com",
+  "documentationUrl": "https://github.com/drolosoft/immich-photo-manager/blob/main/doc/GETTING-STARTED.md",
+  "supportUrl": "https://github.com/drolosoft/immich-photo-manager/issues",
+  "privacyPolicyUrl": "https://github.com/drolosoft/immich-photo-manager#what-leaves-your-network",
   "license": "MIT",
+  "icon": "./assets/icon.png",
   "keywords": [
     "immich",
     "photos",
