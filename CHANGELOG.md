@@ -6,6 +6,10 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Commands name the tools with the plugin scope.** The four slash commands allowed `mcp__immich__*`, the name the server has on the script route; inside the plugin the tools are `mcp__plugin_immich-photo-manager_immich__*`, which is what the directory's validator pointed out.
+
 ## [v2.0.12] - 2026-10-03
 
 ### Changed

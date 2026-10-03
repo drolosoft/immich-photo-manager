@@ -1,7 +1,7 @@
 ---
 name: immich-status
 description: Check Immich connection and library stats
-allowed-tools: ["mcp__immich__*"]
+allowed-tools: ["mcp__plugin_immich-photo-manager_immich__*"]
 ---
 
 ## ⚠️ Connection Required — ALWAYS CHECK FIRST

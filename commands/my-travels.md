@@ -1,7 +1,7 @@
 ---
 name: my-travels
 description: Discover all travel destinations in your photo library
-allowed-tools: ["mcp__immich__*"]
+allowed-tools: ["mcp__plugin_immich-photo-manager_immich__*"]
 ---
 
 ## ⚠️ Connection Required — ALWAYS CHECK FIRST

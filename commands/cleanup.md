@@ -2,7 +2,7 @@
 name: cleanup
 description: Scan library for screenshots, duplicates, junk
 argument-hint: [screenshots|duplicates|all]
-allowed-tools: ["mcp__immich__*"]
+allowed-tools: ["mcp__plugin_immich-photo-manager_immich__*"]
 ---
 
 ## ⚠️ Connection Required — ALWAYS CHECK FIRST
