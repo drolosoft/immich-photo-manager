@@ -59,6 +59,8 @@ claude plugin marketplace add ./
 claude plugin install immich-photo-manager
 ```
 
+The install prints that two options are not set yet: the server URL and the API key. Inside a session, `/plugin` asks for them in a dialog (the key goes to your system's secure storage); from the shell you can pass them with `--config immich_base_url=... --config immich_api_key=...`, or leave both empty and let the setup below save them.
+
 Open Claude Code (restart it if it was already open) and connect it to your Immich. Guided:
 
 ```

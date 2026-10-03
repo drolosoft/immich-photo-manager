@@ -194,3 +194,22 @@ def test_the_plugin_placeholders_do_not_beat_the_update_proof_copy(isolated_cach
 
     assert client.base_url == OLD_URL
     assert client.api_key == OLD_KEY
+
+
+def test_an_unsubstituted_user_config_reference_counts_as_unset(isolated_cache, tmp_path,
+                                                                monkeypatch):
+    """The plugin's mcp.json asks for the credentials through userConfig and
+    passes them as `${user_config.immich_api_key}`. A client that does not
+    substitute the reference hands the server that literal text; it must be
+    read as "nothing configured", never sent to Immich as a key."""
+    ImmichClient.save_config(OLD_URL, OLD_KEY)
+
+    monkeypatch.setenv("IMMICH_CACHE_DIR", str(tmp_path / "mcpb-cache-v2"))
+    monkeypatch.setenv("IMMICH_BASE_URL", "${user_config.immich_base_url}")
+    monkeypatch.setenv("IMMICH_API_KEY", "${user_config.immich_api_key}")
+    ImmichClient._cache_dir = None
+
+    client = ImmichClient()
+
+    assert client.base_url == OLD_URL
+    assert client.api_key == OLD_KEY

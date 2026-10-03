@@ -19,6 +19,10 @@ STABLE_CONFIG_DIR = "~/.immich-photo-manager"
 # plugin version would otherwise "connect" to the placeholder host.
 PLACEHOLDER_VALUES = ("https://your-immich-server.com", "your-api-key-here")
 
+# How Claude Code writes a plugin userConfig reference into the server's
+# environment before substitution, for example `${user_config.immich_api_key}`.
+USER_CONFIG_REFERENCE_PREFIX = "${user_config."
+
 # The length of a bare ISO date, `2019-07-14`, and the time that widens it to
 # the full timestamp Immich 3.x validates against.
 BARE_DATE_LENGTH = 10
@@ -26,10 +30,14 @@ START_OF_DAY = "T00:00:00.000Z"
 
 
 def _real_env_value(name: str) -> str:
-    """The environment value for `name`, or "" when it is unset or still one of
-    the plugin's placeholders."""
+    """The environment value for `name`, or "" when it is unset, still one of
+    the plugin's old placeholders, or a `${user_config.KEY}` reference that the
+    client did not substitute (Claude Code fills those from the plugin's
+    userConfig; a client without that feature hands over the literal text)."""
     value = os.environ.get(name, "")
     if value in PLACEHOLDER_VALUES:
+        return ""
+    if value.startswith(USER_CONFIG_REFERENCE_PREFIX):
         return ""
     return value
 

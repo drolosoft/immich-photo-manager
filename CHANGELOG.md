@@ -6,6 +6,11 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- **Plugin manifest in the shape the Claude directory reads.** The server starts from a file inside the plugin (`src/plugin_entry.py`, which puts `src/` on the path itself) instead of `python3 -m` plus `PYTHONPATH`, and the credentials are asked through `userConfig` (`immich_base_url`, `immich_api_key` marked sensitive) and reach the server as `${user_config.*}` in place of the old placeholder values. Both options default to empty, so Cowork still starts the server and `/setup-immich-photo-manager` or `update_credentials` keep working as before; a literal `${user_config.*}` that a client leaves unsubstituted is read as "not configured". `tests/test_plugin_manifest.py` pins the manifest and drives the launcher over stdio with no PYTHONPATH and no credentials.
+- **Demo media off the plugin folder.** The animated demo page and the video and PDFs behind demo 12 live on the `gh-pages` branch, served by GitHub Pages; demo 12 links there. Every file the plugin ships is now text or an image under 256 KiB.
+
 ## [v2.0.11] - 2026-09-04
 
 ### Added
