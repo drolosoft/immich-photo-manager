@@ -1,6 +1,7 @@
 #!/bin/bash
 # setup-mcp.sh - Interactive setup for the Immich MCP server
-# Configures: project .mcp.json, Claude Code user scope (claude mcp add-json), claude_desktop_config.json (Desktop app)
+# Configures: project .mcp.json, Claude Code user scope (claude mcp add-json), claude_desktop_config.json (Desktop app).
+# It never edits Claude's permission settings.
 set -e
 
 echo ""
@@ -119,29 +120,10 @@ print(json.dumps({"command": os.environ["PYTHON_PATH"], "args": ["-m", "immich_m
     write_immich_config "$LINUX_DESKTOP" merge
   fi
 
-  # 2d. Auto-allow immich MCP tools in ~/.claude/settings.json
-  SETTINGS_FILE=~/.claude/settings.json
-  if [ -f "$SETTINGS_FILE" ]; then
-    SETTINGS_FILE="$SETTINGS_FILE" python3 - <<'PYEOF'
-import json, os
-
-sf = os.environ["SETTINGS_FILE"]
-with open(sf) as f:
-    settings = json.load(f)
-
-allow = settings.setdefault("permissions", {}).setdefault("allow", [])
-if "mcp__immich__*" not in allow:
-    allow.append("mcp__immich__*")
-    with open(sf, "w") as f:
-        json.dump(settings, f, indent=2)
-        f.write("\n")
-    print("  Added mcp__immich__* to permissions.allow in " + sf)
-else:
-    print("  mcp__immich__* already in permissions.allow")
-PYEOF
-  else
-    echo "  ~/.claude/settings.json not found (skipping auto-allow)"
-  fi
+  # The script never touches ~/.claude/settings.json: whether the immich tools
+  # run without a prompt is the user's call, made inside Claude Code.
+  echo "  To let the immich tools run without a prompt, add mcp__immich__* under"
+  echo "  Allow in /permissions inside Claude Code."
 
   echo ""
   echo "Global installation complete."

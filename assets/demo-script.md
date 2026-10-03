@@ -254,4 +254,3 @@ The demo touches these plugin capabilities:
 2. [ ] Save to `assets/demo.gif`
 3. [ ] Update README.md `<img>` tag (already points to `assets/demo.gif`)
 4. [ ] Commit + push to both remotes
-5. [ ] Rebuild .plugin with `./build-plugin.sh`

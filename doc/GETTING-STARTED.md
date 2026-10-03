@@ -69,7 +69,7 @@ cd immich-photo-manager
 ./scripts/setup-mcp.sh
 ```
 
-The script installs the Python dependencies (`mcp`, `httpx`), asks for your Immich URL and API key, checks the key against the server, and writes a server entry named `immich` (with `IMMICH_BASE_URL` and `IMMICH_API_KEY`) into `.mcp.json` in this folder. If you answer yes to "install globally", it also registers it in Claude Code for every folder (`claude mcp add-json immich ... -s user`) and in Claude Desktop's config. Restart the app afterwards, then ask "What Immich version am I connected to?".
+The script installs the Python dependencies (`mcp`, `httpx`), asks for your Immich URL and API key, checks the key against the server, and writes a server entry named `immich` (with `IMMICH_BASE_URL` and `IMMICH_API_KEY`) into `.mcp.json` in this folder. If you answer yes to "install globally", it also registers it in Claude Code for every folder (`claude mcp add-json immich ... -s user`) and in Claude Desktop's config. It never edits Claude's permission settings; to let the tools run without a prompt, add `mcp__immich__*` under Allow in `/permissions` yourself. Restart the app afterwards, then ask "What Immich version am I connected to?".
 
 **Claude Desktop on macOS, if the server does not show up:** the app is started by launchd and does not see your shell's PATH. Use full paths in the config: `which python3` (script route) or `which uvx` (uvx route) and put that in `"command"`. Quit with Cmd+Q, not just close the window, and reopen. The server's own log is `~/Library/Logs/Claude/mcp-server-immich.log`; the last lines say what failed (missing `uvx`, missing Python packages, wrong URL or key).
 

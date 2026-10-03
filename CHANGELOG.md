@@ -8,6 +8,7 @@ All notable changes to immich-photo-manager are documented here.
 
 ### Changed
 
+- **`setup-mcp.sh` no longer edits Claude's permission settings.** The global install used to add `mcp__immich__*` to the Allow list in `~/.claude/settings.json`; that is the user's decision, made in `/permissions`, and the script now says so instead of doing it. The Cowork `.plugin` builder (`build-plugin.sh`) and the loose `test-mcp.py` are gone: both predate the plugin route and nothing used them.
 - **Plugin manifest in the shape the Claude directory reads.** The server starts from a file inside the plugin (`src/plugin_entry.py`, which puts `src/` on the path itself) instead of `python3 -m` plus `PYTHONPATH`, and the credentials are asked through `userConfig` (`immich_base_url`, `immich_api_key` marked sensitive) and reach the server as `${user_config.*}` in place of the old placeholder values. Both options default to empty, so Cowork still starts the server and `/setup-immich-photo-manager` or `update_credentials` keep working as before; a literal `${user_config.*}` that a client leaves unsubstituted is read as "not configured". `tests/test_plugin_manifest.py` pins the manifest and drives the launcher over stdio with no PYTHONPATH and no credentials.
 - **Demo media off the plugin folder.** The animated demo page and the video and PDFs behind demo 12 live on the `gh-pages` branch, served by GitHub Pages; demo 12 links there. Every file the plugin ships is now text or an image under 256 KiB.
 
