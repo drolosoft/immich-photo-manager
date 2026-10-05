@@ -38,7 +38,7 @@ else
 fi
 
 echo "Inspector -> ${SERVER_BIN} ${SERVER_ARGS:-} (Immich: ${IMMICH_BASE_URL})"
-exec npx -y @modelcontextprotocol/inspector \
+exec npx -y @modelcontextprotocol/inspector@2.9.0 \
   -e IMMICH_BASE_URL="$IMMICH_BASE_URL" \
   -e IMMICH_API_KEY="$IMMICH_API_KEY" \
   -e MCP_TRANSPORT=stdio \
