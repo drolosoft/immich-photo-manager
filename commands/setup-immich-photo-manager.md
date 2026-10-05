@@ -33,9 +33,17 @@ Call `get_statistics` or `search_metadata` (any authenticated endpoint).
 
 ### Step 3: Get new credentials from the user
 
-Ask the user:
+First offer the plugin's configuration dialog, because a key typed there never passes
+through the conversation and is kept in the system's secure storage: in Claude Code,
+`/plugin`, then this plugin, then its options (server URL and API key). After saving,
+the user restarts the session and runs this command again to verify.
+
+If the user prefers to give the values here, or the client has no such dialog, ask:
 - What is your Immich server URL? (e.g., `https://photos.example.com`)
 - What is your new API key? (guide them to create one if needed: Immich → User Settings → API Keys)
+
+Tell them that a key given in conversation is read by the model and saved in a file only
+their user can read.
 
 ### Step 4: Update credentials via MCP tool
 
@@ -47,7 +55,7 @@ update_credentials(base_url="https://photos.example.com", api_key=<user-provided
 
 This tool will:
 1. Validate the new credentials against Immich (an authenticated call, a wrong key is rejected)
-2. Persist them to `.mcpb-cache/config.json` (survives session restarts)
+2. Persist them to `config.json` in the plugin's cache folder and to `~/.immich-photo-manager/config.json` (survives session restarts and plugin updates)
 3. Hot-swap the live connection (no restart required)
 
 **If `update_credentials` succeeds** → proceed to Step 5.
