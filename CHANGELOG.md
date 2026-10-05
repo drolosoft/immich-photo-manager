@@ -6,8 +6,33 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+## [v2.0.13] - 2026-10-05
+
+### Added
+
+- **Tool titles and annotations.** Each of the 94 tools now declares a title and the `readOnlyHint` and `destructiveHint` annotations: 51 read-only, 17 that only add, 26 that change or remove. Clients use them to decide which calls to confirm with you, and the Claude directory policy asks for them. Tool names, parameters and results are unchanged.
+
+### Changed
+
+- **Images without embedded data.** The Claude Code screenshot carried an Apple display colour profile and an EXIF block from the macOS capture, which held 2.0.12 for a reviewer in the Claude directory. It is converted to sRGB and saved without them, and every other PNG and JPEG in the repository went through the same lossless pass. The images weigh about 550 KiB less.
+- **Bundled images use Markdown image syntax** in the README and demo 12, in place of HTML `img` tags.
+- **Galleries load nothing from outside.** The handwriting font of the polaroid labels (Caveat) is embedded in the gallery template, and the body text uses the system font; the two Google Fonts requests are gone.
+- **Travel map pinned and served from localhost.** Leaflet, MarkerCluster and leaflet.heat come with a fixed version and an `integrity` hash each, the cluster stylesheet the template was missing is in, the retired `a/b/c` tile subdomains are gone, and the skill serves the page from a local address: OpenStreetMap answers a map opened from disk with "Access blocked" tiles.
+- **The README lists everything the plugin runs, sends and fetches**: the local server process, the calls to your Immich, the map tiles of a PDF report, what the generated pages load in the browser (Google Fonts, Leaflet from `unpkg.com`, OpenStreetMap tiles), where credentials are kept, public share links and deletions. The older line that called the map tiles the only third-party call now says it is the only one the server itself makes.
+- **The setup command offers the configuration dialog first**, so the API key can stay out of the conversation, and says where a key given in conversation is saved.
+- **The manifest description and the README say the plugin is unofficial**, not affiliated with or endorsed by Immich or FUTO.
+- **`scripts/inspector.sh` pins the MCP Inspector** to 2.9.0 instead of running whatever is newest.
+- **Display name in the manifest is "Photo Manager for Immich"**, so the listing reads as a tool for Immich and not as a product of Immich. The plugin name, the commands and the tool names do not change.
+
+### Removed
+
+- **Demo tooling off the plugin folder.** `scripts/record-demo.js`, `scripts/capture-screenshots.js`, `scripts/make-gif.py`, `assets/demo-script.md`, `doc/DEMO-SYSTEM.md` and `doc/PROMPT-DROLOSOFT-DEMO.md` live on the `gh-pages` branch next to the demo page they produce.
+- **Three scripts from before the MCP tools**: `scripts/discover_locations.py`, `scripts/create_geographic_albums.py` and `scripts/create_shared_links.py`. They read the API key from the environment and did by hand what `search_metadata`, `create_album` and `create_shared_link` do.
+- **Images no page showed**: three screenshots (one a copy of another) and `assets/demo-latest.gif`. The plugin folder goes from 12.0 MiB to 6.7 MiB.
+
 ### Fixed
 
+- **`get_statistics` works for accounts that are not administrators.** Immich only serves `/server/statistics` to an admin; any other key got a 403. The tool now answers with the user's own counts (`/search/statistics` per type, storage from `/users/me`) and marks them `scope: user`.
 - **Commands name the tools with the plugin scope.** The four slash commands allowed `mcp__immich__*`, the name the server has on the script route; inside the plugin the tools are `mcp__plugin_immich-photo-manager_immich__*`, which is what the directory's validator pointed out.
 
 ## [v2.0.12] - 2026-10-03
@@ -373,6 +398,7 @@ First stable release: 21 MCP tools, 11 skills, 5 slash commands, interactive HTM
 
 ---
 
+[v2.0.13]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.13
 [v2.0.12]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.12
 [v2.0.11]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.11
 [v2.0.10]: https://github.com/drolosoft/immich-photo-manager/releases/tag/v2.0.10
