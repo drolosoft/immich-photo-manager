@@ -127,24 +127,32 @@ For each cluster:
 
 ### Step 4: Generate Interactive HTML Map
 
-Create a standalone HTML file using Leaflet.js:
+Write the HTML file below. Each library is pinned to one version and carries its `integrity` hash,
+so the browser refuses a file that differs from the one these hashes were taken from. Keep the hashes
+as they are; a new library version needs new hashes.
 
 ```html
 <!DOCTYPE html>
 <html>
 <head>
   <title>My Travel Map</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="anonymous" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
+    integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr" crossorigin="anonymous"></script>
 </head>
 <body>
   <div id="map" style="height: 100vh; width: 100%"></div>
   <script>
     const locations = [/* cluster data injected here */];
     const map = L.map('map').setView([30, 0], 3);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
@@ -165,11 +173,26 @@ Create a standalone HTML file using Leaflet.js:
 </html>
 ```
 
-### Step 5: Add Optional Features
+### Step 5: Serve the map over localhost
+
+Do not tell the user to open the file directly. OpenStreetMap answers a page opened from disk
+(`file://`) with "Access blocked" tiles, because such a page sends no referrer and looks like an
+app using the tile servers without identifying itself. Served from a local address the same page
+works. Write the file into its own folder and start a small server there:
+
+```bash
+cd /path/to/map-folder && python3 -m http.server 9876
+```
+
+Then open `http://127.0.0.1:9876/travel-map.html` and tell the user the server runs until they close
+that terminal. The plugin ships the same two lines as `assets/serve.sh`.
+
+### Step 6: Add Optional Features
 
 **Heatmap layer:**
 ```html
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"
+  integrity="sha384-mFKkGiGvT5vo1fEyGCD3hshDdKmW3wzXW/x+fWriYJArD0R3gawT6lMvLboM22c0" crossorigin="anonymous"></script>
 <script>
   const heatData = locations.map(l => [l.lat, l.lng, l.photos]);
   L.heatLayer(heatData, {radius: 25}).addTo(map);
@@ -189,7 +212,7 @@ Search bar to find a specific location on the map.
 
 | Format | Description |
 |---|---|
-| **Standalone HTML** | Self-contained file, opens in any browser, shareable |
+| **Standalone HTML** | One file, served from localhost (Step 5) or any web server |
 | **Hosted page** | Deploy to your own domain or static hosting |
 | **Markdown report** | Text summary with country list, no map |
 | **JSON export** | Raw cluster data for custom visualization |
@@ -205,7 +228,7 @@ Search bar to find a specific location on the map.
 
 - **Read-only**: this skill never modifies assets
 - Requires photos to have GPS data (check with library-health-report first)
-- Leaflet.js and MarkerCluster are loaded from CDN, so the HTML file needs internet access
+- Leaflet, MarkerCluster and leaflet.heat come from `unpkg.com`, pinned by version and `integrity` hash, and the tiles from `tile.openstreetmap.org`, so the page needs internet access and those two servers see the viewer's address and the areas shown
 - For very large libraries (>100K geotagged photos), use the EXIF city/country grouping instead of GPS clustering to keep the HTML file manageable
 - OpenStreetMap tiles are free but have usage limits. For high-traffic hosted maps, consider a tile provider
 - Privacy: the map reveals where the user lives, works, and travels, so remind them before sharing publicly
