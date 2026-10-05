@@ -20,7 +20,7 @@
 
 > **MCP server for intelligent photo management with [Immich](https://immich.app): your self-hosted library, understood.**
 
-> An independent project by Drolosoft. It is not affiliated with or endorsed by the Immich project; it talks to your Immich server through its public API.
+> An unofficial community plugin by Drolosoft. It is not affiliated with, sponsored by or endorsed by Immich or FUTO; "Immich" is their name and is used here only to say which server the plugin works with. It talks to your Immich server through its public API.
 
 If your [Immich](https://immich.app) library has grown past what you can manage by hand, **immich-photo-manager** gives any AI assistant direct access to your instance: search, organize, deduplicate, and curate albums through natural conversation. Works with Claude, Gemma, or any MCP-compatible client. Runs locally and talks only to your Immich; your originals stay on your server (see [what leaves your network](#what-leaves-your-network)).
 
@@ -99,11 +99,30 @@ Then restart Claude Code. `drolosoft-marketplace` is the name the marketplace ge
 
 After pulling a new version, run `pip3 install -r src/requirements.txt` again: 1.7.1 added the video (`av`) and PDF (`fpdf2`) libraries to the plugin's dependencies. On the uvx route, `uvx --refresh immich-photo-manager --help` once, then restart the client.
 
+### Upgrading from 2.0.12
+
+Nothing to set up again. The options, the server command and the tool names are the same as in 2.0.12, and saved credentials carry over. What changes:
+
+- The recommended place for the server URL and the API key is the plugin's configuration dialog (`/plugin`, then the plugin's options), which keeps the key in your system's secure storage. If you connected through `/setup-immich-photo-manager`, that keeps working and you do not have to move anything.
+- The images in the repository were saved again without colour profiles or EXIF data. They look the same.
+- The README now lists everything the plugin runs, sends and fetches in one place.
+
 ### What leaves your network
 
 The plugin process runs on your machine and only talks to your Immich. But everything the assistant *reads* through it goes to the model you use: filenames, dates, EXIF, album lists, and, when you ask it to look at pictures, thumbnails (250px by default, 1440px previews on request). Originals are never fetched. With Claude that means those thumbnails leave your network; with a local model over MCP (LM Studio, Ollama) nothing does. Nothing is sent unless you ask for it: listing albums or fixing dates moves text only, "tell me what's in these photos" moves images.
 
-A PDF report follows the same rule: `export_pdf` writes the file to disk on the machine running the server, and it is not sent anywhere unless you pass `return_base64=true`. The file goes where `output_path` says (default your Desktop); existing files are never overwritten. Frames that only go into the PDF never leave your machine and cost no tokens; only the frames you ask the model to look at do. When the assets carry GPS, the Places page draws a map with tiles from `tile.openstreetmap.org`, the only third-party call this plugin makes; pass `map=false` to skip it and keep everything inside your network.
+A PDF report follows the same rule: `export_pdf` writes the file to disk on the machine running the server, and it is not sent anywhere unless you pass `return_base64=true`. The file goes where `output_path` says (default your Desktop); existing files are never overwritten. Frames that only go into the PDF never leave your machine and cost no tokens; only the frames you ask the model to look at do. When the assets carry GPS, the Places page draws a map with tiles from `tile.openstreetmap.org`, the only third-party call the server itself makes; pass `map=false` to skip it and keep everything inside your network.
+
+### What the plugin runs, sends and fetches
+
+- **Runs**: one local process, the MCP server, started as `python3` on a file inside the plugin (`src/plugin_entry.py`). There are no hooks and no background jobs, and nothing is downloaded or installed when it starts. The Python libraries are the ones you install yourself from `src/requirements.txt`.
+- **Your Immich server**: every tool is a call to the public API of the Immich server you configure, with your API key in the `x-api-key` header. `upload_asset` sends a local file you name to that server.
+- **Other servers, from the plugin**: only `tile.openstreetmap.org`, and only when a PDF report draws its Places map. The request carries the tile coordinates of the area, so it tells that server roughly where the photos were taken. `map=false` skips it.
+- **Other servers, from the pages it writes**: the HTML pages open in your browser, and the browser loads a few things itself. Gallery pages load their fonts from Google Fonts. The travel map loads Leaflet and two of its add-ons from `unpkg.com` and its map tiles from OpenStreetMap, which again shows those servers the areas you look at. Thumbnails are embedded in the page, or loaded from your own Immich when you set up CORS.
+- **Files on your machine**: `export_pdf` and `download_archive` write where you say and never overwrite. Galleries and maps are HTML files written by the assistant. The duplicate report can read an import folder on disk to compare photos, and it removes files there only when you approve the exact list.
+- **Credentials**: entered in the plugin's configuration dialog, the API key is kept in your system's secure storage. Given in conversation (`/setup-immich-photo-manager` or `update_credentials`), the key passes through the model like any other message and is saved in two files only your user can read: `config.json` in the plugin's cache folder and `~/.immich-photo-manager/config.json`.
+- **Public links**: `create_shared_link` makes a link that anyone with the URL can open. It is created only when you ask for sharing; `list_shared_links` shows the ones that exist and `delete_shared_link` removes one.
+- **Deleting**: `delete_assets` moves assets to Immich's trash, which `restore_assets` undoes. It deletes for good only with `force=true`, and `empty_trash` is permanent too. The cleanup and duplicate skills show what they found and wait for your answer before they delete anything. The plugin never changes Claude's permission settings.
 
 ### Connect, check, switch: all by talking
 
