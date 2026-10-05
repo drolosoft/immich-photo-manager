@@ -14,9 +14,7 @@ What happens in the video luna.mov?
 
 Claude finds the asset and calls `get_video_frames` with the default 6 frames. Each frame is one image in the conversation (~1.6k tokens as a thumbnail), so the default stays small. These are the kind of frames it gets, evenly spaced, and each slot picks the liveliest frame in its own neighbourhood, so a black or dead moment at the exact centre never wastes a slot:
 
-<p align="center">
-<img src="assets/12/01_001.0s.jpg" width="160"> <img src="assets/12/05_008.8s.jpg" width="160"> <img src="assets/12/08_014.7s.jpg" width="160"> <img src="assets/12/10_018.7s.jpg" width="160">
-</p>
+![Frame at 1.0 s](assets/12/01_001.0s.jpg) ![Frame at 8.8 s](assets/12/05_008.8s.jpg) ![Frame at 14.7 s](assets/12/08_014.7s.jpg) ![Frame at 18.7 s](assets/12/10_018.7s.jpg)
 
 > A time-lapse from a balcony over a beach: sunset with pink clouds, then dusk, then the moon rises between clouds and lights a path on the sea before leaving the frame at the top.
 
@@ -30,7 +28,7 @@ Skim that video: one frame every 2 seconds, as a contact sheet
 
 `get_video_frames(interval=2, sheet=true)` packs everything into grid images, 30 frames per sheet with the timestamp burned under each, so the whole skim costs one or two images:
 
-<p align="center"><img src="assets/12/contact-sheet.jpg" width="700"></p>
+![Contact sheet of the twelve frames](assets/12/contact-sheet.jpg)
 
 ## 3. Zoom into a moment
 

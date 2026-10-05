@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="assets/icon.png" alt="immich-photo-manager" width="100">
-</p>
+![immich-photo-manager](assets/icon.png)
 
 <h1 align="center">immich-photo-manager</h1>
 
@@ -28,7 +26,7 @@ If your [Immich](https://immich.app) library has grown past what you can manage 
 
 > **Tested, not assumed.** Every push runs 364 unit tests on CI. Every release is also run **live against real Immich 2.7.5 and 3.1.0** (Docker, all 94 tools over the MCP protocol's legacy era, state re-read after each write) before it is tagged; both protocol eras (the legacy handshake and stateless 2026-07-28) are pinned on every push by SDK-free wire tests ([`tests/test_raw_wire_eras.py`](tests/test_raw_wire_eras.py)). The kit is in [`tests/live/`](tests/live/), reproducible by anyone. The demos in [`doc/demos/`](doc/demos/) are transcripts of real sessions, [Demo 11](doc/demos/11-album-walkthrough.md) is this exact flow prompt by prompt, and [Demo 12](doc/demos/12-video-frames-and-pdf.md) runs the video frames and PDF photobook on a real clip. Demos [13 to 18](doc/demos/README.md) cover everything added in 2.x (library discovery, OCR and people search, memories and stacks, partners and downloads, asset notes, the Docker image) from real sessions. Details: [How it's tested](#how-its-tested).
 
-<p align="center"><img src="./assets/demo.gif" alt="immich-photo-manager demo" width="800"></p>
+![immich-photo-manager demo](assets/demo.gif)
 
 ---
 
@@ -36,7 +34,7 @@ If your [Immich](https://immich.app) library has grown past what you can manage 
 
 Say **"create albums for all my trips"** and watch it work:
 
-<p align="center"><img src="./assets/screenshot-06-geographic-albums.png" alt="Geographic album creation" width="700"></p>
+![Geographic album creation](assets/screenshot-06-geographic-albums.png)
 
 GPS coordinates, CLIP visual search, and temporal matching, combined in one request to create dozens of curated albums. No scripts, no manual sorting.
 
@@ -71,7 +69,7 @@ Open Claude Code (restart it if it was already open) and connect it to your Immi
 
 It asks for your server URL and API key, checks them against the server, saves them, and shows your library numbers:
 
-<p align="center"><img src="./assets/screenshot-01-setup.png" alt="/setup-immich-photo-manager: connected, Immich version and library size" width="700"></p>
+![/setup-immich-photo-manager: connected, Immich version and library size](assets/screenshot-01-setup.png)
 
 Or skip the guide and say it in one line (same thing underneath):
 
@@ -125,7 +123,7 @@ One connection at a time: to work with a second Immich (a test instance, a frien
 
 The same plugin runs in **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)**: search your library, curate albums, and generate galleries right from the terminal.
 
-<p align="center"><img src="./doc/demos/cc/claude-code-conversation.png" alt="Split screen: Claude Code terminal generating a photo gallery on the left, browser showing the resulting gallery with album cards on the right" width="800"></p>
+![Split screen: Claude Code terminal generating a photo gallery on the left, browser showing the resulting gallery with album cards on the right](doc/demos/cc/claude-code-conversation.png)
 
 > Full conversation transcript: **[Claude Code demo](doc/demos/cc/claude-code-example-demo.txt)**
 
@@ -254,7 +252,7 @@ RESULT: Zero cloud dependency, fully self-hosted stack.
 - **Runs in Docker**: multi-arch image serving MCP over HTTP on port 8626, both protocol eras, same 94 tools
 - **Interactive galleries**: self-contained HTML pages with embedded thumbnails, 3 themes, 4 view modes, and a Cowork Actions Panel for batch operations
 
-<p align="center"><img src="./assets/screenshot-03-gallery-selection.png" alt="Interactive gallery with Cowork Actions" width="700"></p>
+![Interactive gallery with Cowork Actions](assets/screenshot-03-gallery-selection.png)
 
 > Select photos in the gallery, click an action, and paste the command into Claude. See **[Skills Reference](doc/SKILLS.md)** for all 13 skills.
 
