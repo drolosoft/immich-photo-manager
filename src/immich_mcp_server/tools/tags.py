@@ -10,9 +10,9 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _api_error
+from ._common import ADDS_ONLY, CHANGES_OR_REMOVES, READ_ONLY, _api_error
 
-@mcp.tool()
+@mcp.tool(title="List tags", annotations=READ_ONLY)
 async def list_tags(ctx: Context) -> str:
     """List all tags in the library. Use this to discover existing tags before creating
     new ones or to find a tag ID for tagging operations. Read-only.
@@ -26,7 +26,7 @@ async def list_tags(ctx: Context) -> str:
         return _api_error(exc)
 
 
-@mcp.tool()
+@mcp.tool(title="Get tag", annotations=READ_ONLY)
 async def get_tag(ctx: Context, tag_id: str) -> str:
     """Get details for a specific tag. Use this to inspect a tag's properties. Read-only.
 
@@ -42,7 +42,7 @@ async def get_tag(ctx: Context, tag_id: str) -> str:
         return _api_error(exc)
 
 
-@mcp.tool()
+@mcp.tool(title="Create tag", annotations=ADDS_ONLY)
 async def create_tag(ctx: Context, name: str, color: str = "") -> str:
     """Create a new tag for categorizing assets. Use list_tags first to avoid duplicates.
     Side effect: creates a new tag in Immich.
@@ -60,7 +60,7 @@ async def create_tag(ctx: Context, name: str, color: str = "") -> str:
         return _api_error(exc)
 
 
-@mcp.tool()
+@mcp.tool(title="Update tag", annotations=CHANGES_OR_REMOVES)
 async def update_tag(ctx: Context, tag_id: str, name: str | None = None, color: str | None = None) -> str:
     """Update a tag's color. Side effect: changes apply to all assets using this tag.
     Immich's API cannot rename a tag (TagUpdateDto only carries `color`); to rename,
@@ -91,7 +91,7 @@ async def update_tag(ctx: Context, tag_id: str, name: str | None = None, color: 
         return _api_error(exc)
 
 
-@mcp.tool()
+@mcp.tool(title="Delete tag", annotations=CHANGES_OR_REMOVES)
 async def delete_tag(ctx: Context, tag_id: str) -> str:
     """Delete a tag and remove it from all assets. The assets themselves are unaffected.
     Side effect: permanently deletes the tag (cannot be undone).
@@ -110,7 +110,7 @@ async def delete_tag(ctx: Context, tag_id: str) -> str:
         return _api_error(exc)
 
 
-@mcp.tool()
+@mcp.tool(title="Tag assets", annotations=ADDS_ONLY)
 async def tag_assets(ctx: Context, tag_id: str, asset_ids: list[str]) -> str:
     """Apply a tag to multiple assets at once. Use this to bulk-categorize photos
     (e.g. tag all vacation photos). Side effect: adds tag association to assets.
@@ -130,7 +130,7 @@ async def tag_assets(ctx: Context, tag_id: str, asset_ids: list[str]) -> str:
         return _api_error(exc)
 
 
-@mcp.tool()
+@mcp.tool(title="Untag assets", annotations=CHANGES_OR_REMOVES)
 async def untag_assets(ctx: Context, tag_id: str, asset_ids: list[str]) -> str:
     """Remove a tag from multiple assets. The tag itself remains; only the association is
     removed. Side effect: removes tag-to-asset links.

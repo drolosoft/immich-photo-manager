@@ -12,14 +12,14 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _api_error
+from ._common import READ_ONLY, _api_error
 
 # How far back an open-ended heatmap looks on Immich 2.x. The fallback costs one
 # request per month in range, so an unbounded call would walk the whole library.
 HEATMAP_DEFAULT_DAYS = 365
 
 
-@mcp.tool()
+@mcp.tool(title="Get timeline buckets", annotations=READ_ONLY)
 async def get_timeline_buckets(
     ctx: Context,
     album_id: str = "",
@@ -55,7 +55,7 @@ async def get_timeline_buckets(
     return json.dumps({"total_buckets": len(result), "buckets": result}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Get timeline bucket", annotations=READ_ONLY)
 async def get_timeline_bucket(
     ctx: Context,
     time_bucket: str,
@@ -164,7 +164,7 @@ async def _heatmap_from_timeline(client, from_date: str, to_date: str) -> dict:
     return {"source": "timeline", "total": sum(counts.values()), "series": series}
 
 
-@mcp.tool()
+@mcp.tool(title="Get calendar heatmap", annotations=READ_ONLY)
 async def get_calendar_heatmap(
     ctx: Context,
     from_date: str = "",

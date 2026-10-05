@@ -10,9 +10,9 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _api_error
+from ._common import READ_ONLY, _api_error
 
-@mcp.tool()
+@mcp.tool(title="Search metadata", annotations=READ_ONLY)
 async def search_metadata(
     ctx: Context,
     city: str = "",
@@ -85,7 +85,7 @@ async def search_metadata(
     return json.dumps({"total": total, "page": page, "assets": assets}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Search explore", annotations=READ_ONLY)
 async def search_explore(ctx: Context) -> str:
     """Overview of what the library contains, grouped by explore field: one
     representative asset per city and per detected concept (Immich's Explore page).
@@ -110,7 +110,7 @@ async def search_explore(ctx: Context) -> str:
     return json.dumps({"total": len(fields), "fields": fields}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Search cities", annotations=READ_ONLY)
 async def search_cities(ctx: Context) -> str:
     """Every city that appears in the library, one representative asset each.
     Unlike search_explore this has no minimum-asset threshold, so it is the
@@ -132,7 +132,7 @@ async def search_cities(ctx: Context) -> str:
     return json.dumps({"total": len(cities), "cities": cities}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Search places", annotations=READ_ONLY)
 async def search_places(ctx: Context, name: str) -> str:
     """Look a place name up in Immich's built-in gazetteer (no assets involved).
     Use this to resolve a spelling or get coordinates for a place before a
@@ -148,7 +148,7 @@ async def search_places(ctx: Context, name: str) -> str:
     return json.dumps({"total": len(result), "places": result}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Search suggestions", annotations=READ_ONLY)
 async def search_suggestions(
     ctx: Context,
     suggestion_type: str,
@@ -187,7 +187,7 @@ async def search_suggestions(
     return json.dumps({"total": len(result), "suggestions": result}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Search random", annotations=READ_ONLY)
 async def search_random(
     ctx: Context,
     size: int = 10,
@@ -225,7 +225,7 @@ async def search_random(
     return json.dumps({"total": len(result), "assets": result}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Search statistics", annotations=READ_ONLY)
 async def search_statistics(
     ctx: Context,
     city: str = "",
@@ -281,7 +281,7 @@ async def search_statistics(
     return json.dumps({"total": result.get("total", 0)})
 
 
-@mcp.tool()
+@mcp.tool(title="Search large assets", annotations=READ_ONLY)
 async def search_large_assets(
     ctx: Context,
     min_size_mb: int = 0,
@@ -320,7 +320,7 @@ async def search_large_assets(
     return json.dumps({"total": len(assets), "assets": assets}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Search smart", annotations=READ_ONLY)
 async def search_smart(
     ctx: Context,
     query: str,

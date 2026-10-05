@@ -7,9 +7,9 @@ module is imported; `server.py` imports all tool modules and re-exports the func
 from mcp.server.mcpserver import Context, Image
 
 from ..app import mcp, _client
-from ._common import _entry_to_image
+from ._common import READ_ONLY, _entry_to_image
 
-@mcp.tool()
+@mcp.tool(title="Get asset image", annotations=READ_ONLY)
 async def get_asset_image(ctx: Context, asset_id: str, size: str = "thumbnail") -> Image:
     """Get a single asset's thumbnail as an image block for inline visual display.
     Use this in clients that render images (Open WebUI, Claude Desktop). For HTML
@@ -26,7 +26,7 @@ async def get_asset_image(ctx: Context, asset_id: str, size: str = "thumbnail") 
     return _entry_to_image(result)
 
 
-@mcp.tool(structured_output=False)
+@mcp.tool(title="Get album images", annotations=READ_ONLY, structured_output=False)
 async def get_album_images(
     ctx: Context, album_id: str, size: str = "thumbnail", limit: int = 20
 ) -> list[Image]:
@@ -46,7 +46,7 @@ async def get_album_images(
     return [_entry_to_image(thumb) for thumb in result.get("thumbnails", [])]
 
 
-@mcp.tool(structured_output=False)
+@mcp.tool(title="Get images batch", annotations=READ_ONLY, structured_output=False)
 async def get_images_batch(
     ctx: Context, asset_ids: list[str], size: str = "thumbnail", limit: int = 20
 ) -> list[Image]:

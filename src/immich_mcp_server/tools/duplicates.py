@@ -9,9 +9,9 @@ import json
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _album_assets
+from ._common import CHANGES_OR_REMOVES, READ_ONLY, _album_assets
 
-@mcp.tool()
+@mcp.tool(title="Get duplicates", annotations=READ_ONLY)
 async def get_duplicates(ctx: Context, album_id: str = "") -> str:
     """Get ML-detected duplicate asset groups (same image stored more than once). Use this
     to review potential duplicates before resolving them with resolve_duplicates. Requires
@@ -43,7 +43,7 @@ async def get_duplicates(ctx: Context, album_id: str = "") -> str:
     )
 
 
-@mcp.tool()
+@mcp.tool(title="Resolve duplicates", annotations=CHANGES_OR_REMOVES)
 async def resolve_duplicates(ctx: Context, groups: list[dict]) -> str:
     """Resolve duplicate groups by choosing which assets to keep and which to trash.
     Use this after reviewing results from get_duplicates. Trashed assets can still be

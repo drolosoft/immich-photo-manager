@@ -10,13 +10,13 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _api_error
+from ._common import ADDS_ONLY, _api_error
 
 ALLOWED_UPLOAD_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".mp4", ".mov", ".gif", ".webp"}
 MAX_UPLOAD_SIZE = 25 * 1024 * 1024  # 25MB
 
 
-@mcp.tool()
+@mcp.tool(title="Upload asset", annotations=ADDS_ONLY)
 async def upload_asset(ctx: Context, file_path: str, album_id: str = "") -> str:
     """Upload a local photo or video file to Immich. Use this to ingest new media into
     the library. Constraints: max 25MB, allowed types: jpg, jpeg, png, heic, mp4, mov,

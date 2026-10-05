@@ -10,8 +10,9 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import READ_ONLY
 
-@mcp.tool()
+@mcp.tool(title="Ping", annotations=READ_ONLY)
 async def ping(ctx: Context) -> str:
     """Check Immich server connectivity. Use this to verify the server is reachable
     before running other operations. Read-only.
@@ -22,7 +23,7 @@ async def ping(ctx: Context) -> str:
     return json.dumps(result)
 
 
-@mcp.tool()
+@mcp.tool(title="Get server version", annotations=READ_ONLY)
 async def get_server_version(ctx: Context) -> str:
     """Get the Immich server version. Use this to check compatibility or report
     the running server version. Read-only.
@@ -33,7 +34,7 @@ async def get_server_version(ctx: Context) -> str:
     return json.dumps(result)
 
 
-@mcp.tool()
+@mcp.tool(title="Get capabilities", annotations=READ_ONLY)
 async def get_capabilities(ctx: Context) -> str:
     """What this Immich server can do: version, feature flags and known quirks.
     Use this once at the start of a session to learn whether OCR, smart search or
@@ -97,7 +98,7 @@ async def get_capabilities(ctx: Context) -> str:
     return json.dumps(capabilities)
 
 
-@mcp.tool()
+@mcp.tool(title="Get statistics", annotations=READ_ONLY)
 async def get_statistics(ctx: Context) -> str:
     """Get library statistics. Use this for a quick overview of library size
     without listing individual assets. Read-only.

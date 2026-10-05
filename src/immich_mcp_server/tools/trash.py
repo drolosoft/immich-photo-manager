@@ -9,8 +9,9 @@ import json
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import ADDS_ONLY, CHANGES_OR_REMOVES
 
-@mcp.tool()
+@mcp.tool(title="Delete assets", annotations=CHANGES_OR_REMOVES)
 async def delete_assets(ctx: Context, asset_ids: list[str], force: bool = False) -> str:
     """Delete assets (soft-delete to trash or permanent). Use this to remove unwanted
     photos/videos. Default is soft-delete (recoverable via restore_assets). With force=true,
@@ -30,7 +31,7 @@ async def delete_assets(ctx: Context, asset_ids: list[str], force: bool = False)
     })
 
 
-@mcp.tool()
+@mcp.tool(title="Empty trash", annotations=CHANGES_OR_REMOVES)
 async def empty_trash(ctx: Context) -> str:
     """Permanently delete ALL assets currently in trash. DESTRUCTIVE and IRREVERSIBLE.
     Use this only after confirming the user wants to purge all trashed items. For
@@ -43,7 +44,7 @@ async def empty_trash(ctx: Context) -> str:
     return json.dumps({"success": True, "warning": "All trashed assets have been permanently deleted."})
 
 
-@mcp.tool()
+@mcp.tool(title="Restore trash", annotations=ADDS_ONLY)
 async def restore_trash(ctx: Context) -> str:
     """Restore ALL trashed assets back to the library. Use this to undo an accidental
     bulk deletion. For restoring specific assets only, use restore_assets instead.
@@ -55,7 +56,7 @@ async def restore_trash(ctx: Context) -> str:
     return json.dumps({"success": True, "message": "All trashed assets have been restored."})
 
 
-@mcp.tool()
+@mcp.tool(title="Restore assets", annotations=ADDS_ONLY)
 async def restore_assets(ctx: Context, asset_ids: list[str]) -> str:
     """Restore specific assets from trash back to the active library. Use this to
     selectively recover accidentally deleted photos. For restoring everything at once,

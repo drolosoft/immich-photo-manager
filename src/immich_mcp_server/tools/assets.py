@@ -10,7 +10,7 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _album_assets, _api_error
+from ._common import ADDS_ONLY, CHANGES_OR_REMOVES, READ_ONLY, _album_assets, _api_error
 
 # Immich accepts -1 (rejected) and 1 to 5 (stars). Immich 3.x refuses 0 outright
 # ("no longer valid"), while 2.7.5 silently accepts it, so the plugin refuses it
@@ -21,7 +21,7 @@ RATING_ERROR = ("Rating must be -1 (rejected) or 1 to 5 (stars). Immich 3.x reje
                 "0, and a rating cannot be cleared through this tool.")
 
 
-@mcp.tool()
+@mcp.tool(title="Get asset info", annotations=READ_ONLY)
 async def get_asset_info(ctx: Context, asset_id: str, with_notes: bool = False) -> str:
     """Get full metadata for a single asset. Use this when you need EXIF details,
     GPS coordinates, camera info, or file properties for a known asset ID.
@@ -44,7 +44,7 @@ async def get_asset_info(ctx: Context, asset_id: str, with_notes: bool = False) 
     return json.dumps(result, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Update asset metadata", annotations=CHANGES_OR_REMOVES)
 async def update_asset_metadata(
     ctx: Context,
     asset_id: str,
@@ -100,7 +100,7 @@ async def update_asset_metadata(
     return json.dumps(result, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Update assets metadata", annotations=CHANGES_OR_REMOVES)
 async def update_assets_metadata(
     ctx: Context,
     asset_ids: list[str],
@@ -192,7 +192,7 @@ async def _rotate_one(client, asset_id: str, angle: int) -> None:
         await client.delete_asset_edits(asset_id)
 
 
-@mcp.tool()
+@mcp.tool(title="Rotate assets", annotations=ADDS_ONLY)
 async def rotate_assets(
     ctx: Context,
     angle: int = 90,
@@ -248,7 +248,7 @@ async def rotate_assets(
     return json.dumps(results, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Revert asset edits", annotations=CHANGES_OR_REMOVES)
 async def revert_asset_edits(
     ctx: Context,
     asset_ids: list[str] | None = None,
@@ -296,7 +296,7 @@ async def revert_asset_edits(
     return json.dumps(results, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Get map markers", annotations=READ_ONLY)
 async def get_map_markers(
     ctx: Context,
     file_created_after: str = "",
@@ -322,7 +322,7 @@ async def get_map_markers(
     return json.dumps({"total": len(result), "markers": result[:500]}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Reverse geocode", annotations=READ_ONLY)
 async def reverse_geocode(ctx: Context, lat: float, lon: float) -> str:
     """Resolve GPS coordinates to a place name using Immich's own offline geodata.
     Use this to name the location of a marker from get_map_markers or of an asset's

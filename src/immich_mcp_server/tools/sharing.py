@@ -10,9 +10,9 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _api_error
+from ._common import ADDS_ONLY, CHANGES_OR_REMOVES, READ_ONLY, _api_error
 
-@mcp.tool()
+@mcp.tool(title="List shared links", annotations=READ_ONLY)
 async def list_shared_links(ctx: Context) -> str:
     """List all shared links (public gallery URLs). Use this to see what's currently
     shared publicly or to find a link ID for updates/deletion. Read-only.
@@ -34,7 +34,7 @@ async def list_shared_links(ctx: Context) -> str:
     return json.dumps({"total": len(links), "links": links}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Create shared link", annotations=ADDS_ONLY)
 async def create_shared_link(
     ctx: Context,
     album_id: str,
@@ -71,7 +71,7 @@ async def create_shared_link(
     )
 
 
-@mcp.tool()
+@mcp.tool(title="Get shared link", annotations=READ_ONLY)
 async def get_shared_link(ctx: Context, link_id: str) -> str:
     """Get full details of a shared link including permissions, expiry, and linked assets.
     Use this to inspect a specific link's configuration. Read-only.
@@ -88,7 +88,7 @@ async def get_shared_link(ctx: Context, link_id: str) -> str:
         return _api_error(exc)
 
 
-@mcp.tool()
+@mcp.tool(title="Update shared link", annotations=CHANGES_OR_REMOVES)
 async def update_shared_link(
     ctx: Context,
     link_id: str,
@@ -131,7 +131,7 @@ async def update_shared_link(
         return _api_error(exc)
 
 
-@mcp.tool()
+@mcp.tool(title="Delete shared link", annotations=CHANGES_OR_REMOVES)
 async def delete_shared_link(ctx: Context, link_id: str) -> str:
     """Delete (revoke) a shared link, making the public URL immediately inaccessible.
     The album and its photos are unaffected. Side effect: permanently removes the link.
@@ -148,7 +148,7 @@ async def delete_shared_link(ctx: Context, link_id: str) -> str:
         return _api_error(exc)
 
 
-@mcp.tool()
+@mcp.tool(title="Get connection info", annotations=READ_ONLY)
 async def get_connection_info(ctx: Context) -> str:
     """Return the Immich base URL and a masked API key. Use this to populate gallery
     template placeholders (e.g. {{IMMICH_URL}}). The API key is intentionally masked

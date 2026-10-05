@@ -10,9 +10,10 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp
+from ._common import CHANGES_OR_REMOVES
 from ..immich_client import ImmichClient
 
-@mcp.tool()
+@mcp.tool(title="Update credentials", annotations=CHANGES_OR_REMOVES)
 async def update_credentials(ctx: Context, base_url: str, api_key: str) -> str:
     """Update the Immich connection credentials. Use this when the API key has been
     rotated or the server URL changed. Validates credentials before applying.

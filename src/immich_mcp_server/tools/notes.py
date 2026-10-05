@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import ADDS_ONLY, CHANGES_OR_REMOVES, READ_ONLY
 
 # The single metadata key this plugin owns on an asset. Other apps' keys are
 # never read as ours nor deleted.
@@ -62,7 +63,7 @@ async def _append_note(client, asset_id: str, section: str, entry: dict) -> None
     await client.upsert_asset_metadata(asset_id, NOTES_KEY, current)
 
 
-@mcp.tool()
+@mcp.tool(title="Review assets", annotations=ADDS_ONLY)
 async def review_assets(
     ctx: Context, asset_ids: list[str], verdict: str, reason: str = ""
 ) -> str:
@@ -107,7 +108,7 @@ async def review_assets(
                        "verdict": verdict, "failed": failed}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Record action", annotations=ADDS_ONLY)
 async def record_action(
     ctx: Context, asset_ids: list[str], action: str, detail: str = ""
 ) -> str:
@@ -145,7 +146,7 @@ async def record_action(
                        "action": action, "failed": failed}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Get asset notes", annotations=READ_ONLY)
 async def get_asset_notes(ctx: Context, asset_id: str) -> str:
     """The plugin's notes on one asset: past review verdicts with reasons and
     recorded actions, newest last. Empty lists when it was never annotated.
@@ -161,7 +162,7 @@ async def get_asset_notes(ctx: Context, asset_id: str) -> str:
     return json.dumps({"asset_id": asset_id, **notes}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Get assets notes", annotations=READ_ONLY)
 async def get_assets_notes(ctx: Context, asset_ids: list[str]) -> str:
     """Which of these assets already carry notes, and their last verdict — the
     call that lets a cleanup pass skip what an earlier session reviewed. Immich
@@ -209,7 +210,7 @@ async def get_assets_notes(ctx: Context, asset_ids: list[str]) -> str:
                        "annotated": annotated, "failed": failed}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Clear asset notes", annotations=CHANGES_OR_REMOVES)
 async def clear_asset_notes(ctx: Context, asset_ids: list[str]) -> str:
     """Forget the plugin's notes on assets (reviews and actions). Only the
     plugin's own key is removed; metadata other apps stored stays. Side effect:

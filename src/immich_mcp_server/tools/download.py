@@ -10,10 +10,10 @@ import os
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _album_assets
+from ._common import ADDS_ONLY, READ_ONLY, _album_assets
 
 
-@mcp.tool()
+@mcp.tool(title="Get download info", annotations=READ_ONLY)
 async def get_download_info(
     ctx: Context,
     album_id: str = "",
@@ -49,7 +49,7 @@ async def get_download_info(
     })
 
 
-@mcp.tool()
+@mcp.tool(title="Download archive", annotations=ADDS_ONLY)
 async def download_archive(
     ctx: Context,
     output_path: str,

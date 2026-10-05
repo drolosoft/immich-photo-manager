@@ -10,7 +10,7 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _api_error
+from ._common import ADDS_ONLY, CHANGES_OR_REMOVES, READ_ONLY, _api_error
 
 
 def _trim_stack(stack: dict) -> dict:
@@ -27,7 +27,7 @@ def _trim_stack(stack: dict) -> dict:
     }
 
 
-@mcp.tool()
+@mcp.tool(title="Create stack", annotations=ADDS_ONLY)
 async def create_stack(ctx: Context, asset_ids: list[str]) -> str:
     """Group near-identical assets (a burst, retries of the same shot) into one
     stack. The library then shows the stack as a single item fronted by its primary
@@ -54,7 +54,7 @@ async def create_stack(ctx: Context, asset_ids: list[str]) -> str:
     return json.dumps(_trim_stack(result), default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="List stacks", annotations=READ_ONLY)
 async def list_stacks(ctx: Context, primary_asset_id: str = "") -> str:
     """List every stack in the library. Use this to see what is already grouped
     before creating new stacks or to find a stack's id. Read-only.
@@ -69,7 +69,7 @@ async def list_stacks(ctx: Context, primary_asset_id: str = "") -> str:
     return json.dumps({"total": len(stacks), "stacks": stacks}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Get stack", annotations=READ_ONLY)
 async def get_stack(ctx: Context, stack_id: str) -> str:
     """One stack with its assets. Use this after list_stacks to see everything a
     group holds before changing its cover or dissolving it, or to check what
@@ -84,7 +84,7 @@ async def get_stack(ctx: Context, stack_id: str) -> str:
     return json.dumps(_trim_stack(result), default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Update stack", annotations=CHANGES_OR_REMOVES)
 async def update_stack(ctx: Context, stack_id: str, primary_asset_id: str) -> str:
     """Change which asset fronts a stack (the one the library shows). Side effect:
     updates the stack on the server.
@@ -100,7 +100,7 @@ async def update_stack(ctx: Context, stack_id: str, primary_asset_id: str) -> st
     return json.dumps(_trim_stack(result), default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Delete stack", annotations=CHANGES_OR_REMOVES)
 async def delete_stack(ctx: Context, stack_id: str) -> str:
     """Dissolve a stack. The assets are NOT deleted — they simply show as
     individual items again. Side effect: removes the grouping on the server.

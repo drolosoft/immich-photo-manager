@@ -20,6 +20,7 @@ from mcp.server.mcpserver import Context
 
 from .. import __version__, pdf_export, video_frames
 from ..app import mcp, _client
+from ._common import ADDS_ONLY, READ_ONLY
 from ..pdf_export import AssetEntry, Document
 
 # Hard ceiling on assets per export. Above this a PDF stops being a document
@@ -293,7 +294,7 @@ EXPORT_OPTIONS = {
 }
 
 
-@mcp.tool()
+@mcp.tool(title="Get export preview", annotations=READ_ONLY)
 async def get_export_preview(ctx: Context, album_id: str = "", asset_ids: list[str] = [], limit: int = 100) -> str:
     """List what export_pdf would include (id, type, filename, date, place, people,
     video duration) so you know which assets exist before looking at images and
@@ -355,7 +356,7 @@ def _mixed_stories(raw: list[dict]) -> dict | None:
     }
 
 
-@mcp.tool()
+@mcp.tool(title="Export PDF", annotations=ADDS_ONLY)
 async def export_pdf(
     ctx: Context, album_id: str = "", asset_ids: list[str] = [], output_path: str = "",
     title: str = "", captions: dict = {}, layout: str = "detail", frames_per_video: int = 4,

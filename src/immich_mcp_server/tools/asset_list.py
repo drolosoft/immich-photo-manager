@@ -10,9 +10,9 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _api_error
+from ._common import READ_ONLY, _api_error
 
-@mcp.tool()
+@mcp.tool(title="List assets", annotations=READ_ONLY)
 async def list_assets(
     ctx: Context,
     is_favorite: bool | None = None,

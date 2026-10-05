@@ -6,6 +6,17 @@ import json
 
 import httpx
 from mcp.server.mcpserver import Image
+from mcp.types import ToolAnnotations
+
+
+# What each tool tells the client about itself. Clients read these hints to
+# decide which calls to run freely and which to confirm with the user, and the
+# Claude directory asks every tool to carry them. The MCP specification counts
+# a call as destructive when it overwrites or removes something; a call that
+# only adds (a new album, a tag on an asset, a file that did not exist) is not.
+READ_ONLY = ToolAnnotations(read_only_hint=True, destructive_hint=False)
+ADDS_ONLY = ToolAnnotations(read_only_hint=False, destructive_hint=False)
+CHANGES_OR_REMOVES = ToolAnnotations(read_only_hint=False, destructive_hint=True)
 
 
 def _api_error(exc: httpx.HTTPStatusError) -> str:

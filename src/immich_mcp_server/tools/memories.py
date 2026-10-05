@@ -9,6 +9,7 @@ import json
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import ADDS_ONLY, CHANGES_OR_REMOVES, READ_ONLY
 
 
 def _trim_memory(memory: dict) -> dict:
@@ -32,7 +33,7 @@ def _trim_memory(memory: dict) -> dict:
     }
 
 
-@mcp.tool()
+@mcp.tool(title="List memories", annotations=READ_ONLY)
 async def list_memories(
     ctx: Context,
     for_date: str = "",
@@ -62,7 +63,7 @@ async def list_memories(
     return json.dumps({"total": len(memories), "memories": memories}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Create memory", annotations=ADDS_ONLY)
 async def create_memory(
     ctx: Context,
     memory_at: str,
@@ -90,7 +91,7 @@ async def create_memory(
     return json.dumps(_trim_memory(result), default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Update memory", annotations=CHANGES_OR_REMOVES)
 async def update_memory(
     ctx: Context,
     memory_id: str,
@@ -118,7 +119,7 @@ async def update_memory(
     return json.dumps(_trim_memory(result), default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Delete memory", annotations=CHANGES_OR_REMOVES)
 async def delete_memory(ctx: Context, memory_id: str) -> str:
     """Delete a memory. The photos stay in the library — only the memory entry
     goes away. Side effect: removes the memory from the server.

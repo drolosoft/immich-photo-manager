@@ -9,8 +9,9 @@ import json
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import READ_ONLY
 
-@mcp.tool()
+@mcp.tool(title="Get asset thumbnail", annotations=READ_ONLY)
 async def get_asset_thumbnail(ctx: Context, asset_id: str, size: str = "thumbnail") -> str:
     """Get a base64-encoded thumbnail image for a single asset. Use this to visually
     inspect one photo. For multiple photos, use get_thumbnails_batch (by IDs) or
@@ -26,7 +27,7 @@ async def get_asset_thumbnail(ctx: Context, asset_id: str, size: str = "thumbnai
     return json.dumps(result)
 
 
-@mcp.tool()
+@mcp.tool(title="Get album thumbnails", annotations=READ_ONLY)
 async def get_album_thumbnails(
     ctx: Context, album_id: str, size: str = "thumbnail", limit: int = 20
 ) -> str:
@@ -47,7 +48,7 @@ async def get_album_thumbnails(
     return json.dumps(result, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Get thumbnails batch", annotations=READ_ONLY)
 async def get_thumbnails_batch(
     ctx: Context, asset_ids: list[str], size: str = "thumbnail", limit: int = 20
 ) -> str:

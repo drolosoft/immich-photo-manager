@@ -10,10 +10,10 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _api_error
+from ._common import ADDS_ONLY, CHANGES_OR_REMOVES, READ_ONLY, _api_error
 
 
-@mcp.tool()
+@mcp.tool(title="List activities", annotations=READ_ONLY)
 async def list_activities(
     ctx: Context,
     album_id: str,
@@ -56,7 +56,7 @@ async def list_activities(
     return json.dumps({"total": len(activities), "activities": activities}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Create activity", annotations=ADDS_ONLY)
 async def create_activity(
     ctx: Context,
     album_id: str,
@@ -90,7 +90,7 @@ async def create_activity(
     return json.dumps({"id": result.get("id"), "type": result.get("type")}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Delete activity", annotations=CHANGES_OR_REMOVES)
 async def delete_activity(ctx: Context, activity_id: str) -> str:
     """Remove one comment or like. Side effect: deletes it for everyone.
 

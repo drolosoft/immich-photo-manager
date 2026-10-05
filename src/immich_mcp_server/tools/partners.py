@@ -10,10 +10,10 @@ import httpx
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _api_error
+from ._common import ADDS_ONLY, CHANGES_OR_REMOVES, READ_ONLY, _api_error
 
 
-@mcp.tool()
+@mcp.tool(title="List users", annotations=READ_ONLY)
 async def list_users(ctx: Context) -> str:
     """The users visible on this Immich server. Use this to find the id that
     create_partner needs, or to see who could be shared with. Read-only.
@@ -26,7 +26,7 @@ async def list_users(ctx: Context) -> str:
     return json.dumps({"total": len(users), "users": users}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="List partners", annotations=READ_ONLY)
 async def list_partners(ctx: Context) -> str:
     """Who shares their library with this account, and who this account shares
     with. Partner sharing is Immich's family feature: each side keeps its own
@@ -48,7 +48,7 @@ async def list_partners(ctx: Context) -> str:
     }, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Create partner", annotations=ADDS_ONLY)
 async def create_partner(ctx: Context, user_id: str) -> str:
     """Share this account's library with another user on the server. The other
     user will see these photos next to their own. Find the id with list_users.
@@ -70,7 +70,7 @@ async def create_partner(ctx: Context, user_id: str) -> str:
                       default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Update partner", annotations=CHANGES_OR_REMOVES)
 async def update_partner(ctx: Context, user_id: str, in_timeline: bool) -> str:
     """Show or hide a partner's photos inside the main timeline (they stay
     reachable either way). Only works on a partner who shares their library
@@ -102,7 +102,7 @@ async def update_partner(ctx: Context, user_id: str, in_timeline: bool) -> str:
                       default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Remove partner", annotations=CHANGES_OR_REMOVES)
 async def remove_partner(ctx: Context, user_id: str) -> str:
     """Stop sharing this account's library with a user. Their own photos are not
     touched. Side effect: revokes their access.

@@ -9,8 +9,9 @@ import json
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
+from ._common import CHANGES_OR_REMOVES, READ_ONLY
 
-@mcp.tool()
+@mcp.tool(title="List people", annotations=READ_ONLY)
 async def list_people(
     ctx: Context, page: int = 1, size: int = 50, with_hidden: bool = False
 ) -> str:
@@ -31,7 +32,7 @@ async def list_people(
     return json.dumps({"total": total, "page": page, "people": people}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Get person", annotations=READ_ONLY)
 async def get_person(ctx: Context, person_id: str) -> str:
     """Get full details for a specific person including name, birth date, and photo count.
     Use this after finding a person via list_people or search_people. Read-only.
@@ -45,7 +46,7 @@ async def get_person(ctx: Context, person_id: str) -> str:
     return json.dumps(result, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Update person", annotations=CHANGES_OR_REMOVES)
 async def update_person(
     ctx: Context,
     person_id: str,
@@ -90,7 +91,7 @@ async def update_person(
     return json.dumps(result, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Merge people", annotations=CHANGES_OR_REMOVES)
 async def merge_people(
     ctx: Context, person_id: str, merge_ids: list[str], confirm: bool = False
 ) -> str:
@@ -139,7 +140,7 @@ async def merge_people(
     return json.dumps(result, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Search people", annotations=READ_ONLY)
 async def search_people(ctx: Context, name: str, with_hidden: bool = False) -> str:
     """Search for people by name (partial match). Use this when you know the person's
     name. For browsing all people, use list_people instead. Read-only.
@@ -154,7 +155,7 @@ async def search_people(ctx: Context, name: str, with_hidden: bool = False) -> s
     return json.dumps(result, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Get person thumbnail", annotations=READ_ONLY)
 async def get_person_thumbnail(ctx: Context, person_id: str) -> str:
     """Get a base64-encoded face crop thumbnail for a person. Use this to visually
     identify a person before merging or renaming. Read-only.
@@ -168,7 +169,7 @@ async def get_person_thumbnail(ctx: Context, person_id: str) -> str:
     return json.dumps(result)
 
 
-@mcp.tool()
+@mcp.tool(title="Get asset faces", annotations=READ_ONLY)
 async def get_asset_faces(ctx: Context, asset_id: str) -> str:
     """Get all detected faces in a photo with their person assignments. Use this to see
     who is in a specific photo or to find face IDs for reassign_face. Read-only.
@@ -182,7 +183,7 @@ async def get_asset_faces(ctx: Context, asset_id: str) -> str:
     return json.dumps(result, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Reassign face", annotations=CHANGES_OR_REMOVES)
 async def reassign_face(ctx: Context, face_id: str, person_id: str) -> str:
     """Reassign a detected face to a different person. Use this to correct face recognition
     mistakes (e.g. a face wrongly attributed to Person A should be Person B). Get face_id

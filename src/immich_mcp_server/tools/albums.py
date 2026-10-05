@@ -9,9 +9,9 @@ import json
 from mcp.server.mcpserver import Context
 
 from ..app import mcp, _client
-from ._common import _album_assets
+from ._common import ADDS_ONLY, CHANGES_OR_REMOVES, READ_ONLY, _album_assets
 
-@mcp.tool()
+@mcp.tool(title="List albums", annotations=READ_ONLY)
 async def list_albums(ctx: Context, shared: bool | None = None) -> str:
     """List all albums in the library with summary info. Use this to discover existing
     albums before creating new ones or to find an album ID. Read-only.
@@ -37,7 +37,7 @@ async def list_albums(ctx: Context, shared: bool | None = None) -> str:
     return json.dumps({"total": len(albums), "albums": albums}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Get album", annotations=READ_ONLY)
 async def get_album(ctx: Context, album_id: str) -> str:
     """Get full details for a specific album including all its asset IDs. Use this to
     inspect album contents or retrieve asset IDs for further operations (thumbnails,
@@ -82,7 +82,7 @@ async def get_album(ctx: Context, album_id: str) -> str:
     )
 
 
-@mcp.tool()
+@mcp.tool(title="Create album", annotations=ADDS_ONLY)
 async def create_album(
     ctx: Context, name: str, description: str = "", asset_ids: list[str] | None = None
 ) -> str:
@@ -109,7 +109,7 @@ async def create_album(
     )
 
 
-@mcp.tool()
+@mcp.tool(title="Update album", annotations=CHANGES_OR_REMOVES)
 async def update_album(
     ctx: Context, album_id: str, name: str = "", description: str = ""
 ) -> str:
@@ -131,7 +131,7 @@ async def update_album(
     return json.dumps(result, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Delete album", annotations=CHANGES_OR_REMOVES)
 async def delete_album(ctx: Context, album_id: str) -> str:
     """Delete an album container. The photos inside are NOT deleted — they remain in
     the library. Use this to remove unwanted album groupings. Side effect: permanently
@@ -148,7 +148,7 @@ async def delete_album(ctx: Context, album_id: str) -> str:
     return json.dumps({"success": True, "deleted": album_id, "album_id": album_id})
 
 
-@mcp.tool()
+@mcp.tool(title="Add assets to album", annotations=ADDS_ONLY)
 async def add_assets_to_album(ctx: Context, album_id: str, asset_ids: list[str]) -> str:
     """Add existing assets to an album. Use this to curate albums from search results
     or other asset lists. Assets can belong to multiple albums simultaneously.
@@ -164,7 +164,7 @@ async def add_assets_to_album(ctx: Context, album_id: str, asset_ids: list[str])
     return json.dumps({"album_id": album_id, "added": len(asset_ids), "result": result}, default=str)
 
 
-@mcp.tool()
+@mcp.tool(title="Remove assets from album", annotations=CHANGES_OR_REMOVES)
 async def remove_assets_from_album(ctx: Context, album_id: str, asset_ids: list[str]) -> str:
     """Remove assets from an album without deleting them. The photos remain in the
     library and other albums. Use this to un-curate mistakenly added assets.

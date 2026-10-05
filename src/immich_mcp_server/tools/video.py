@@ -11,7 +11,7 @@ from mcp.server.mcpserver import Context, Image
 
 from .. import video_frames
 from ..app import mcp, _client
-from ._common import _entry_to_image
+from ._common import READ_ONLY, _entry_to_image
 
 async def _video_plan(ctx: Context, asset_id: str, count: int, size: str,
                       start: float, end: float, interval: float, confirm: bool):
@@ -41,7 +41,7 @@ async def _video_plan(ctx: Context, asset_id: str, count: int, size: str,
     return result, None
 
 
-@mcp.tool(structured_output=False)
+@mcp.tool(title="Get video frames", annotations=READ_ONLY, structured_output=False)
 async def get_video_frames(
     ctx: Context, asset_id: str, count: int = 6, size: str = "thumbnail",
     start: float = 0.0, end: float = 0.0, interval: float = 0.0, confirm: bool = False,
@@ -82,7 +82,7 @@ async def get_video_frames(
     return [_entry_to_image(frame) for frame in result["frames"]]
 
 
-@mcp.tool()
+@mcp.tool(title="Get video frames JSON", annotations=READ_ONLY)
 async def get_video_frames_json(
     ctx: Context, asset_id: str, count: int = 6, size: str = "thumbnail",
     start: float = 0.0, end: float = 0.0, interval: float = 0.0, confirm: bool = False,
