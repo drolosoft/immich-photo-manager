@@ -158,7 +158,7 @@ The cheap way to browse by date: one call maps the whole library month by month.
 
 | Tool | Description | Modifies? |
 |------|-------------|-----------|
-| `list_albums` | List all albums with asset counts | No |
+| `list_albums` | List albums with asset counts. Filter with `name_contains` (case-insensitive), page with `page` and `size` (total is always the count after the filter), `compact=true` for id, name and count only. Without arguments it returns every album, as before | No |
 | `get_album` | Get album details including all asset IDs | No |
 | `create_album` | Create a new album with name, description, and optional initial assets | Yes |
 | `update_album` | Update album name or description | Yes |

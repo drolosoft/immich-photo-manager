@@ -20,3 +20,4 @@ ipm/
 # Use start-mcp.sh.example as the committed template.
 start-mcp.sh
 mcp-server.log
+.venv-test/

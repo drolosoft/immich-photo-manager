@@ -12,29 +12,74 @@ from ..app import mcp, _client
 from ._common import ADDS_ONLY, CHANGES_OR_REMOVES, READ_ONLY, _album_assets
 
 @mcp.tool(title="List albums", annotations=READ_ONLY)
-async def list_albums(ctx: Context, shared: bool | None = None) -> str:
-    """List all albums in the library with summary info. Use this to discover existing
-    albums before creating new ones or to find an album ID. Read-only.
+async def list_albums(
+    ctx: Context,
+    shared: bool | None = None,
+    name_contains: str = "",
+    page: int = 1,
+    size: int = 0,
+    compact: bool = False,
+) -> str:
+    """List albums in the library with summary info. Use this to discover existing
+    albums before creating new ones or to find an album ID. On a library with
+    thousands of albums, filter with name_contains or page with size instead of
+    listing everything: the full list can be too large for the context. Read-only.
 
     Args:
         shared: true = only shared albums, false = only non-shared, omit = all albums.
+        name_contains: Only albums whose name contains this text (case-insensitive). Omit for all.
+        page: Page number, starting from 1 (default 1). Only used when size is given.
+        size: Albums per page (1-500). Omit or 0 = every album in one response (the default).
+        compact: true = only id, albumName and assetCount per album (smaller response).
 
-    Returns: JSON with total count and albums array (each with id, name, description, assetCount, shared status).
+    Returns: JSON with total count (after the filter), the albums array (each with id, name,
+    description, assetCount, shared status), and page/size/pages when paging.
     """
     result = await _client(ctx).list_albums(shared=shared)
-    albums = [
+
+    # The Immich endpoint returns the whole list and has no filter or paging of
+    # its own (GET /albums only takes `shared` and `assetId`), so both are done
+    # here. Immich's order is kept so that the default output does not change.
+    needle = name_contains.strip().casefold()
+    if needle:
+        result = [album for album in result if needle in album.get("albumName", "").casefold()]
+    total = len(result)
+
+    paging: dict = {}
+    if size > 0:
+        size = min(size, 500)
+        page = max(page, 1)
+        pages = max(1, -(-total // size))
+        result = result[(page - 1) * size : page * size]
+        paging = {"page": page, "size": size, "pages": pages}
+
+    albums = [_album_summary(album, compact) for album in result]
+    return json.dumps({"total": total, **paging, "albums": albums}, default=str)
+
+
+def _album_summary(album: dict, compact: bool) -> dict:
+    """The fields of one album that list_albums sends to the model.
+
+    The compact form is for clients that only need to pick an album by name;
+    the full form is what the tool has always returned.
+    """
+    summary = {
+        "id": album["id"],
+        "albumName": album.get("albumName", ""),
+        "assetCount": album.get("assetCount", 0),
+    }
+    if compact:
+        return summary
+
+    summary.update(
         {
-            "id": album["id"],
-            "albumName": album.get("albumName", ""),
             "description": album.get("description", ""),
-            "assetCount": album.get("assetCount", 0),
             "shared": album.get("shared", False),
             "hasSharedLink": album.get("hasSharedLink", False),
             "createdAt": album.get("createdAt", ""),
         }
-        for album in result
-    ]
-    return json.dumps({"total": len(albums), "albums": albums}, default=str)
+    )
+    return summary
 
 
 @mcp.tool(title="Get album", annotations=READ_ONLY)

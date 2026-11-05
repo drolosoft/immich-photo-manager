@@ -47,7 +47,7 @@ Use the Immich MCP tools for all API interactions:
 - `create_album`: Create a new album with name and description
 - `add_assets_to_album`: Add photos/videos to an album by asset IDs
 - `remove_assets_from_album`: Remove assets from an album
-- `list_albums`: List all albums with asset counts
+- `list_albums`: List albums with asset counts. On large libraries use `name_contains` to find one by name or `page` + `size` to page; `compact=true` trims each album to id, name and count
 - `get_album`: Get album details including all assets
 - `delete_album`: Delete an album (does NOT delete the photos)
 - `create_shared_link`: Create a public shared link for an album (makes it visible in Gallery)

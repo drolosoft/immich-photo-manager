@@ -44,7 +44,7 @@ Analyze new photos against existing albums and suggest additions. Uses GPS proxi
 
 ### Step 1: Inventory Current Albums
 
-Use the MCP tool `list_albums` to get all albums, then `get_album` for each to understand their contents:
+Use the MCP tool `list_albums` to get all albums (on large libraries page with `page` and `size`, or use `compact=true`), then `get_album` for each to understand their contents:
 
 ```python
 for album in albums:

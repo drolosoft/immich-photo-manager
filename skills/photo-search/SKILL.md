@@ -67,7 +67,7 @@ Search strategy priority:
 
 ### Step 3: Find REAL matching albums
 
-Call `list_albums()` and **fuzzy-match** album names/descriptions against the user's query.
+Call `list_albums()` and **fuzzy-match** album names/descriptions against the user's query. When the library has hundreds of albums, call `list_albums(name_contains="...")` with one or two keywords from the query instead: the full list can be cut off by the context and the match becomes unreliable.
 
 Examples:
 - User asks "photos of Tikal" -> match album "Tikal & Petén" (and possibly "Guatemala")

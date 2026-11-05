@@ -6,6 +6,10 @@ All notable changes to immich-photo-manager are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **`list_albums` filters and pages.** `name_contains` keeps only the albums whose name contains the text, ignoring case; `page` and `size` (up to 500) return one page and the response carries `total`, `page`, `size` and `pages`; `compact=true` trims each album to id, name and asset count. Immich's own endpoint returns the whole list with no filter or paging, so the server does both. Without arguments the answer is the same as before. On a library with about 3,300 albums the full list weighed some 816 KB of JSON and only the first few hundred albums reached the model (#31).
+
 ## [v2.0.13] - 2026-10-05
 
 ### Added
